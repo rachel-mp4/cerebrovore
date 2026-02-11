@@ -1,0 +1,45 @@
+package main
+
+import (
+	"encoding/json"
+	"flag"
+	"fmt"
+	"net/http"
+	"os"
+
+	"github.com/rachel-mp4/cerebrovore/handler"
+)
+
+type Manifest struct {
+	Chat struct {
+		File string `json:"file"`
+	} `json:"src/chat.ts"`
+	Beep struct {
+		File string `json:"file"`
+	} `json:"src/beep.ts"`
+}
+
+func main() {
+	fmt.Println("*eats ur brain*")
+	prod := flag.Bool("prod", false, "runs prod")
+	port := flag.Int("port", 8080, "port to listen on")
+	flag.Parse()
+	var hp *handler.Prod
+	if *prod {
+		manifest, err := os.ReadFile("./frontend/dist/.vite/manifest.json")
+		if err != nil {
+			panic(err)
+		}
+		var ms Manifest
+		err = json.Unmarshal(manifest, &ms)
+		if err != nil {
+			panic(err)
+		}
+		hp = &handler.Prod{
+			ChatPath: ms.Chat.File,
+			BeepPath: ms.Beep.File,
+		}
+	}
+	h := handler.NewHandler(hp)
+	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
+}
