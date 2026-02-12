@@ -37,11 +37,9 @@ func NewHandler(prod *Prod, m *model.Model) Handler {
 func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
 	type homeresp struct {
 		Title   string
-		Prod    *Prod
 		Threads []ThreadResp
 	}
 	err := homeT.Execute(w, homeresp{"home",
-		h.prod,
 		constructThreadsResp(h.m.GetThreads()),
 	})
 	if err != nil {

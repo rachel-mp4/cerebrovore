@@ -34,11 +34,13 @@ func (h *Handler) getThread(w http.ResponseWriter, r *http.Request) {
 		Title   string
 		Me      ThreadResp
 		Threads []ThreadResp
+		Prod    *Prod
 	}
 	gtr := getthreadresp{
 		Title:   title,
 		Me:      me,
 		Threads: threads,
+		Prod:    h.prod,
 	}
 	err = threadT.Execute(w, gtr)
 	if err != nil {

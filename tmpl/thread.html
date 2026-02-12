@@ -1,5 +1,8 @@
 {{define "content"}}
-<p>thread TID={{.Me.TID}} NTID={{.Me.NTID}} exists!</p>
-<p>connect using tty!xcvr</p>
-<p>{{.Me.WSURL}}</p>
+<div id="cbv"></div>
+{{if .Prod}}
+<script type="module" src="{{.Prod.ChatPath}}"></script>
+{{else}}
+<script type="module" src="http://localhost:5173/src/chat.ts"></script>
+{{end}}
 {{end}}
