@@ -8,6 +8,7 @@ import (
 	"os"
 
 	"github.com/rachel-mp4/cerebrovore/handler"
+	"github.com/rachel-mp4/cerebrovore/model"
 )
 
 type Manifest struct {
@@ -40,6 +41,8 @@ func main() {
 			BeepPath: ms.Beep.File,
 		}
 	}
-	h := handler.NewHandler(hp)
+
+	m := model.NewModel()
+	h := handler.NewHandler(hp, m)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
 }

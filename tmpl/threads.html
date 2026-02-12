@@ -1,5 +1,11 @@
 {{define "left-sidebar"}}
 <div>
-  <a>make thread</a>
+  <form action="/t" method="POST">
+  <input type="submit">make thread</input>
+  </form>
+  {{range .Threads}}
+    {{template "thread" .}}
+  {{end}}
+
 </div>
 {{end}}
