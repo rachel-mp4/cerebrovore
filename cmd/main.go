@@ -37,8 +37,8 @@ func main() {
 			panic(err)
 		}
 		hp = &handler.Prod{
-			ChatPath: ms.Chat.File,
-			BeepPath: ms.Beep.File,
+			ChatPath: fmt.Sprintf("/%s", ms.Chat.File),
+			BeepPath: fmt.Sprintf("/%s", ms.Beep.File),
 		}
 	}
 
