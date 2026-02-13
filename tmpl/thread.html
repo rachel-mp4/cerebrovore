@@ -1,7 +1,10 @@
 {{define "content"}}
 <div id="cbv"></div>
 {{if .Prod}}
-<script type="module" src="{{.Prod.ChatPath}}"></script>
+<script type="module" src="/{{.Prod.ChatPath}}"></script>
+{{range .Prod.ChatCss}}
+<link rel="stylesheet" href="/{{.}}">
+{{end}}
 {{else}}
 <script type="module" src="http://localhost:5173/src/chat.ts"></script>
 {{end}}

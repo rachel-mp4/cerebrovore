@@ -13,10 +13,12 @@ import (
 
 type Manifest struct {
 	Chat struct {
-		File string `json:"file"`
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
 	} `json:"src/chat.ts"`
 	Beep struct {
-		File string `json:"file"`
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
 	} `json:"src/beep.ts"`
 }
 
@@ -37,8 +39,10 @@ func main() {
 			panic(err)
 		}
 		hp = &handler.Prod{
-			ChatPath: fmt.Sprintf("/%s", ms.Chat.File),
-			BeepPath: fmt.Sprintf("/%s", ms.Beep.File),
+			ChatPath: ms.Chat.File,
+			ChatCss:  ms.Chat.CSS,
+			BeepPath: ms.Beep.File,
+			BeepCss:  ms.Beep.CSS,
 		}
 	}
 

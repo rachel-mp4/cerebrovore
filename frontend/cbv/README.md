@@ -22,13 +22,19 @@ new island
    the key, but pick New-Island. the value of course must be the path
 `src/beep.ts` 
 4. in `handler/handler.go`, add a field to Prod struct to represent the path
-   that our compiled svelte will end up at
+   that our compiled svelte will end up at, and a second field to represent the
+paths that our compiled css will end up at. ideally, we won't use any css in
+svelte components, because this makes it harder for users to write their own
+css, however, it is probably faster to write component level css initially, and
+then we want to copy it over, and if you don't make a field for the array of
+css paths, then there will be differences in appearence between dev + prod
 5. in `cmd/main.go`, extend the json schema for `Manifest` accordingly, and
    after unmarshaling, copy the path into the new field in the `handler.Prod`
-struct 
+struct, and copy the array of css paths into the handler struct
 6. in our template that has this new island, we need both a div with the id
    specified in `new-island.ts`, and a `script type="module"` with a link to
-our code, so look at `tmpl/beep.html`; but in the case where we are in prod, we
-want to access the field of prod for the compiled code, and in the case where
-we are in dev, we can just link "straight to it" and vite handles the rest
+our code, and in prod, we need to range over all css paths and add links to
+them so look at `tmpl/beep.html`; but in the case where we are in prod, we want
+to access the field of prod for the compiled code, and in the case where we are
+in dev, we can just link "straight to it" and vite handles the rest
 

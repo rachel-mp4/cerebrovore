@@ -14,7 +14,9 @@ type Handler struct {
 
 type Prod struct {
 	ChatPath string
+	ChatCss  []string
 	BeepPath string
+	BeepCss  []string
 }
 
 func NewHandler(prod *Prod, m *model.Model) Handler {
@@ -26,6 +28,7 @@ func NewHandler(prod *Prod, m *model.Model) Handler {
 	mux.HandleFunc("GET /t/{ntid}", h.getThread)
 	mux.HandleFunc("GET /t/{ntid}/ws", h.getThreadWS)
 	mux.Handle("GET /css/", http.StripPrefix("/css/", http.FileServer(http.Dir("./css"))))
+	mux.Handle("GET /svg/", http.StripPrefix("/svg/", http.FileServer(http.Dir("./svg"))))
 	mux.Handle("GET /assets/", http.FileServer(http.Dir("./frontend/dist")))
 	h.mux = mux
 	h.prod = prod
@@ -39,7 +42,7 @@ func (h *Handler) home(w http.ResponseWriter, r *http.Request) {
 		Title   string
 		Threads []ThreadResp
 	}
-	err := homeT.Execute(w, homeresp{"home",
+	err := homeT.Execute(w, homeresp{"brainworm",
 		constructThreadsResp(h.m.GetThreads()),
 	})
 	if err != nil {

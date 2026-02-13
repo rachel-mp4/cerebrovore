@@ -2,7 +2,10 @@
 <h1 class="chat-title">{{.Title}}</h1>
 <div id="cbv"></div>
 {{if .Prod}}
-<script type="module" src="{{.Prod.BeepPath}}"></script>
+<script type="module" src="/{{.Prod.BeepPath}}"></script>
+{{range .Prod.BeepCss}}
+<link rel="stylesheet" href="/{{.}}">
+{{end}}
 {{else}}
 <script type="module" src="http://localhost:5173/src/beep.ts"></script>
 {{end}}
