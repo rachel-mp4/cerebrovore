@@ -503,18 +503,13 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 	if c == nil {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 	}
-	// ids, err := h.db.GetWatchedThreads(c.Username, r.Context())
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	http.Error(w, "error finding watched threads", http.StatusInternalServerError)
-	// 	return
-	// }
-	// f, err := h.m.GetThreadSocketHandler(ids)
-	// if err != nil {
-	// 	log.Println(err.Error())
-	// 	http.Error(w, "error getting ws handler", http.StatusInternalServerError)
-	// 	return
-	// }
-	// f(w, r)
+	ids, err := h.db.GetWatchedThreads(c.Username, r.Context())
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "error finding watched threads", http.StatusInternalServerError)
+		return
+	}
+	f := h.m.GetThreadSocketHandler(ids)
+	f(w, r)
 
 }

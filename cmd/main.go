@@ -23,6 +23,10 @@ type Manifest struct {
 		File string   `json:"file"`
 		CSS  []string `json:"css,omitempty"`
 	} `json:"src/beep.ts"`
+	Watcher struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/watcher.ts"`
 }
 
 func main() {
@@ -48,10 +52,12 @@ func main() {
 			panic(err)
 		}
 		ca = &handler.CompiledAssets{
-			ChatPath: ms.Chat.File,
-			ChatCss:  ms.Chat.CSS,
-			BeepPath: ms.Beep.File,
-			BeepCss:  ms.Beep.CSS,
+			ChatPath:    ms.Chat.File,
+			ChatCss:     ms.Chat.CSS,
+			BeepPath:    ms.Beep.File,
+			BeepCss:     ms.Beep.CSS,
+			WatcherPath: ms.Watcher.File,
+			WatcherCss:  ms.Watcher.CSS,
 		}
 	}
 	var store db.Storer

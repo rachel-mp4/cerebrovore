@@ -11,6 +11,7 @@ export default defineConfig({
       input: {
         chat: 'src/chat.ts',
         beep: 'src/beep.ts',
+        watcher: 'src/watcher.ts',
       }
     }
   },

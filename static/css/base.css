@@ -442,3 +442,8 @@ input {
 .body a {
   font-weight: 600;
 }
+
+.watched-thread {
+  display: flex;
+  justify-content: space-between;
+}

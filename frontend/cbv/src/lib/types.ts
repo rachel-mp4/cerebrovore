@@ -1,3 +1,11 @@
+export type WatchThread = {
+  type: 'watchthread'
+  id: number
+  topic?: string
+  bumps: number
+  bumpedAt: number
+}
+
 export type Item = Message | Media | Enby
 
 export type Enby = {

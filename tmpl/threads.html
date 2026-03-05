@@ -8,21 +8,24 @@
 </div>
 </div>
 
-
 <div class="sidebar-group" id="watched-threads">
   <div>
-    watched threads
+    <button>
+      watched threads
+    </button>
   </div>
-  {{range .Threads}}
-    {{template "threadlink" .}}
-  {{end}}
-  {{range .Threads}}
-    {{template "threadlink" .}}
-  {{end}}
 </div>
 
 <div class="sidebar-group" id="bumped-threads">
   {{template "bumped-threads" .}}
 </div>
 
+{{if .CompiledAssets}}
+<script type="module" src="/{{.CompiledAssets.WatcherPath}}"></script>
+{{range .CompiledAssets.WatcherCss}}
+<link rel="stylesheet" href="/{{.}}">
+{{end}}
+{{else}}
+<script type="module" src="http://localhost:5173/src/watcher.ts"></script>
+{{end}}
 {{end}}

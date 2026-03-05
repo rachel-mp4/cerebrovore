@@ -1,6 +1,7 @@
 package model
 
 import (
+	"context"
 	"fmt"
 	"github.com/gorilla/websocket"
 	"github.com/rachel-mp4/cerebrovore/types"
@@ -8,6 +9,7 @@ import (
 	"net/http"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 type Model struct {
@@ -92,6 +94,18 @@ func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 	return handler, nil
 }
 
+type watchEvent struct {
+	Topic *string `json:"topic,omitempty"`
+	ID    uint32  `json:"id"`
+}
+
+type watcher struct {
+	conn   *websocket.Conn
+	ch     chan watchEvent
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
 func (m *Model) NotifyWatchers(forID uint32) {
 	m.tmapmu.Lock()
 	tm, ok := m.tmap[forID]
@@ -102,7 +116,9 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	tm.watchersmu.Lock()
 	for w := range tm.watchers {
 		select {
-		case w.ch <- forID:
+		case w.ch <- watchEvent{tm.topic, forID}:
+		case <-w.ctx.Done():
+			delete(tm.watchers, w)
 		default:
 			delete(tm.watchers, w)
 		}
@@ -110,26 +126,7 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	tm.watchersmu.Unlock()
 }
 
-type watcher struct {
-	conn *websocket.Conn
-	ch   chan uint32
-}
-
 func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
-	watcher := &watcher{}
-	ch := make(chan uint32, 10)
-	watcher.ch = ch
-	m.tmapmu.Lock()
-	for _, tid := range threadIDs {
-		tm, ok := m.tmap[tid]
-		if !ok {
-			continue
-		}
-		tm.watchersmu.Lock()
-		tm.watchers[watcher] = true
-		tm.watchersmu.Unlock()
-	}
-	m.tmapmu.Unlock()
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -140,12 +137,45 @@ func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 		if err != nil {
 			return
 		}
+		watcher := &watcher{}
+		ch := make(chan watchEvent, 10)
+		watcher.ch = ch
 		watcher.conn = conn
+		watcher.ctx, watcher.cancel = context.WithCancel(r.Context())
+		m.tmapmu.Lock()
+		for _, tid := range threadIDs {
+			tm, ok := m.tmap[tid]
+			if !ok {
+				continue
+			}
+			tm.watchersmu.Lock()
+			tm.watchers[watcher] = true
+			tm.watchersmu.Unlock()
+		}
+		m.tmapmu.Unlock()
+		watcher.watch()
 	}
 }
 
-func (w *watcher) Watch() {
-
+func (w *watcher) watch() {
+	defer w.cancel()
+	ticker := time.NewTicker(15 * time.Second)
+	for {
+		select {
+		case <-w.ctx.Done():
+			return
+		case <-ticker.C:
+			err := w.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
+			if err != nil {
+				return
+			}
+		case we := <-w.ch:
+			err := w.conn.WriteJSON(we)
+			if err != nil {
+				return
+			}
+		}
+	}
 }
 
 func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {

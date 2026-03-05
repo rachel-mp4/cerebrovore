@@ -468,14 +468,6 @@ export const connectTo = (url: string, ctx: WSContext) => {
 
       }
     }
-    // i wonder why i commented this? it looks correct NGL, oh i think i was doing some stuff with ShouldScroll
-    // parseEvent used to return a bool
-    // if (shouldScroll) {
-    //     setTimeout(() => {
-    //         window.scrollTo(0, document.body.scrollHeight)
-    //     }, 0)
-    // }
-
   };
   ws.onclose = () => {
     console.log("closed")

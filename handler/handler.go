@@ -20,10 +20,12 @@ type Handler struct {
 }
 
 type CompiledAssets struct {
-	ChatPath string
-	ChatCss  []string
-	BeepPath string
-	BeepCss  []string
+	ChatPath    string
+	ChatCss     []string
+	BeepPath    string
+	BeepCss     []string
+	WatcherPath string
+	WatcherCss  []string
 }
 
 type withIdentityProvider = bool
