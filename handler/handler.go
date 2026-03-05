@@ -36,6 +36,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp withIdenti
 	mux.HandleFunc("POST /callback", h.callback)
 	mux.HandleFunc("GET /beep", h.beep)
 	mux.HandleFunc("GET /ts", h.AM(h.getThreadSocket))
+	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
 	mux.HandleFunc("POST /blob", h.AM(h.postBlob))
 	mux.HandleFunc("GET /blob", h.AM(h.getBlob))

@@ -1,14 +1,28 @@
 {{define "left-sidebar"}}
+<div class="sidebar-group">
+<div>
+  <a href="/">go home!</a>
+</div>
 <div>
   <a href="/new">start a new thread!</a>
 </div>
-  {{if .ThreadsCursor}}
-  <a href="{{.ThreadsCursor}}">
-    get more threads
-  </a>
+</div>
+
+
+<div class="sidebar-group" id="watched-threads">
+  <div>
+    watched threads
+  </div>
+  {{range .Threads}}
+    {{template "threadlink" .}}
   {{end}}
   {{range .Threads}}
     {{template "threadlink" .}}
   {{end}}
+</div>
+
+<div class="sidebar-group" id="bumped-threads">
+  {{template "bumped-threads" .}}
+</div>
 
 {{end}}

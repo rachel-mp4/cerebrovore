@@ -1,0 +1,10 @@
+{{define "bumped-threads"}}
+  <div>
+    <button hx-get="/t-bumped" hx-target="#bumped-threads" hx-trigger="click">
+    bumped threads
+    </button>
+  </div>
+  {{range .Threads}}
+    {{template "threadlink" .}}
+  {{end}}
+{{end}}

@@ -10,12 +10,14 @@ var mockloginT *template.Template
 var beepT *template.Template
 var threadT *template.Template
 var newthreadT *template.Template
+var bumpedT *template.Template
 
 func init() {
 	homeT = newTemplate(
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/home.html",
 	)
@@ -23,6 +25,7 @@ func init() {
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/mocklogin.html",
 	)
@@ -30,6 +33,7 @@ func init() {
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/beep.html",
 	)
@@ -37,6 +41,7 @@ func init() {
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/thread.html",
 		"./tmpl/partial/post.html",
@@ -45,8 +50,13 @@ func init() {
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/newthread.html",
+	)
+	bumpedT = newTemplate(
+		"./tmpl/bumped-threads.html",
+		"./tmpl/partial/threadlink.html",
 	)
 }
 

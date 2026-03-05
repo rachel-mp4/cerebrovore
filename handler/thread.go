@@ -418,6 +418,25 @@ func (h *Handler) getPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/t/%s#%s", utils.IDToA(tid), npid), http.StatusFound)
 }
 
+func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tt, _, err := h.db.GetBumpedThreads(nil, 5, r.Context())
+	if err != nil {
+		http.Error(w, "failed to get threads", http.StatusInternalServerError)
+		return
+	}
+	type tbumpedresp struct {
+		Threads []types.Thread
+	}
+	err = bumpedT.ExecuteTemplate(w, "bumped-threads", tbumpedresp{tt})
+	if err != nil {
+		log.Println(err.Error())
+	}
+}
+
 func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
