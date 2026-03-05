@@ -21,7 +21,10 @@ prod build
 3. `cd -`
 4. `go run ./cmd -prod`
 
-### KNOWN BUGS AND BAD BEHAVIOR THATS ANNOYING
-when you click on a thumbnail, swapping it out for the full-size image, it's bad
-need to store the size (aspect ratio dimensions size), broadcast over lrc
+### KNOWN BUGS AND BAD BEHAVIOR THATS ANNOYING 
+when you click on a thumbnail, swapping it out for the full-size image, it's
+bad need to store the size (aspect ratio dimensions size), broadcast over lrc
 etc...
+
+mock db is completely useless, need to upgrade it to an in memory db at least
+lol

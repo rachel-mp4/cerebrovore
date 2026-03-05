@@ -144,7 +144,9 @@ func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 	}
 }
 
-func (w *watcher) Watch()
+func (w *watcher) Watch() {
+
+}
 
 func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {
 	tm, ok := m.tmap[threadID]
