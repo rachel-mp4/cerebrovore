@@ -73,9 +73,10 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type homeresp struct {
-		Title         string
-		ThreadsCursor *time.Time
-		Threads       []types.Thread
+		Title          string
+		ThreadsCursor  *time.Time
+		Threads        []types.Thread
+		CompiledAssets *CompiledAssets
 	}
 	tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
 	if err != nil {
@@ -83,7 +84,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 	}
 	err = homeT.ExecuteTemplate(w, "base", homeresp{"brainworm",
-		crsr, tt,
+		crsr, tt, h.ca,
 	})
 	if err != nil {
 		log.Println(err)
@@ -97,9 +98,10 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type homeresp struct {
-		Title         string
-		ThreadsCursor *time.Time
-		Threads       []types.Thread
+		Title          string
+		ThreadsCursor  *time.Time
+		Threads        []types.Thread
+		CompiledAssets *CompiledAssets
 	}
 	tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
 	if err != nil {
@@ -107,7 +109,7 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 	}
 	err = newthreadT.ExecuteTemplate(w, "base", homeresp{"new thread",
-		crsr, tt,
+		crsr, tt, h.ca,
 	})
 	if err != nil {
 		log.Println(err)
@@ -118,9 +120,10 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	if h.idp == false {
 		type loginresp struct {
-			Title         string
-			ThreadsCursor *time.Time
-			Threads       []types.Thread
+			Title          string
+			ThreadsCursor  *time.Time
+			Threads        []types.Thread
+			CompiledAssets *CompiledAssets
 		}
 		tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
 		if err != nil {
@@ -129,7 +132,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		err = mockloginT.ExecuteTemplate(w, "base", loginresp{"login",
-			crsr, tt,
+			crsr, tt, h.ca,
 		})
 		if err != nil {
 			log.Println(err)
