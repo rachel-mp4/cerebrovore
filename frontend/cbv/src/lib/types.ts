@@ -4,12 +4,14 @@ export type Enby = {
   type: 'enby'
   id: number
   lrcdata: LrcBaseItem
+  replies: Array<number>
 }
 
 export type Message = {
   type: 'message'
   id: number
   lrcdata: LrcMessage
+  replies: Array<number>
 }
 
 export type Media = Image
@@ -18,6 +20,7 @@ export type Image = {
   type: 'image'
   id: number
   lrcdata: LrcMedia
+  replies: Array<number>
 }
 
 export type LrcMessage = LrcBaseItem & {

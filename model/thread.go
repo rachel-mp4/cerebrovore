@@ -2,16 +2,24 @@ package model
 
 import (
 	"fmt"
-	"github.com/rachel-mp4/lrcd"
 	"net/http"
+	"os"
 	"sync"
+
+	"github.com/rachel-mp4/cerebrovore/utils"
+	"github.com/rachel-mp4/lrcd"
 )
 
 // threadModel is the model for a thread. if the server is non nil, then
 // it should be started
 type threadModel struct {
 	mu     sync.Mutex
+	id     uint32
+	topic  *string
 	server *lrcd.Server
+
+	watchers   map[*watcher]bool
+	watchersmu sync.Mutex
 }
 
 func (tm *threadModel) GetWSHandler() (http.HandlerFunc, error) {
@@ -32,8 +40,15 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	if tm.server != nil {
 		return nil
 	}
-	s, err := lrcd.NewServer(
+	opts := []lrcd.Option{
 		lrcd.WithIDAllocator(idAllocator),
+		lrcd.WithServerURIAndSecret(utils.IDToA(tm.id), os.Getenv("LRCD_SECRET")),
+	}
+	if tm.topic != nil {
+		opts = append(opts, lrcd.WithWelcome(*tm.topic))
+	}
+	s, err := lrcd.NewServer(
+		opts...,
 	)
 	if err != nil {
 		return fmt.Errorf("newserver: %w", err)

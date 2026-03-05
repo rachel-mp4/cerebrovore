@@ -1,0 +1,22 @@
+{{define "post"}}
+<div class="transmission {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}">
+  <div class="header">
+    {{- if .Nick -}}<span class="nick">{{- .Nick }} </span>{{- end -}}
+    <button class="reply">#{{- idtoa .ID -}}</button>
+  </div>
+  <div class="body">
+    {{- if .ImageContent -}}
+    {{- renderImageBody .ImageContent.CID .ImageContent.Alt -}}
+    {{- end -}}
+    {{- if .TextContent -}}
+      {{- renderTextBody .TextContent.Body -}}
+    {{- end -}}
+  </div>
+  <div class="footer">
+    {{- range $i, $v := .Backlinks -}}
+    {{- if $i }} {{ end -}}
+    <a href="/p/{{idtoa .}}">#{{idtoa .}}</a>
+    {{- end -}}
+  </div>
+</div>
+{{end}}

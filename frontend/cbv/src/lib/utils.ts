@@ -41,3 +41,7 @@ export function smartAbsoluteTimestamp(then: number): string {
 export function dumbAbsoluteTimestamp(then: number): string {
   return (new Date(then)).toString()
 }
+
+export function b36encodenumber(n: number): string {
+  return n.toString(36)
+}

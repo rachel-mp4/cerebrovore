@@ -1,9 +1,9 @@
 {{define "content"}}
 <h1 class="chat-title">{{.Title}}</h1>
-<div id="cbv"></div>
-{{if .Prod}}
+<div id="0cbv"></div>
+{{if .CompiledAssets}}
 <script type="module" src="/{{.Prod.BeepPath}}"></script>
-{{range .Prod.BeepCss}}
+{{range .CompiledAssets.BeepCss}}
 <link rel="stylesheet" href="/{{.}}">
 {{end}}
 {{else}}

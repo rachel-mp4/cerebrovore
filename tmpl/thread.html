@@ -1,11 +1,20 @@
 {{define "content"}}
-<div id="cbv"></div>
-{{if .Prod}}
-<script type="module" src="/{{.Prod.ChatPath}}"></script>
-{{range .Prod.ChatCss}}
+{{if .Thread.Topic}}
+<h1 class="thread-topic">{{.Thread.Topic}}</h1>
+{{end}}
+<div id="eats-ur-brain">
+{{range .Thread.Posts}}
+  {{template "post" .}}
+{{end}}
+</div>
+{{if .CompiledAssets}}
+<script type="module" src="/{{.CompiledAssets.ChatPath}}"></script>
+{{range .CompiledAssets.ChatCss}}
 <link rel="stylesheet" href="/{{.}}">
 {{end}}
 {{else}}
 <script type="module" src="http://localhost:5173/src/chat.ts"></script>
+<script src="/js/links.js"></script>
+<script src="/js/thumb.js"></script>
 {{end}}
 {{end}}

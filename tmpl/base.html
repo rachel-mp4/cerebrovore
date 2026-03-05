@@ -1,3 +1,4 @@
+{{define "base"}}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -5,10 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/base.css">
     <link rel="stylesheet" href="/css/dark.css">
+    <link rel="stylesheet" href="/css/postsizes.css">
     <link rel="icon" href="/svg/favicon2.svg" type="image/svg+xml">
     <title>{{ .Title }}</title>
   </head>
-  <body>
+  <body class="tripartite">
     <aside id="left-sidebar">
       {{template "left-sidebar" .}}
     </aside>
@@ -20,3 +22,4 @@
     </aside>
   </body>
 </html>
+{{end}}

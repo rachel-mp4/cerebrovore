@@ -5,20 +5,10 @@ export type ColorSet = {
   themecontrasttransparent: string
 }
 
-export function colorSetFromTheme(theme: number): ColorSet {
-  const color = numToHex(theme);
-  const cpartial = hexToTransparent(color);
-  const contrast = hexToContrast(color);
-  const partial = hexToTransparent(contrast);
-
-  return {
-    theme: color,
-    themetransparent: cpartial,
-    themecontrast: contrast,
-    themecontrasttransparent: partial,
-  }
+export function numIsDark(num: number): boolean {
+  const color = numToHex(num)
+  return hexIsDark(color)
 }
-
 
 export function numToHex(num: number) {
   const int = Math.max(Math.min(16777215, Math.floor(num)), 0)
@@ -28,12 +18,12 @@ export function numToHex(num: number) {
 export function hexToNum(hex: string) {
   return Number("0x" + hex.slice(1))
 }
-export function hexToContrast(hex: string) {
+export function hexIsDark(hex: string): boolean {
   const r = Number("0x" + hex.slice(1, 3))
   const g = Number("0x" + hex.slice(3, 5))
   const b = Number("0x" + hex.slice(5))
   const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255
-  return luminance > 0.5 ? "#000000" : "#ffffff"
+  return luminance > 0.5
 }
 export function hexToTransparent(hex: string) {
   return hex + "80"

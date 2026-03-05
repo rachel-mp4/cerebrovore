@@ -1,11 +1,14 @@
 {{define "left-sidebar"}}
 <div>
-  <form action="/t" method="POST">
-  <input type="submit">make thread</input>
-  </form>
+  <a href="/new">start a new thread!</a>
+</div>
+  {{if .ThreadsCursor}}
+  <a href="{{.ThreadsCursor}}">
+    get more threads
+  </a>
+  {{end}}
   {{range .Threads}}
-    {{template "thread" .}}
+    {{template "threadlink" .}}
   {{end}}
 
-</div>
 {{end}}

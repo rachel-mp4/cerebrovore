@@ -2,17 +2,13 @@
   import AutoGrowInput from "./AutoGrowInput.svelte";
   import { WSContext } from "../wscontext.svelte";
   import { numToHex } from "../colors";
-  import AutoGrowTextArea from "./AutoGrowTextArea.svelte";
   import diff from "fast-diff";
   interface Props {
     ctx: WSContext;
     defaultNick?: string;
-    defaultHandle?: string;
   }
-  let { ctx, defaultNick, defaultHandle }: Props = $props();
-  let nick = $state(defaultNick ?? "wanderer");
-  let innerWidth = $state(0);
-  let isDesktop = $derived(innerWidth > 1000);
+  let { ctx }: Props = $props();
+  let nick = $state("wanderer");
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
   let image: HTMLImageElement | undefined = $state();
@@ -21,25 +17,36 @@
       ctx.setNick(nick);
     }
   });
-  let message = $state("");
   const setName = (event: Event) => {
     const el = event.target as HTMLInputElement;
     ctx.nick = el.value;
   };
-  let handle = $state(defaultHandle ?? "cool.org");
-  const setHandle = (event: Event) => {
-    const el = event.target as HTMLInputElement;
-    ctx.handle = el.value;
+
+  let message = $state("");
+  const addReply = (str: string) => {
+    message = message + `${str}\n`;
   };
-  $effect(() => {
-    if (ctx) {
-      ctx.setHandle(handle);
+  document.addEventListener("click", (e: MouseEvent) => {
+    const t = e.target as HTMLElement;
+    if (!t) {
+      return;
     }
+    const reply = t.closest("button.reply");
+    if (!reply) {
+      return;
+    }
+    const text = reply.textContent;
+    if (!text) {
+      return;
+    }
+    addReply(text);
+    inputEl.focus();
   });
 
   let color = $derived(numToHex(ctx.color));
-  const diffAndSendEl = (el: HTMLTextAreaElement) => {
-    const result = diff(message, el.value);
+  let sentmessage = $state("");
+  const diffAndSend = () => {
+    const result = diff(sentmessage, message);
     let idx = 0;
     result.forEach((d) => {
       switch (d[0]) {
@@ -56,25 +63,27 @@
           break;
       }
     });
-    message = el.value;
+    sentmessage = message;
   };
 
-  const bi = (event: InputEvent) => {
-    const el = event.target as HTMLInputElement;
-    switch (event.inputType) {
-      case "insertLineBreak": {
-        if (ctx.myMessage === undefined) {
-          event.preventDefault();
-          return;
-        }
-        ctx.insertLineBreak();
-        el.value = "";
-        event.preventDefault();
-        message = "";
+  const bi = (event: KeyboardEvent) => {
+    if (event.key === "Enter") {
+      if (event.shiftKey) {
         return;
       }
+      inputEl.style.height = "auto";
+      if (ctx.myMessage === undefined) {
+        event.preventDefault();
+        return;
+      }
+      ctx.insertLineBreak();
+      message = "";
+      event.preventDefault();
+      sentmessage = "";
+      return;
     }
   };
+
   const convertFileToImageItem = (blob: File) => {
     cancelimagepost();
     const blobUrl = URL.createObjectURL(blob);
@@ -97,16 +106,54 @@
     imageAlt = "";
     imageURL = undefined;
   };
+  let inputEl: HTMLTextAreaElement;
+  function adjustHeight() {
+    if (inputEl) {
+      const init = inputEl.style.height;
+      inputEl.style.height = inputEl.scrollHeight + "px";
+      if (inputEl.style.height !== init) {
+        const el: HTMLElement | null = document.getElementById("main-content");
+        if (el) {
+          console.log("scrolling here!");
+          setTimeout(() => {
+            el.scrollTo(0, el.scrollHeight + 1000);
+          }, 0);
+        }
+      }
+    }
+  }
+  function adjust(event: Event) {
+    diffAndSend();
+  }
+  $effect(() => {
+    message;
+    // we want to adjust height always, unless both the user has a
+    // blank message and there is a hash in the url (in that case, )
+    if (message === "" && location.hash !== "") {
+      return;
+    }
+    adjustHeight();
+  });
+  const pastifier = (event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (items === undefined) {
+      return;
+    }
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const blob = item.getAsFile();
+        if (blob === null) {
+          return;
+        }
+        event.preventDefault();
+        convertFileToImageItem(blob);
+      }
+    }
+  };
 </script>
 
-<svelte:window bind:innerWidth />
-
-<div id="transmitter">
-  <div
-    class="wrapper"
-    style:--theme={color}
-    style:font-size={isDesktop ? "2rem" : "1rem"}
-  >
+<div class="transmitter">
+  <div class="wrapper" style:--accent={color}>
     <input
       type="range"
       min="0"
@@ -115,7 +162,6 @@
       onchange={() => {
         ctx.setColor(ctx.color);
       }}
-      style:font-size={isDesktop ? "2rem" : "1rem"}
     />
     <AutoGrowInput
       bind:value={nick}
@@ -125,25 +171,40 @@
       onInput={setName}
       maxlength={12}
       bold={true}
-      fs={isDesktop ? "2rem" : "1rem"}
-    />@<AutoGrowInput
-      bind:value={handle}
-      placeholder="alice.com"
-      size={8}
-      onInput={setHandle}
-      maxlength={253}
-      bold={false}
-      fs={isDesktop ? "2rem" : "1rem"}
     />
+    <input type="checkbox" name="anon" />
+    <label for="anon">anon</label>
   </div>
-  <AutoGrowTextArea
-    placeholder="start typing..."
-    onBeforeInput={bi}
-    onInputEl={diffAndSendEl}
-    imageHandler={convertFileToImageItem}
-    maxlength={65535}
-    fs={isDesktop ? "2rem" : "1rem"}
-  />
+  <div class="autogrowwrapper">
+    <textarea
+      rows="1"
+      bind:value={message}
+      bind:this={inputEl}
+      maxlength={65535}
+      oninput={adjust}
+      onpaste={pastifier}
+      onkeydown={bi}
+      placeholder="start typing..."
+    ></textarea>
+    {#if message === ""}
+      <label class="media-upload-button" for="media-upload"
+        >...or upload an image</label
+      >
+      <input
+        onchange={(event) => {
+          if (
+            event.currentTarget.files &&
+            event.currentTarget.files.length > 0
+          ) {
+            convertFileToImageItem(event.currentTarget.files[0]);
+          }
+        }}
+        class="media-upload"
+        type="file"
+        accept="image/*"
+      />
+    {/if}
+  </div>
   {#if imageURL !== undefined}
     <div>
       <img bind:this={image} src={imageURL} alt={imageAlt} />
@@ -152,7 +213,6 @@
         placeholder="alt text"
         size={10}
         bold={false}
-        fs={isDesktop ? "2rem" : "1rem"}
       />
       <button onclick={cancelimagepost}> cancel </button>
       {#if ctx.myImageRef !== undefined}
@@ -163,25 +223,3 @@
     </div>
   {/if}
 </div>
-
-<style>
-  #transmitter {
-    flex-shrink: 0;
-  }
-  .wrapper {
-    position: relative;
-    display: inline-block;
-  }
-  .wrapper :first-child {
-    position: absolute;
-    left: 0px;
-    right: 0px;
-    top: -2rem;
-    bottom: 1em;
-    display: none;
-    accent-color: var(--theme);
-  }
-  .wrapper:focus-within :first-child {
-    display: inline-block;
-  }
-</style>

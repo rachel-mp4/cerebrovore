@@ -1,0 +1,8 @@
+DROP TABLE IF EXISTS image_posts;
+
+CREATE TABLE images (
+  post_id INTEGER PRIMARY KEY,
+  FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+  cid TEXT NOT NULL,
+  alt TEXT
+);

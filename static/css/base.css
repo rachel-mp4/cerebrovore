@@ -1,0 +1,366 @@
+/* Box sizing rules */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Prevent font size inflation */
+html {
+  -moz-text-size-adjust: none;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+}
+
+/* Remove default margin in favour of better control in authored CSS */
+body, h1, h2, h3, h4, p,
+figure, blockquote, dl, dd {
+  margin: 0;
+}
+
+/* Remove list styles on ul, ol elements with a list role, which suggests default styling will be removed */
+ul[role='list'],
+ol[role='list'] {
+  list-style: none;
+}
+
+/* Set core body defaults */
+body {
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+/* Balance text wrapping on headings */
+h1, h2,
+h3, h4 {
+  text-wrap: balance;
+}
+
+/* A elements that don't have a class get default styles */
+a:not([class]) {
+  text-decoration-skip-ink: auto;
+  color: currentColor;
+}
+
+/* Make images easier to work with */
+img,
+picture {
+  max-width: 100%;
+  display: block;
+}
+
+/* Inherit fonts for inputs and buttons */
+input, button,
+textarea, select {
+  font-family: inherit;
+  font-size: inherit;
+}
+
+/* Make sure textareas without a rows attribute are not tiny */
+textarea:not([rows]) {
+  min-height: 10em;
+}
+
+/* Anything that has been anchored to should have extra scroll margin */
+:target {
+  scroll-margin-block: 5ex;
+}
+
+:root {
+  --gbg: #ffffff; /*global background*/
+  --bg: var(--gbg); /*background*/
+  --gbl: #ffffff80; /*global background light*/
+  --bl: var(--gbl); /*background light*/
+  --gfg: #000000; /*global foreground*/
+  --fg: var(--gfg); /*foreground*/
+  --gfl: #00000080; /*global foreground light*/
+  --fl: var(--gfl); /*foreground light*/
+  --gprimary: #452faa; /*global primary*/
+  --primary: var(--gprimary); /*primary*/
+  --gsecondary: #fea2db; /*global secondary*/
+  --secondary: var(--gsecondary); /*secondary*/
+}
+@font-face {
+  font-family: 'SourceSans';
+  src: url('/font/SS3IVariable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: italic;
+  font-display: block;
+}
+@font-face {
+  font-family: 'SourceSans';
+  src: url('/font/SS3Variable.ttf') format('truetype');
+  font-weight: 200 900;
+  font-style: normal;
+  font-display: block;
+}
+
+body {
+  font-family: 'SourceSans';
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.tripartite {
+  display: grid;
+  grid-template-columns: 0fr 1fr 0fr;
+}
+
+#left-sidebar, #right-sidebar {
+  width: 18rem;
+}
+
+#main-content {
+  display: flex;
+  position: relative;
+  flex-direction: column;
+  height: 100vh;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+.transmitter {
+  background: linear-gradient(var(--bl), var(--bg));
+  position: sticky;
+  bottom: 0;
+}
+
+.media-upload {
+  display: none;
+}
+
+.media-upload-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  border: none;
+  color: var(--bl);
+  cursor: pointer;
+}
+
+.media-upload-button:hover {
+  font-weight: 700;
+}
+
+.autogrowwrapper textarea {
+  width: 100%;
+  font: inherit;
+  padding: 0;
+  margin: 0;
+  display: block;
+  resize: none;
+  border: none;
+  background: var(--fl);
+}
+
+.autogrowwrapper {
+  position: relative;
+}
+
+.autogrowwrapper::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--fg);
+  z-index: -1;
+}
+
+.receiver {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.transmitter {
+  flex-shrink: 0;
+}
+
+.transmitter .wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.transmitter .wrapper :first-child {
+  position: absolute;
+  left: 0px;
+  right: 0px;
+  top: -2rem;
+  bottom: 1em;
+  display: none;
+  accent-color: var(--accent);
+}
+
+.transmitter .wrapper:focus-within :first-child {
+  display: inline-block;
+}
+
+.active {
+  position: relative;
+  background-color: var(--accent);
+}
+
+.active.dark {
+  color: var(--fg);
+}
+
+.active.light {
+  color: var(--bg);
+}
+
+.active::before {
+  position: absolute;
+  content: "";
+  inset: 0;
+  z-index: -1;
+  background-color: var(--accent);
+}
+
+/* diff styles */
+.removed {
+  text-decoration: line-through var(--dg);
+}
+
+.appended {
+  color: var(--dg);
+}
+
+.transmission:not(:hover) .clickable {
+  display: none;
+}
+
+.header {
+  font-weight: 700;
+}
+
+.handle {
+  color: var(--fl);
+  position: relative;
+}
+
+.nick {
+  white-space: pre-wrap;
+}
+
+.transmission {
+  padding-bottom: 1rem;
+  margin-top: var(--margin);
+  font-size: var(--size);
+}
+
+.transmission:not(.active) .header {
+  color: var(--accent);
+}
+
+.body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+button {
+  background-color: transparent;
+  border: none;
+  color: var(--fg);
+  padding: 0;
+  cursor: pointer;
+}
+
+button:hover {
+  font-weight: 700;
+}
+
+.active {
+  position: relative;
+  background-color: var(--accent);
+}
+
+.active.dark {
+  color: var(--bg);
+}
+
+.active.light {
+  color: var(--fg);
+}
+
+.active::before {
+  position: absolute;
+  content: "";
+  inset: 0;
+  z-index: -1;
+  background-color: var(--accent);
+}
+
+.clickable {
+  color: var(--fl);
+  cursor: pointer;
+}
+
+.clickable:hover {
+  color: var(--fg);
+}
+
+.pinned {
+  order: 1;
+}
+
+.header {
+  font-weight: 700;
+}
+
+.nick {
+  white-space: pre-wrap;
+}
+
+.image-wrapper {
+  position: relative;
+}
+
+.image-wrapper[data-thumb] > img {
+  cursor: pointer;
+}
+
+/* gifs and thumbnails should be rendered nearest-neighbor */
+.image-wrapper:not([data-thumb]) > img, .image-wrapper.thumb > img {
+  image-rendering: crisp-edges;
+}
+
+.image-wrapper .bg-img {
+  position: absolute;
+  z-index: -1;
+}
+
+.image-wrapper .fg-img {
+  position: relative;
+  opacity: 0.5;
+}
+
+input {
+  background-color: transparent;
+  border: none;
+}
+
+.transmission > .footer {
+  font-size: .75em;
+}
+
+.transmission .body:has(a[href="/p/big"]) {
+  font-size: 2em;
+}
+
+.transmission .body:has(a[href="/p/small"]) {
+  font-size: 0.5em;
+}
+
+:is(a[href="/p/big"], a[href="/p/small"]) {
+  color: var(--gsecondary);
+}
+
+:is(a[href="/p/big"], a[href="/p/small"]):hover {
+  opacity: 0.5;
+}
+
+.body a {
+  font-weight: 600;
+}

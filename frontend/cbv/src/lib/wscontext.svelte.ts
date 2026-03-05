@@ -1,10 +1,11 @@
 import type * as cbv from "./types"
 import { isMessage, isImage, isMedia } from "./types"
+import { b36encodenumber } from "./utils"
 import * as lrc from '@rachel-mp4/lrcproto/gen/ts/lrc'
+import { numToHex } from "./colors"
 
 export class WSContext {
   existingindices: Map<number, boolean> = new Map()
-  existinguris: Map<string, string> = new Map()
   items: Array<cbv.Item> = $state(new Array())
   log: Array<cbv.LogItem> = $state(new Array())
   topic: string = $state("")
@@ -13,13 +14,11 @@ export class WSContext {
   ws: WebSocket | null = null
   color: number = $state(Math.floor(Math.random() * 16777216))
 
-  threadID: string
   nick: string = "wanderer"
-  handle: string = ""
   curMsg: string = $state("")
   myMessage: cbv.Message | undefined
   messageactive: boolean = false
-  myImageRef: string | undefined
+  myImageRef: string | undefined = $state()
   myImageNonce: string | undefined
   myMedia: cbv.Media | undefined
   mediaactive: boolean = false
@@ -27,10 +26,7 @@ export class WSContext {
   shouldTransmit: boolean = $state(true)
   lrceventqueue: Array<lrc.Edit> = []
 
-  constructor(threadID: string, defaultHandle: string, defaultNick: string, defaultColor: number) {
-    console.log(threadID)
-    this.threadID = threadID
-    this.handle = defaultHandle
+  constructor(defaultNick: string, defaultColor: number) {
     this.nick = defaultNick
     this.color = defaultColor
   }
@@ -72,6 +68,27 @@ export class WSContext {
     if (this.myMessage) {
       this.starttransmit()
       pubMessage(this)
+      let body = this.curMsg
+      const fd = new FormData()
+      fd.append("id", b36encodenumber(this.myMessage.id))
+      fd.append("color", numToHex(this.color))
+      fd.append("nick", this.nick)
+      fd.append("body", body)
+      if (this.myMessage.lrcdata?.init?.nonce) {
+        fd.append("nonce", b64encodebytearray(this.myMessage.lrcdata.init.nonce))
+      }
+      const endpoint = window.location.href
+      console.log("endpoint: ", endpoint)
+      fetch(endpoint, {
+        method: "POST",
+        body: fd,
+      }).then((response) => {
+        if (response.ok) {
+          console.log(response)
+        } else {
+          throw new Error(`HTTP ${response.status}`)
+        }
+      }).catch(console.error)
       this.myMessage = undefined
       this.messageactive = false
       this.curMsg = ""
@@ -89,8 +106,30 @@ export class WSContext {
   pubImage = (alt: string) => {
     if (this.myMedia) {
       if (this.myImageRef) {
-        const contentAddress = `TODO: come up with contentAddress scheme`
+        const contentAddress = `/blob?cid=${this.myImageRef}`
         pubImage(alt, contentAddress, this)
+        let body = this.curMsg
+        const fd = new FormData()
+        fd.append("id", b36encodenumber(this.myMedia.id))
+        fd.append("color", numToHex(this.color))
+        fd.append("nick", this.nick)
+        fd.append("cid", this.myImageRef)
+        fd.append("alt", alt)
+        if (this.myMedia.lrcdata?.init?.nonce) {
+          fd.append("nonce", b64encodebytearray(this.myMedia.lrcdata.init.nonce))
+        }
+        const endpoint = window.location.href
+        console.log("endpoint: ", endpoint)
+        fetch(endpoint, {
+          method: "POST",
+          body: fd,
+        }).then((response) => {
+          if (response.ok) {
+            console.log(response)
+          } else {
+            throw new Error(`HTTP ${response.status}`)
+          }
+        }).catch(console.error)
       } else {
         pubImage(alt, undefined, this)
       }
@@ -122,27 +161,27 @@ export class WSContext {
       this.mediaactive = true
       const uuid = crypto.randomUUID()
       const formData = new FormData()
-      formData.append("image", blob)
+      formData.append("file", blob)
       formData.append("uuid", uuid)
       this.myImageNonce = uuid
-      // fetch(`TODO: come up with imageUploadEndpoint`, {
-      //   method: "POST",
-      //   body: formData
-      // }).then((response) => {
-      //   if (response.ok) {
-      //     response.json().then((data) => {
-      //       if (this.myImageNonce === data.uuid) {
-      //         this.myImageRef = data.imageRef
-      //         this.myImageNonce = undefined
-      //         console.log("here's myImageRef")
-      //       } else {
-      //         console.error("nonce mismatch!!!")
-      //       }
-      //     })
-      //   } else {
-      //     throw new Error(`HTTP ${response.status}`)
-      //   }
-      // }).catch((err) => { console.log(err) })
+      fetch(`/blob`, {
+        method: "POST",
+        body: formData
+      }).then((response) => {
+        if (response.ok) {
+          response.json().then((data) => {
+            if (this.myImageNonce === data.uuid) {
+              this.myImageRef = data.cid
+              this.myImageNonce = undefined
+              console.log("here's myImageRef", this.myImageRef)
+            } else {
+              console.error("nonce mismatch!!!")
+            }
+          })
+        } else {
+          throw new Error(`HTTP ${response.status}`)
+        }
+      }).catch((err) => { console.log(err) })
     }
   }
 
@@ -175,9 +214,6 @@ export class WSContext {
   }
   setColor = (color: number) => {
     setColor(color, this)
-  }
-  setHandle = (handle: string) => {
-    setHandle(handle, this)
   }
 
   setTopic = (topic: string) => {
@@ -223,6 +259,7 @@ export class WSContext {
           muted: false,
           init: init,
         },
+        replies: []
       })
     }
   }
@@ -244,6 +281,7 @@ export class WSContext {
           muted: false,
           init: init,
         },
+        replies: []
       })
     }
   }
@@ -263,7 +301,8 @@ export class WSContext {
         lrcdata: {
           mine: false,
           muted: true,
-        }
+        },
+        replies: []
       })
     }
   }
@@ -285,6 +324,7 @@ export class WSContext {
           muted: false,
           body: "",
         },
+        replies: []
       })
     }
   }
@@ -312,6 +352,7 @@ export class WSContext {
           muted: false,
           pub: pub,
         },
+        replies: []
       })
     }
   }
@@ -335,6 +376,7 @@ export class WSContext {
           body: insertSIntoAStringAtIdx(s, "", idx),
           pub: false
         },
+        replies: []
       })
     }
   }
@@ -358,6 +400,7 @@ export class WSContext {
           body: deleteFromAStringBetweenIdxs("", idx1, idx2),
           pub: false
         },
+        replies: []
       })
     }
   }
@@ -370,10 +413,10 @@ export class WSContext {
   }
 }
 
-// this was for uploading nonce so that you could confirm anonymous posts
-// const b64encodebytearray = (u8: Uint8Array): string => {
-//   return btoa(String.fromCharCode(...u8))
-// }
+
+const b64encodebytearray = (u8: Uint8Array): string => {
+  return btoa(String.fromCharCode(...u8))
+}
 
 const insertSIntoAStringAtIdx = (s: string, a: string, idx: number) => {
   if (a === undefined) {
@@ -404,11 +447,27 @@ export const connectTo = (url: string, ctx: WSContext) => {
     getTopic(ctx)
     setNick(ctx.nick, ctx)
     setColor(ctx.color, ctx)
-    setHandle(ctx.handle, ctx)
   };
+  const el: HTMLElement | null = document.getElementById("main-content")
   ws.onmessage = (event) => {
     console.log(event)
-    parseEvent(event, ctx)
+    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
+      const shouldScroll = parseEvent(event, ctx)
+      if (shouldScroll !== 0) {
+        console.log("scrolling there")
+        setTimeout(() => {
+          el.scrollTo(0, el.scrollHeight)
+        }, 0)
+      }
+    } else {
+      const shouldScroll = parseEvent(event, ctx)
+      if (shouldScroll === 2) {
+        setTimeout(() => {
+          if (el) el.scrollTo(0, el.scrollHeight)
+        }, 0)
+
+      }
+    }
     // i wonder why i commented this? it looks correct NGL, oh i think i was doing some stuff with ShouldScroll
     // parseEvent used to return a bool
     // if (shouldScroll) {
@@ -442,7 +501,6 @@ export const initMessage = (ctx: WSContext) => {
       init: {
         nick: ctx.nick,
         color: ctx.color,
-        externalID: ctx.handle
       }
     }
   }
@@ -458,7 +516,6 @@ export const initImage = (ctx: WSContext) => {
       mediainit: {
         nick: ctx.nick,
         color: ctx.color,
-        externalID: ctx.handle
       }
     }
   }
@@ -600,19 +657,6 @@ export const setNick = (nick: string, ctx: WSContext) => {
   ctx.ws?.send(byteArray)
 }
 
-export const setHandle = (handle: string, ctx: WSContext) => {
-  ctx.handle = handle
-  const evt: lrc.Event = {
-    msg: {
-      oneofKind: "set",
-      set: {
-        externalID: handle
-      }
-    }
-  }
-  const byteArray = lrc.Event.toBinary(evt)
-  ctx.ws?.send(byteArray)
-}
 export const setColor = (color: number, ctx: WSContext) => {
   ctx.color = color
   const evt: lrc.Event = {
@@ -627,21 +671,21 @@ export const setColor = (color: number, ctx: WSContext) => {
   ctx.ws?.send(byteArray)
 }
 
-function parseEvent(binary: MessageEvent<any>, ctx: WSContext): boolean {
+function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
   const byteArray = new Uint8Array(binary.data);
   const event = lrc.Event.fromBinary(byteArray)
   switch (event.msg.oneofKind) {
     case "ping": {
-      return false;
+      return 0;
     }
 
     case "pong": {
-      return false
+      return 0
     }
 
     case "init": {
       const id = event.msg.init.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       const color = event.msg.init.color
       const nick = event.msg.init.nick
       const handle = event.msg.init.externalID
@@ -655,12 +699,12 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): boolean {
       }
       ctx.initMessage(id, init, mine)
       ctx.pushToLog(id, byteArray, "init")
-      return true
+      return mine ? 2 : 1
     }
 
     case "mediainit": {
       const id = event.msg.mediainit.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       const color = event.msg.mediainit.color
       const nick = event.msg.mediainit.nick
       const handle = event.msg.mediainit.externalID
@@ -674,59 +718,59 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): boolean {
       }
       ctx.initMedia(id, init, mine)
       ctx.pushToLog(id, byteArray, "init")
-      return true
+      return mine ? 2 : 1
     }
 
     case "pub": {
       const id = event.msg.pub.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       ctx.pubMessage(id)
       ctx.pushToLog(id, byteArray, "pub")
-      return false
+      return 0
     }
 
     case "mediapub": {
       const id = event.msg.mediapub.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       const pub: cbv.LrcMediaPub = {
         alt: event.msg.mediapub.alt ?? "",
         contentAddress: event.msg.mediapub.contentAddress
       }
       ctx.pubMedia(id, pub)
       ctx.pushToLog(id, byteArray, "pub")
-      return false
+      return 0
     }
 
     case "insert": {
       const id = event.msg.insert.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       ctx.pushToLog(id, byteArray, "insert")
       doinsert(id, event.msg.insert, ctx)
-      return false
+      return 1
     }
 
     case "delete": {
       const id = event.msg.delete.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       ctx.pushToLog(event.msg.delete.id ?? 0, byteArray, "delete")
       dodelete(id, event.msg.delete, ctx)
-      return false
+      return 1
     }
 
 
     case "mute": {
       const id = event.msg.mute.id ?? 0
-      if (id === 0) return false
+      if (id === 0) return 0
       ctx.initMute(id)
-      return false
+      return 0
     }
 
     case "unmute": {
-      return false
+      return 0
     }
 
     case "set": {
-      return false
+      return 0
     }
 
     case "get": {
@@ -736,14 +780,14 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): boolean {
       if (event.msg.get.topic !== undefined) {
         ctx.setTopic(event.msg.get.topic)
       }
-      return false
+      return 0
     }
     //TODO: better logging system so that way even non hrt messages
     // can have the background effect!
     case "editbatch": {
       const id = event.id ?? 0
       if (id === 0) {
-        return false
+        return 0
       }
       event.msg.editbatch.edits.forEach((edit: lrc.Edit) => {
         switch (edit.edit.oneofKind) {
@@ -757,12 +801,73 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): boolean {
           }
         }
       })
-      return false
+      return 1
 
+    }
+    case "replybatch": {
+      event.msg.replybatch.replies.forEach((reply: lrc.Reply) => {
+        switch (reply.reply.oneofKind) {
+          case "detachreply": {
+            dodetachreply(reply.reply.detachreply, ctx)
+            return
+          }
+          case "attachreply": {
+            doattachreply(reply.reply.attachreply, ctx)
+            return
+          }
+        }
+      })
+      return 1
     }
 
   }
-  return false
+  return 0
+}
+
+function dodetachreply(detach: lrc.DetachReply, ctx: WSContext) {
+  const from = detach.from
+  if (from == null) {
+    return
+  }
+  const to = detach.to
+  if (!ctx.existingindices.get(to)) {
+    console.log("manually detach me! unimplemented")
+    return
+  }
+  ctx.items = ctx.items.map((item) => {
+    return (item.id !== to) ? item : { ...item, replies: item.replies.filter((id) => id !== from) }
+  })
+}
+
+function doattachreply(attach: lrc.AttachReply, ctx: WSContext) {
+  const from = attach.from
+  if (from == null) {
+    return
+  }
+  const to = attach.to
+  if (!ctx.existingindices.get(to)) {
+    const toel = document.getElementById(b36encodenumber(to))
+    if (!toel) {
+      console.log("i can't find to")
+      return
+    }
+    const toelf = toel.querySelector(".footer")
+    if (!toelf) {
+      console.log("i can't find toelf")
+      return
+    }
+    if (toelf.childNodes) {
+      const tn = document.createTextNode(" ")
+      toelf.appendChild(tn)
+    }
+    const el = document.createElement("a")
+    el.href = `/p/${b36encodenumber(from)}`
+    el.innerText = `#${b36encodenumber(from)}`
+    toelf.appendChild(el)
+  }
+  ctx.items = ctx.items.map((item) => {
+    return (item.id !== to) ? item : { ...item, replies: [...item.replies, from] }
+  })
 }
 
 function doinsert(id: number, insert: lrc.Insert, ctx: WSContext) {
