@@ -6,10 +6,10 @@
   }
   let { items }: Props = $props();
   let bumpOrder = $derived(
-    items.toSorted((a: WatchThread, b: WatchThread) => a.bumpedAt - b.bumpedAt),
+    items.toSorted((a: WatchThread, b: WatchThread) => b.bumpedAt - a.bumpedAt),
   );
   let bumpsOrder = $derived(
-    items.toSorted((a: WatchThread, b: WatchThread) => a.bumps - b.bumps),
+    items.toSorted((a: WatchThread, b: WatchThread) => b.bumps - a.bumps),
   );
   let usingBumpOrdering = $state(true);
   const button = document.querySelector(

@@ -2,6 +2,15 @@
 {{if .Thread.Topic}}
 <h1 class="thread-topic">{{.Thread.Topic}}</h1>
 {{end}}
+{{if .Watched}}
+<form action="/u/{{idtoa .Thread.ID}}" method="POST">
+<input type="submit">unwatch</input>
+</form>
+{{else}}
+<form action="/w/{{idtoa .Thread.ID}}" method="POST">
+<input type="submit">watch</input>
+</form>
+{{end}}
 <div id="eats-ur-brain">
 {{range .Thread.Posts}}
   {{template "post" .}}

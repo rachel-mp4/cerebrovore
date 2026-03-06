@@ -45,6 +45,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp withIdenti
 	mux.HandleFunc("POST /t/{ntid}", h.AM(h.postPost))
 	mux.HandleFunc("GET /t/{ntid}", h.AM(h.getThread))
 	mux.HandleFunc("GET /p/{npid}", h.AM(h.getPost))
+	mux.HandleFunc("POST /w/{ntid}", h.AM(h.watchThread))
+	mux.HandleFunc("POST /u/{ntid}", h.AM(h.unwatchThread))
 	mux.HandleFunc("GET /t/{ntid}/ws", h.AM(h.getThreadWS))
 	mux.HandleFunc("GET /new", h.AM(h.newThread))
 	mux.Handle("GET /css/", http.FileServer(http.Dir("./static")))

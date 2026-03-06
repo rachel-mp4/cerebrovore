@@ -399,7 +399,8 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 		h.m.AddBacklinks(tid, batch)
 	}
-
+	log.Println("notifying!")
+	h.m.NotifyWatchers(tid)
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }
 
@@ -438,6 +439,10 @@ func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) 
 }
 
 func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
@@ -455,6 +460,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	title := ntid
+	watched := h.db.IsWatched(c.Username, tid, r.Context())
 
 	type getthreadresp struct {
 		Title          string
@@ -463,6 +469,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		Threads        []types.Thread
 		ThreadsCursor  *time.Time
 		CompiledAssets *CompiledAssets
+		Watched        bool
 	}
 	gtr := getthreadresp{
 		Title:          title,
@@ -471,6 +478,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		Threads:        tt,
 		ThreadsCursor:  ttcrsr,
 		CompiledAssets: h.ca,
+		Watched:        watched,
 	}
 	err = threadT.ExecuteTemplate(w, "base", gtr)
 	if err != nil {
@@ -502,6 +510,7 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
 	}
 	ids, err := h.db.GetWatchedThreads(c.Username, r.Context())
 	if err != nil {
@@ -509,7 +518,50 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 		http.Error(w, "error finding watched threads", http.StatusInternalServerError)
 		return
 	}
+
+	log.Println("watched threads got! getting handler")
 	f := h.m.GetThreadSocketHandler(ids)
 	f(w, r)
 
+}
+
+func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	log.Println("watching")
+	err = h.db.WatchThread(c.Username, tid, r.Context())
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "error watching thread", http.StatusInternalServerError)
+		return
+	}
+	log.Println("watched")
+	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+}
+
+func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	err = h.db.UnwatchThread(c.Username, tid, r.Context())
+	if err != nil {
+		http.Error(w, "error watching thread", http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }

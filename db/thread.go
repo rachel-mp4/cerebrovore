@@ -304,7 +304,23 @@ func (m *MockStore) GetWatchedThreads(username string, ctx context.Context) ([]u
 }
 
 func (s *Store) GetWatchedThreads(username string, ctx context.Context) ([]uint32, error) {
-	return nil, nil
+	rows, err := s.pool.Query(ctx, `
+		SELECT thread_id FROM watched_threads WHERE username = $1
+		`, username)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]uint32, 0)
+	defer rows.Close()
+	for rows.Next() {
+		var v uint32
+		err := rows.Scan(&v)
+		if err != nil {
+			return nil, err
+		}
+		res = append(res, v)
+	}
+	return res, nil
 }
 
 func (m *MockStore) WatchThread(username string, id uint32, ctx context.Context) error {
@@ -312,14 +328,32 @@ func (m *MockStore) WatchThread(username string, id uint32, ctx context.Context)
 }
 
 func (s *Store) WatchThread(username string, id uint32, ctx context.Context) error {
-	return nil
+	_, err := s.pool.Exec(ctx, `
+		INSERT INTO watched_threads (username, thread_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+		`, username, id)
+	return err
 }
 
 func (s *Store) UnwatchThread(username string, id uint32, ctx context.Context) error {
-	return nil
+	_, err := s.pool.Exec(ctx, `
+		DELETE FROM watched_threads WHERE username = $1 AND thread_id = $2
+		`, username, id)
+	return err
 }
 
 func (m *MockStore) UnwatchThread(username string, id uint32, ctx context.Context) error {
 
 	return nil
+}
+
+func (s *Store) IsWatched(username string, id uint32, ctx context.Context) bool {
+	row := s.pool.QueryRow(ctx, `
+		SELECT * FROM watched_threads WHERE username = $1 AND thread_id = $2
+		`, username, id)
+	err := row.Scan(&username, &id)
+	return err == nil
+}
+
+func (m *MockStore) IsWatched(username string, id uint32, ctx context.Context) bool {
+	return false
 }

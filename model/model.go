@@ -6,6 +6,7 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rachel-mp4/cerebrovore/types"
 	lrcpb "github.com/rachel-mp4/lrcproto/gen/go"
+	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -34,7 +35,7 @@ func NewModel(threads []types.Thread, mid uint32) *Model {
 // that already existed, for use in model initialization,
 // reading from database
 func (m *Model) recreateThread(thread types.Thread) {
-	rt := &threadModel{topic: thread.Topic, id: thread.ID}
+	rt := &threadModel{topic: thread.Topic, id: thread.ID, watchers: make(map[*watcher]bool)}
 	m.tmap[thread.ID] = rt
 }
 
@@ -44,7 +45,7 @@ func (m *Model) AddThread(topic *string) uint32 {
 	m.tmapmu.Lock()
 	defer m.tmapmu.Unlock()
 	threadID := m.getIDAllocator()()
-	nt := &threadModel{id: threadID, topic: topic}
+	nt := &threadModel{id: threadID, topic: topic, watchers: make(map[*watcher]bool)}
 	m.tmap[threadID] = nt
 	return threadID
 }
@@ -117,10 +118,13 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	for w := range tm.watchers {
 		select {
 		case w.ch <- watchEvent{tm.topic, forID}:
+			log.Println("send")
 		case <-w.ctx.Done():
 			delete(tm.watchers, w)
+			log.Println("delete from ctx")
 		default:
 			delete(tm.watchers, w)
+			log.Println("delete")
 		}
 	}
 	tm.watchersmu.Unlock()
@@ -151,6 +155,7 @@ func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 			tm.watchersmu.Lock()
 			tm.watchers[watcher] = true
 			tm.watchersmu.Unlock()
+			log.Println("attach!")
 		}
 		m.tmapmu.Unlock()
 		watcher.watch()

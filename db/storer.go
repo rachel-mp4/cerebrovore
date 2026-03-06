@@ -24,9 +24,12 @@ type Storer interface {
 	GetRecentThreads(before *uint32, limit int, ctx context.Context) ([]types.Thread, *uint32, error)
 	GetBumpedThreads(before *time.Time, limit int, ctx context.Context) ([]types.Thread, *time.Time, error)
 	GetThread(id uint32, before *uint32, limit int, ctx context.Context) (*types.Thread, *uint32, error)
+
+	// watch methods
 	GetWatchedThreads(username string, ctx context.Context) ([]uint32, error)
 	WatchThread(username string, id uint32, ctx context.Context) error
 	UnwatchThread(username string, id uint32, ctx context.Context) error
+	IsWatched(username string, id uint32, ctx context.Context) bool
 
 	// post methods
 	CreatePost(post *types.Post, ctx context.Context) ([]Backlink, error)
