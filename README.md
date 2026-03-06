@@ -12,7 +12,7 @@ initial setup
 5. copy over environment variables from example, changing stuff & generating
    secrets as desired
 6. `docker compose up -d`
-7. `./migrate`
+7. `./migrateup`
 8. `cd frontend/cbv`
 9. `npm install`
 
