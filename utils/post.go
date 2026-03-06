@@ -43,6 +43,7 @@ func RenderTextBody(s string) template.HTML {
 	return template.HTML(out.String())
 }
 
+// for some reason i felt like this was stupid a few days ago...
 func RenderImageBody(cid string, alt *string) template.HTML {
 	var out strings.Builder
 	isgif := strings.HasSuffix(cid, ".gif")

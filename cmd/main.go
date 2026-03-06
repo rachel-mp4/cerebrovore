@@ -14,21 +14,6 @@ import (
 	"github.com/rachel-mp4/cerebrovore/model"
 )
 
-type Manifest struct {
-	Chat struct {
-		File string   `json:"file"`
-		CSS  []string `json:"css,omitempty"`
-	} `json:"src/chat.ts"`
-	Beep struct {
-		File string   `json:"file"`
-		CSS  []string `json:"css,omitempty"`
-	} `json:"src/beep.ts"`
-	Watcher struct {
-		File string   `json:"file"`
-		CSS  []string `json:"css,omitempty"`
-	} `json:"src/watcher.ts"`
-}
-
 func main() {
 	fmt.Println("*eats ur brain*")
 	err := godotenv.Load(".env")
@@ -41,6 +26,9 @@ func main() {
 	idp := flag.Bool("idp", false, "doesn't mock the id provider")
 	flag.Parse()
 	var ca *handler.CompiledAssets
+	// if not doing hot module replacement, we must read the manifest to figure out
+	// where the required scripts are, so that way we can link them accordingly when
+	// we template our html
 	if *cold {
 		manifest, err := os.ReadFile("./frontend/dist/.vite/manifest.json")
 		if err != nil {
@@ -82,10 +70,17 @@ func main() {
 		store = mockstore
 	}
 
+	// in order to initialize our model of the threads, we need to get
+	// all threads. in truth this should be get all threads that haven't
+	// hit post limit, but the post limit does not yet exist
 	threads, err := store.GetAllThreads(context.Background())
 	if err != nil {
 		panic(err)
 	}
+	// we also need the max id in order to allocate post ids properly
+	// cross site. i'm not sure if this is exactly ideal, because it
+	// couples all the threads, but it seems cool + you have to make
+	// dumb decisions to learn
 	mid, err := store.GetMaxPostId(context.Background())
 	if err != nil {
 		panic(err)
@@ -93,4 +88,21 @@ func main() {
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, *idp)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
+}
+
+// Manifest is a json file generated when we compile our frontend
+// that maps out where the scripts and css ended up
+type Manifest struct {
+	Chat struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/chat.ts"`
+	Beep struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/beep.ts"`
+	Watcher struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/watcher.ts"`
 }

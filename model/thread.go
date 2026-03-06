@@ -22,6 +22,17 @@ type threadModel struct {
 	watchersmu sync.Mutex
 }
 
+// newThreadModel creates a new thread model. it does not create or start
+// an lrc server
+func newThreadModel(id uint32, topic *string) *threadModel {
+	return &threadModel{
+		id:       id,
+		topic:    topic,
+		watchers: make(map[*watcher]bool),
+	}
+}
+
+// GetWSHandler returns the wshandler for an lrc server, if it exists
 func (tm *threadModel) GetWSHandler() (http.HandlerFunc, error) {
 	if tm.server == nil {
 		return nil, ErrServerDNE
@@ -62,6 +73,8 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	return nil
 }
 
+// destroyServer stops a server, returning an error
+// if there was some issue stopping it (likely it was already stopped)
 func (tm *threadModel) destroyServer() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
@@ -74,4 +87,17 @@ func (tm *threadModel) destroyServer() error {
 	}
 	tm.server = nil
 	return nil
+}
+
+// kawaiiDestroyServer only kills the server if it's empty uwu
+func (tm *threadModel) kawaiiDestroyServer() {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	if tm.server == nil {
+		return
+	}
+	stopped := tm.server.StopIfEmpty()
+	if stopped {
+		tm.server = nil
+	}
 }

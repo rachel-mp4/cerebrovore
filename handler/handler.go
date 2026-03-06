@@ -199,7 +199,8 @@ type Client struct {
 	Username string
 }
 
-// AM is an auth middleware function that reads from our cookiestore
+// AM is an auth middleware function that reads from our cookiestore and validates
+// it with the database
 func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s, _ := h.sessionStore.Get(r, "session")
@@ -210,8 +211,8 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			return
 		}
 		// check that they haven't been logged out
-		_, err := h.db.RetrieveSession(id, r.Context())
-		if err != nil {
+		whynotcheck, err := h.db.RetrieveSession(id, r.Context())
+		if err != nil || username != whynotcheck {
 			s.Options.MaxAge = -1
 			s.Save(r, w)
 			f(nil, w, r)
@@ -222,6 +223,9 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 	}
 }
 
+// Add1YCache is a middleware function to add a header to cache our
+// response for up to a year. only use this on things that definitely
+// never will change, like font or maybe blobs
 func Add1YCache(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000")

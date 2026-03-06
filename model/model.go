@@ -17,24 +17,45 @@ type Model struct {
 	tmap   map[uint32]*threadModel
 
 	id  uint32
-	pid uint32 // "prestige" id
+	pid uint32 // "prestige" id // lol what drugs was i onnnnnn
 }
 
 // NewModel creates and initializes a new Model, returning it
-func NewModel(threads []types.Thread, mid uint32) *Model {
-	m := &Model{id: mid}
+func NewModel(threads []types.Thread, maxid uint32) *Model {
+	m := &Model{id: maxid}
 	m.tmap = make(map[uint32]*threadModel, len(threads))
 	for _, thread := range threads {
 		m.recreateThread(thread)
 	}
+	go cleaner(m)
 	return m
+}
+
+// cleaner cleans up any empty servers every 10 minutes, i just
+// picked the time scale at random. i prefer for it to not be
+// immediate just because that way you can't constantly create
+// and destroy servers by constantly refreshing some empty
+// thread. cleaner is a bit of a costly operation, maybe there's
+// a better way of doing this, but it's fine for now
+func cleaner(m *Model) {
+	ticker := time.NewTicker(10 * time.Minute)
+	for {
+		select {
+		case <-ticker.C:
+			m.tmapmu.Lock()
+			defer m.tmapmu.Unlock()
+			for _, tm := range m.tmap {
+				tm.kawaiiDestroyServer()
+			}
+		}
+	}
 }
 
 // recreateThread is an internal function to recreateThreads
 // that already existed, for use in model initialization,
 // reading from database
 func (m *Model) recreateThread(thread types.Thread) {
-	rt := &threadModel{topic: thread.Topic, id: thread.ID, watchers: make(map[*watcher]bool)}
+	rt := newThreadModel(thread.ID, thread.Topic)
 	m.tmap[thread.ID] = rt
 }
 
@@ -44,11 +65,12 @@ func (m *Model) AddThread(topic *string) uint32 {
 	m.tmapmu.Lock()
 	defer m.tmapmu.Unlock()
 	threadID := m.getIDAllocator()()
-	nt := &threadModel{id: threadID, topic: topic, watchers: make(map[*watcher]bool)}
+	nt := newThreadModel(threadID, topic)
 	m.tmap[threadID] = nt
 	return threadID
 }
 
+// DeleteThread deletes a thread after destroying it's server
 func (m *Model) DeleteThread(threadID uint32) error {
 	m.tmapmu.Lock()
 	defer m.tmapmu.Unlock()
@@ -64,16 +86,7 @@ func (m *Model) DeleteThread(threadID uint32) error {
 	return nil
 }
 
-func (m *Model) GetThread(threadID uint32) error {
-	m.tmapmu.Lock()
-	defer m.tmapmu.Unlock()
-	_, ok := m.tmap[threadID]
-	if !ok {
-		return ErrThreadDNE
-	}
-	return nil
-}
-
+// GetThreadWSHandler gets the ws handler for a thread's lrc server
 func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 	m.tmapmu.Lock()
 	defer m.tmapmu.Unlock()
@@ -94,11 +107,16 @@ func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 	return handler, nil
 }
 
+// watchEvent represents a bump happening in a thread that a user
+// watches; it gets sent on threadsocket to anyone connected
 type watchEvent struct {
 	Topic *string `json:"topic,omitempty"`
 	ID    uint32  `json:"id"`
 }
 
+// watcher represents an open thread watcher connection, this is
+// created for basically every tab that you have open of the site,
+// since ATM like all the templates involve the list of threads
 type watcher struct {
 	conn   *websocket.Conn
 	ch     chan watchEvent
@@ -106,6 +124,8 @@ type watcher struct {
 	cancel context.CancelFunc
 }
 
+// NotifyWatchers notifies all online watchers of a thread that a
+// bump just occurred
 func (m *Model) NotifyWatchers(forID uint32) {
 	m.tmapmu.Lock()
 	tm, ok := m.tmap[forID]
@@ -119,6 +139,10 @@ func (m *Model) NotifyWatchers(forID uint32) {
 		case w.ch <- watchEvent{tm.topic, forID}:
 		case <-w.ctx.Done():
 			delete(tm.watchers, w)
+		// maybe not necessary to delete a connection in this case,
+		// however i think that things get written quickly, and the channel
+		// is buffered, so i'm assuming they disconnected but the context
+		// isn't done for some reason
 		default:
 			delete(tm.watchers, w)
 		}
@@ -126,6 +150,8 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	tm.watchersmu.Unlock()
 }
 
+// GetThreadSocketHandler gets the websocket handler for a given user's
+// collection of threadIDs that they are watching
 func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := &websocket.Upgrader{
@@ -157,6 +183,7 @@ func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 	}
 }
 
+// watch writes events to a watcher's threadsocket
 func (w *watcher) watch() {
 	defer w.cancel()
 	ticker := time.NewTicker(15 * time.Second)
@@ -178,6 +205,7 @@ func (w *watcher) watch() {
 	}
 }
 
+// AddBacklinks tells the lrc server to send a batch of replies to all lrc connections
 func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {
 	tm, ok := m.tmap[threadID]
 	if !ok {

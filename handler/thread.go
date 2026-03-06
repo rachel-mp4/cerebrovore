@@ -182,6 +182,8 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		http.Error(w, "encountered an error 2", http.StatusInternalServerError)
 	}
+	// i'm not really sure why there's a uuid, but i remember a few months ago
+	// being certain it was necessary. not gonna think too hard about it haha
 	type blobresp struct {
 		CID  string `json:"cid"`
 		UUID string `json:"uuid"`
@@ -193,6 +195,12 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// genThumbnail generates a thumnail for a given content id that
+// is currently in our uploads folder. i save it as png, and since it should
+// already have an extension in the cid, the final path for the thumbanil
+// should look like "uploads/74d/670818d4421f572b6.jpeg.png". this way i can
+// easily find the thumbnail when user requests it by just appending .png to
+// the content id
 func genThumbnail(cid string) error {
 	dir := filepath.Join("uploads", cid[:3], cid[3:])
 	file, err := os.Open(dir)
@@ -212,6 +220,7 @@ func genThumbnail(cid string) error {
 
 func saveFileToContentAddress(file multipart.File) (cid string, err error, code int) {
 	defer file.Close()
+	// read first 512 byte into a buffer, so we can detect content type
 	buf := make([]byte, 512)
 	n, err := io.ReadFull(file, buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
@@ -225,8 +234,10 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 		return
 	}
 
+	// want to hash file so we can store it as content address
 	hasher := sha256.New()
 
+	// remember to include the first up to 512 byte in hash
 	_, err = hasher.Write(buf[:n])
 	if err != nil {
 		code = http.StatusInternalServerError
@@ -239,9 +250,14 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 	}
 
 	hash := hasher.Sum(nil)
+	// sha256 = 64 hex encode bytes
 	hexhash := make([]byte, 64)
 	hex.Encode(hexhash, hash)
+	// only include first 20 hex encode bytes, since that's more than
+	// enough and we have prettier url
 	cid = fmt.Sprintf("%s%s", string(hexhash)[:20], ext)
+	// nested directory structure for content id means that we don't have every
+	// single file in one directory, maybe this is better or something
 	dir := filepath.Join("uploads", cid[:3])
 	err = os.MkdirAll(dir, 0755)
 	if err != nil {
@@ -268,18 +284,22 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 		code = http.StatusInternalServerError
 		return
 	}
+	// full path is uploads > first 3 of hex encode hash > next 17 of hex encode hash .ext
 	path := filepath.Join(dir, cid[3:])
 	_, err = os.Stat(path)
+	// err == nil => we already have this file
 	if err == nil {
 		os.Remove(out.Name())
 		return
 	} else if !os.IsNotExist(err) {
+		// we want the is not exist error so we can make it exist
 		code = http.StatusInternalServerError
 		return
 	}
 	err = os.Link(out.Name(), path)
 	if err != nil {
 		if os.IsExist(err) {
+			// perhaps there's a race here, seems kinda unlikely
 			os.Remove(out.Name())
 			err = nil
 			return
@@ -495,11 +515,6 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 	tid, err := utils.AToID(ntid)
 	if err != nil {
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
-		return
-	}
-	err = h.m.GetThread(uint32(tid))
-	if err != nil {
-		http.Error(w, "thread does not exist", http.StatusNotFound)
 		return
 	}
 	f, err := h.m.GetThreadWSHandler(uint32(tid))
