@@ -6,7 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 	"github.com/rachel-mp4/cerebrovore/types"
 	lrcpb "github.com/rachel-mp4/lrcproto/gen/go"
-	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
@@ -118,13 +117,10 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	for w := range tm.watchers {
 		select {
 		case w.ch <- watchEvent{tm.topic, forID}:
-			log.Println("send")
 		case <-w.ctx.Done():
 			delete(tm.watchers, w)
-			log.Println("delete from ctx")
 		default:
 			delete(tm.watchers, w)
-			log.Println("delete")
 		}
 	}
 	tm.watchersmu.Unlock()
@@ -155,7 +151,6 @@ func (m *Model) GetThreadSocketHandler(threadIDs []uint32) http.HandlerFunc {
 			tm.watchersmu.Lock()
 			tm.watchers[watcher] = true
 			tm.watchersmu.Unlock()
-			log.Println("attach!")
 		}
 		m.tmapmu.Unlock()
 		watcher.watch()

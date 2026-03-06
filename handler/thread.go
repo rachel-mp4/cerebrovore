@@ -40,7 +40,12 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	// so we check just in case maybe it's a nil slice for some strange reason,
 	// if form is filled out correctly the first entry in slice is what we want
 	if ok && len(topic) > 0 {
-		thread.Topic = &(topic[0])
+		maxlen := len("brevity is the soul of wit")
+		mytopic := topic[0]
+		if len(topic) > maxlen {
+			mytopic = mytopic[:maxlen]
+		}
+		thread.Topic = &mytopic
 	}
 	thread.OP.Username = c.Username
 	_, ok = r.MultipartForm.Value["anon"]
@@ -399,7 +404,6 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 		h.m.AddBacklinks(tid, batch)
 	}
-	log.Println("notifying!")
 	h.m.NotifyWatchers(tid)
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }
@@ -454,7 +458,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
 	}
-	tt, ttcrsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
+	tt, ttcrsr, err := h.db.GetBumpedThreads(nil, 5, r.Context())
 	if err != nil {
 		http.Error(w, "failed to get threads", http.StatusInternalServerError)
 		return
@@ -519,7 +523,6 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	log.Println("watched threads got! getting handler")
 	f := h.m.GetThreadSocketHandler(ids)
 	f(w, r)
 
@@ -536,14 +539,12 @@ func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	log.Println("watching")
 	err = h.db.WatchThread(c.Username, tid, r.Context())
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "error watching thread", http.StatusInternalServerError)
 		return
 	}
-	log.Println("watched")
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }
 

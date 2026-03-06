@@ -165,26 +165,67 @@ body {
   flex-direction: column;
   align-items: flex-end;
   justify-content: center;
+  width: 100%;
+}
+
+#watched-threads button {
+  position: relative;
+}
+
+#watched-threads button:hover {
+  color: transparent;
+}
+
+#watched-threads button:hover::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: -3rem;
+  text-align:right;
+  content: 'sort by total activity';
+  overflow: visible;
+  color: var(--fg);
+
+}
+
+#watched-threads button.total-activity:hover::before {
+  content: 'sort by recent activity'
+}
+
+.watched-thread {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
 }
 
 #left-sidebar {
+  position: relative;
+  padding-right: 4px;
+  overflow-y: hidden;
+}
+
+#left-sidebar::after {
+  content: '';
+  position: absolute;
+  z-index: -2;
+  left: 0;
+  right:0;
+  top:-50%;
+  bottom:-50%;
   background: linear-gradient(0deg, var(--fg) 50%, transparent 50%);
   background-repeat: repeat-y;
   background-size: 4px 16px;
-  background-position: 100% 100%;
-  padding-right: 4px;
+  background-position: 100% 0;
   animation: animate-up 128s infinite linear;
-  transition-duration: 2s;
-  transition-property: animation-duration;
 }
 
 @keyframes animate-up {
   from {
-    background-position: 100% 100%;
+    transform: translateY(25%);
   }
 
   to {
-    background-position: 100% 0%;
+    transform: translateY(-25%);
   }
 }
 
@@ -443,7 +484,3 @@ input {
   font-weight: 600;
 }
 
-.watched-thread {
-  display: flex;
-  justify-content: space-between;
-}

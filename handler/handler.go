@@ -7,6 +7,7 @@ import (
 	"github.com/rachel-mp4/cerebrovore/types"
 	"log"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -57,7 +58,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp withIdenti
 	h.mux = mux
 	h.ca = ca
 	h.m = m
-	sessionStore := sessions.NewCookieStore([]byte("//TODO: FIX ME AAAAAAA"))
+	sessionStore := sessions.NewCookieStore([]byte(os.Getenv("SESSION_KEY")))
 	h.sessionStore = sessionStore
 	h.db = db
 	h.idp = idp
