@@ -4,6 +4,7 @@ export type WatchThread = {
   topic?: string
   bumps: number
   bumpedAt: number
+  bumpLimit: boolean
 }
 
 export type Item = Message | Media | Enby

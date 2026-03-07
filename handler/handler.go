@@ -4,11 +4,9 @@ import (
 	"github.com/gorilla/sessions"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/model"
-	"github.com/rachel-mp4/cerebrovore/types"
 	"log"
 	"net/http"
 	"os"
-	"time"
 )
 
 type Handler struct {
@@ -35,12 +33,14 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp withIdenti
 	h := Handler{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", h.AM(h.home))
+	// mux.HandleFunc("GET /catalog", h.AM(h.catalog))
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /callback", h.callback)
 	mux.HandleFunc("GET /beep", h.beep)
 	mux.HandleFunc("GET /ts", h.AM(h.getThreadSocket))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
+	mux.HandleFunc("GET /t", h.AM(h.threads))
 	mux.HandleFunc("POST /blob", h.AM(h.postBlob))
 	mux.HandleFunc("GET /blob", h.AM(h.getBlob))
 	mux.HandleFunc("POST /t/{ntid}", h.AM(h.postPost))
@@ -76,18 +76,20 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type homeresp struct {
-		Title          string
-		ThreadsCursor  *time.Time
-		Threads        []types.Thread
-		CompiledAssets *CompiledAssets
+		baseresp
 	}
-	tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
+	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
+		return
 	}
-	err = homeT.ExecuteTemplate(w, "base", homeresp{"brainworm",
-		crsr, tt, h.ca,
+	err = homeT.ExecuteTemplate(w, "base", homeresp{
+		baseresp{
+			h.ca,
+			"brainworm",
+			tt,
+		},
 	})
 	if err != nil {
 		log.Println(err)
@@ -100,19 +102,21 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	type homeresp struct {
-		Title          string
-		ThreadsCursor  *time.Time
-		Threads        []types.Thread
-		CompiledAssets *CompiledAssets
+	type ntresp struct {
+		baseresp
 	}
-	tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
+	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
+		return
 	}
-	err = newthreadT.ExecuteTemplate(w, "base", homeresp{"new thread",
-		crsr, tt, h.ca,
+	err = newthreadT.ExecuteTemplate(w, "base", ntresp{
+		baseresp{
+			h.ca,
+			"new thread",
+			tt,
+		},
 	})
 	if err != nil {
 		log.Println(err)
@@ -123,19 +127,20 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	if h.idp == false {
 		type loginresp struct {
-			Title          string
-			ThreadsCursor  *time.Time
-			Threads        []types.Thread
-			CompiledAssets *CompiledAssets
+			baseresp
 		}
-		tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
+		tt, err := h.db.GetBumps(r.Context())
 		if err != nil {
 			log.Println(err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
 			return
 		}
-		err = mockloginT.ExecuteTemplate(w, "base", loginresp{"login",
-			crsr, tt, h.ca,
+		err = mockloginT.ExecuteTemplate(w, "base", loginresp{
+			baseresp{
+				h.ca,
+				"login",
+				tt,
+			},
 		})
 		if err != nil {
 			log.Println(err)
@@ -171,20 +176,19 @@ func (h *Handler) callback(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) beep(w http.ResponseWriter, r *http.Request) {
 	type beepresp struct {
-		Title          string
-		CompiledAssets *CompiledAssets
-		ThreadsCursor  *time.Time
-		Threads        []types.Thread
+		baseresp
 	}
-	tt, crsr, err := h.db.GetBumpedThreads(nil, 10, r.Context())
+	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
 		log.Println(err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 	}
-	beepT.ExecuteTemplate(w, "base", beepresp{"beep",
-		h.ca,
-		crsr,
-		tt,
+	beepT.ExecuteTemplate(w, "base", beepresp{
+		baseresp{
+			h.ca,
+			"beep",
+			tt,
+		},
 	})
 }
 
@@ -231,5 +235,4 @@ func Add1YCache(h http.Handler) http.Handler {
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
 		h.ServeHTTP(w, r)
 	})
-
 }

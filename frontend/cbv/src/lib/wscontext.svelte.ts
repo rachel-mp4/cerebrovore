@@ -469,8 +469,8 @@ export const connectTo = (url: string, ctx: WSContext) => {
       }
     }
   };
-  ws.onclose = () => {
-    console.log("closed")
+  ws.onclose = (e) => {
+    console.log(e)
     if (ws === ctx.ws) {
       ctx.connected = false
     }
@@ -480,7 +480,6 @@ export const connectTo = (url: string, ctx: WSContext) => {
     console.log("readyState:", ws.readyState)
     if (ws === ctx.ws) {
       ctx.connected = false
-      // probably i should retry with exp backoff or something
     }
   }
   ctx.ws = ws

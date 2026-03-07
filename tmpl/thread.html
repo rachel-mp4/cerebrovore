@@ -16,6 +16,9 @@
   {{template "post" .}}
 {{end}}
 </div>
+{{if .Archived}}
+<div>[reply limit hit; thread archived]</div>
+{{else}}
 {{if .CompiledAssets}}
 <script type="module" src="/{{.CompiledAssets.ChatPath}}"></script>
 {{range .CompiledAssets.ChatCss}}
@@ -23,6 +26,7 @@
 {{end}}
 {{else}}
 <script type="module" src="http://localhost:5173/src/chat.ts"></script>
+{{end}}
 <script src="/js/links.js"></script>
 <script src="/js/thumb.js"></script>
 {{end}}

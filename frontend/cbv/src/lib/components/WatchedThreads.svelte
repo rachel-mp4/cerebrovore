@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { b36encodenumber } from "../utils";
   import type { WatchThread } from "../types";
+  import WatchedThread from "./WatchedThread.svelte";
   interface Props {
     items: Array<WatchThread>;
   }
@@ -22,30 +22,13 @@
   button.onclick = () => {
     usingBumpOrdering = button.classList.toggle("total-activity");
   };
+  let order = $derived(usingBumpOrdering ? bumpsOrder : bumpOrder);
 </script>
 
 {#if items.length === 0}
   <div>nothing so far...</div>
-{:else if usingBumpOrdering}
-  {#each bumpsOrder as item}
-    <div class="watched-thread">
-      <div class="bump-count">{b36encodenumber(item.bumps)}</div>
-      <div class="thread-link">
-        <a href="/t/{b36encodenumber(item.id)}">
-          {item.topic ?? `#${b36encodenumber(item.id)}`}
-        </a>
-      </div>
-    </div>
-  {/each}
 {:else}
-  {#each bumpOrder as item}
-    <div class="watched-thread">
-      <div class="bump-count">{b36encodenumber(item.bumps)}</div>
-      <div class="thread-link">
-        <a href="/t/{b36encodenumber(item.id)}">
-          {item.topic ?? `#${b36encodenumber(item.id)}`}
-        </a>
-      </div>
-    </div>
+  {#each order as item}
+    <WatchedThread {item} />
   {/each}
 {/if}

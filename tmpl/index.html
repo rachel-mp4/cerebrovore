@@ -1,0 +1,32 @@
+{{define "content"}}
+{{if .IsChrono}}
+<h1>thread index</h1>
+<h2>sorted reverse chronologically</h2>
+<div>
+<a href="/t">switch to bump order</a>
+</div>
+{{else}}
+<h1>thread index, sorted by bump order</h1>
+<h2>sorted by bump order</h2>
+<div>
+<a href="/t?chrono=yes">switch to reverse chronological</a>
+</div>
+{{end}}
+{{range .ThreadThumbs}}
+<div class="thread-tail">
+<a href="/t/{{idtoa .ID}}">
+  {{if .Topic}}<div class="topic">{{.Topic}}</div>{{end}}
+  <div>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}{{.ReplyCount}} replies{{end}}</div>
+</a>
+</div>
+{{end}}
+{{if .IsChrono}}
+{{if .ChronoCursor}}
+<a href="/t?chrono=yes&cursor={{idtoa .ChronoCursor}}">Next page</a>
+{{end}}
+{{else}}
+{{if .BumpCursor}}
+<a href="/t?cursor={{formatTime .BumpCursor}}">Next page</a>
+{{end}}
+{{end}}
+{{end}}

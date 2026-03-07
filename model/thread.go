@@ -17,6 +17,7 @@ type threadModel struct {
 	id     uint32
 	topic  *string
 	server *lrcd.Server
+	full   bool
 
 	watchers   map[*watcher]bool
 	watchersmu sync.Mutex

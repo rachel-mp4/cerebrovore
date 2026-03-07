@@ -59,12 +59,13 @@ func blprint(blbl []uint32) string {
 }
 
 type Thread struct {
-	ID       uint32
-	Topic    *string
-	PostedAt time.Time
-	BumpedAt time.Time
-	OP       Post
-	Posts    []Post
+	ID         uint32
+	Topic      *string
+	PostedAt   time.Time
+	BumpedAt   time.Time
+	ReplyCount int
+	OP         Post
+	Posts      []Post
 }
 
 func (t *Thread) String() string {

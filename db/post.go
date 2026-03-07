@@ -3,28 +3,46 @@ package db
 import (
 	"context"
 	"github.com/rachel-mp4/cerebrovore/types"
+	"github.com/rachel-mp4/cerebrovore/utils"
 	"log"
 )
 
-func (m *MockStore) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, error) {
+func (m *MockStore) CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error) {
 	log.Println(post.String())
-	return nil, nil
+	return 0, nil, nil
 }
 
-func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, error) {
+func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return 0, nil, err
 	}
 	defer tx.Rollback(ctx)
+	row := tx.QueryRow(ctx, `
+		UPDATE threads
+		SET
+			reply_count = reply_count + 1,
+			bumped_at = CASE
+				WHEN reply_count + 1 < $2 THEN now()
+				ELSE bumped_at
+			END
+		WHERE id = $1
+		AND reply_count < $3
+		RETURNING reply_count
+		`, post.ThreadID, utils.BUMP_LIMIT, utils.REPLY_LIMIT)
+	var rc int
+	err = row.Scan(&rc)
+	if err != nil {
+		return 0, nil, err
+	}
 	_, err = tx.Exec(ctx, `
 		INSERT INTO posts (id, thread_id, username, anon, nick, color)
 		VALUES ($1, $2, $3, $4, $5, $6)
 		`, post.ID, post.ThreadID, post.Username, post.Anon, post.Nick, post.Color)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return 0, nil, err
 	}
 	if post.TextContent != nil {
 		_, err = tx.Exec(ctx, `
@@ -33,7 +51,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 			`, post.ID, post.TextContent.Body)
 		if err != nil {
 			log.Println(err.Error())
-			return nil, err
+			return 0, nil, err
 		}
 	}
 	if post.ImageContent != nil {
@@ -43,19 +61,10 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 			`, post.ID, post.ImageContent.CID, post.ImageContent.Alt)
 		if err != nil {
 			log.Println(err.Error())
-			return nil, err
+			return 0, nil, err
 		}
 	}
 
-	_, err = tx.Exec(ctx, `
-		UPDATE threads
-		SET bumped_at = now()
-		WHERE id = $1
-		`, post.ThreadID)
-	if err != nil {
-		log.Println(err.Error())
-		return nil, err
-	}
 	if len(post.Backlinks) > 0 {
 		_, err = tx.Exec(ctx, `
 			INSERT INTO pending_post_replies (from_id, to_id)
@@ -64,7 +73,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 			`, post.ID, post.Backlinks)
 		if err != nil {
 			log.Println(err.Error())
-			return nil, err
+			return 0, nil, err
 		}
 	}
 	rows, err := tx.Query(ctx, `
@@ -78,7 +87,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 		`, post.ID)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return 0, nil, err
 	}
 	defer rows.Close()
 	res := make([]Backlink, 0)
@@ -87,7 +96,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 		err := rows.Scan(&bl.From, &bl.To)
 		if err != nil {
 			log.Println(err.Error())
-			return nil, err
+			return 0, nil, err
 		}
 		res = append(res, bl)
 	}
@@ -100,9 +109,9 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) ([]Backlink, e
 		`, post.ID)
 	if err != nil {
 		log.Println(err.Error())
-		return nil, err
+		return 0, nil, err
 	}
-	return res, tx.Commit(ctx)
+	return rc, res, tx.Commit(ctx)
 }
 
 func (m *MockStore) GetMaxPostId(ctx context.Context) (uint32, error) {

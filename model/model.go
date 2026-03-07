@@ -3,13 +3,16 @@ package model
 import (
 	"context"
 	"fmt"
-	"github.com/gorilla/websocket"
-	"github.com/rachel-mp4/cerebrovore/types"
-	lrcpb "github.com/rachel-mp4/lrcproto/gen/go"
+	"log"
 	"net/http"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/gorilla/websocket"
+	"github.com/rachel-mp4/cerebrovore/types"
+	"github.com/rachel-mp4/cerebrovore/utils"
+	lrcpb "github.com/rachel-mp4/lrcproto/gen/go"
 )
 
 type Model struct {
@@ -36,17 +39,27 @@ func NewModel(threads []types.Thread, maxid uint32) *Model {
 // immediate just because that way you can't constantly create
 // and destroy servers by constantly refreshing some empty
 // thread. cleaner is a bit of a costly operation, maybe there's
-// a better way of doing this, but it's fine for now
+// a better way of doing this, but it's fine for now. if thread
+// has hit max reply count & there are no longer any users
+// connected to the lrc server (thus kawaiiDestroyServer
+// succesfully destroyed it & it's set to nil), then we can
+// permanently remove the threadModel from our map, since we
+// don't need any real-time functions out of it any more: it is
+// succesfully archived
 func cleaner(m *Model) {
-	ticker := time.NewTicker(10 * time.Minute)
+	ticker := time.NewTicker(10 * time.Second)
 	for {
 		select {
 		case <-ticker.C:
 			m.tmapmu.Lock()
-			defer m.tmapmu.Unlock()
-			for _, tm := range m.tmap {
+			for id, tm := range m.tmap {
 				tm.kawaiiDestroyServer()
+				if tm.full && tm.server == nil {
+					log.Println("threadModelKilled")
+					delete(m.tmap, id)
+				}
 			}
+			m.tmapmu.Unlock()
 		}
 	}
 }
@@ -55,6 +68,10 @@ func cleaner(m *Model) {
 // that already existed, for use in model initialization,
 // reading from database
 func (m *Model) recreateThread(thread types.Thread) {
+	if utils.MaxReplies(thread.ReplyCount) {
+		log.Println("tc >= reply limit = archived thread = no threadmodel")
+		return
+	}
 	rt := newThreadModel(thread.ID, thread.Topic)
 	m.tmap[thread.ID] = rt
 }
@@ -94,6 +111,9 @@ func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 	if !ok {
 		return nil, ErrThreadDNE
 	}
+	if thread.full {
+		return nil, ErrThreadFull
+	}
 	if thread.server == nil {
 		err := thread.recreateServer(m.getIDAllocator())
 		if err != nil {
@@ -110,8 +130,9 @@ func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 // watchEvent represents a bump happening in a thread that a user
 // watches; it gets sent on threadsocket to anyone connected
 type watchEvent struct {
-	Topic *string `json:"topic,omitempty"`
-	ID    uint32  `json:"id"`
+	Topic     *string `json:"topic,omitempty"`
+	ID        uint32  `json:"id"`
+	BumpLimit *bool   `json:"bumpLimit,omitempty"`
 }
 
 // watcher represents an open thread watcher connection, this is
@@ -136,13 +157,36 @@ func (m *Model) NotifyWatchers(forID uint32) {
 	tm.watchersmu.Lock()
 	for w := range tm.watchers {
 		select {
-		case w.ch <- watchEvent{tm.topic, forID}:
+		case w.ch <- watchEvent{tm.topic, forID, nil}:
 		case <-w.ctx.Done():
 			delete(tm.watchers, w)
 		// maybe not necessary to delete a connection in this case,
 		// however i think that things get written quickly, and the channel
 		// is buffered, so i'm assuming they disconnected but the context
 		// isn't done for some reason
+		default:
+			delete(tm.watchers, w)
+		}
+	}
+	tm.watchersmu.Unlock()
+}
+
+// NotifyBumpLimit notifies all online watchers of a thread that the
+// thread just hit the bump limit, and it removes them all from the
+// map for good measure
+func (m *Model) NotifyBumpLimit(threadID uint32) {
+	m.tmapmu.Lock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.Unlock()
+	if !ok {
+		return
+	}
+	bl := true
+	tm.watchersmu.Lock()
+	for w := range tm.watchers {
+		select {
+		case w.ch <- watchEvent{tm.topic, threadID, &bl}:
+			delete(tm.watchers, w)
 		default:
 			delete(tm.watchers, w)
 		}
@@ -221,4 +265,14 @@ func (m *Model) getIDAllocator() func() uint32 {
 		next := atomic.AddUint32(&m.id, 1)
 		return next
 	}
+}
+
+func (m *Model) ReplyLimit(threadID uint32) {
+	m.tmapmu.Lock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.Unlock()
+	if !ok {
+		return
+	}
+	tm.full = true
 }

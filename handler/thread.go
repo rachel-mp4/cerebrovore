@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
@@ -8,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/disintegration/imaging"
+
 	_ "golang.org/x/image/webp"
 	"image"
 	_ "image/gif"
@@ -22,6 +24,7 @@ import (
 	"slices"
 	"time"
 
+	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
 	"github.com/rachel-mp4/lrcd"
@@ -156,6 +159,9 @@ func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	contentType := http.DetectContentType(buf[:n])
 	w.Header().Add("Content-Type", contentType)
+	// TODO: be fully sure that this doesn't ruin things because we use query params
+	// but it seems ok rn
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Write(buf[:n])
 	file.WriteTo(w)
 }
@@ -389,13 +395,20 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	backlinks, err := h.db.CreatePost(&post, r.Context())
+	rc, backlinks, err := h.db.CreatePost(&post, r.Context())
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
 		return
 	}
 
+	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background())
+}
+
+// postPostPostFunFunc is a func that runs post postpost, does assorted fun we want
+// like informing lrc clients of parsed backlinks, and sending events to watchers
+func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context) {
 	if len(backlinks) != 0 {
 		log.Println("sending backlinks!")
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
@@ -412,8 +425,6 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 				replies = append(replies, &reply)
 			} else {
 				log.Println("BAD BACKLINK!")
-				http.Error(w, "bad backlink?", http.StatusInternalServerError)
-				return
 			}
 		}
 
@@ -422,10 +433,23 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 				Replies: replies,
 			},
 		}
-		h.m.AddBacklinks(tid, batch)
+		h.m.AddBacklinks(post.ThreadID, batch)
 	}
-	h.m.NotifyWatchers(tid)
-	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	if replyCount < utils.BUMP_LIMIT {
+		h.m.NotifyWatchers(post.ThreadID)
+		err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
+		if err != nil {
+			log.Println(err)
+		}
+	} else if replyCount == utils.BUMP_LIMIT {
+		h.m.NotifyBumpLimit(post.ThreadID)
+		err := h.db.RemoveWatchersFor(post.ThreadID, ctx)
+		if err != nil {
+			log.Println(err.Error())
+		}
+	} else if utils.MaxReplies(replyCount) {
+		h.m.ReplyLimit(post.ThreadID)
+	}
 }
 
 func (h *Handler) getPost(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -448,7 +472,7 @@ func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	tt, _, err := h.db.GetBumpedThreads(nil, 5, r.Context())
+	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
 		http.Error(w, "failed to get threads", http.StatusInternalServerError)
 		return
@@ -473,12 +497,15 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	t, tcrsr, err := h.db.GetThread(tid, nil, 2000, r.Context())
+	t, tcrsr, err := h.db.GetThread(tid, nil, utils.REPLY_LIMIT, r.Context())
 	if err != nil {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
 	}
-	tt, ttcrsr, err := h.db.GetBumpedThreads(nil, 5, r.Context())
+	if tcrsr != nil {
+		log.Println(fmt.Sprintf("thread %d (#%s) has over REPLY_LIMIT replies (%d)", tid, ntid, t.ReplyCount))
+	}
+	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
 		http.Error(w, "failed to get threads", http.StatusInternalServerError)
 		return
@@ -487,22 +514,20 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	watched := h.db.IsWatched(c.Username, tid, r.Context())
 
 	type getthreadresp struct {
-		Title          string
-		Thread         *types.Thread
-		ThreadCursor   *uint32
-		Threads        []types.Thread
-		ThreadsCursor  *time.Time
-		CompiledAssets *CompiledAssets
-		Watched        bool
+		baseresp
+		Thread   *types.Thread
+		Archived bool
+		Watched  bool
 	}
 	gtr := getthreadresp{
-		Title:          title,
-		Thread:         t,
-		ThreadCursor:   tcrsr,
-		Threads:        tt,
-		ThreadsCursor:  ttcrsr,
-		CompiledAssets: h.ca,
-		Watched:        watched,
+		baseresp: baseresp{
+			h.ca,
+			title,
+			tt,
+		},
+		Thread:   t,
+		Watched:  watched,
+		Archived: utils.MaxReplies(t.ReplyCount),
 	}
 	err = threadT.ExecuteTemplate(w, "base", gtr)
 	if err != nil {
@@ -514,6 +539,7 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
+		log.Println(err.Error())
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
@@ -540,7 +566,6 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 
 	f := h.m.GetThreadSocketHandler(ids)
 	f(w, r)
-
 }
 
 func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -580,4 +605,71 @@ func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Reques
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+}
+
+func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	type threadsresp struct {
+		baseresp
+		IsChrono     bool
+		ChronoCursor *uint32
+		BumpCursor   *time.Time
+		ThreadThumbs []types.Thread
+	}
+	tt, err := h.db.GetBumps(r.Context())
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "error getting bumps", http.StatusInternalServerError)
+		return
+	}
+	chrono := r.URL.Query().Get("chrono")
+	isChrono := chrono != ""
+	tr := threadsresp{
+		baseresp{
+			h.ca,
+			"threads",
+			tt,
+		},
+		isChrono,
+		nil,
+		nil,
+		nil,
+	}
+	cursor := r.URL.Query().Get("cursor")
+	if isChrono {
+		var cc *uint32
+		id, err := utils.AToID(cursor)
+		if err == nil {
+			cc = &id
+		}
+		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.ChronoCursor = nc
+		tr.ThreadThumbs = fts
+	} else {
+		var bc *time.Time
+		t, err := utils.ParseTime(cursor)
+		if err == nil {
+			bc = &t
+		}
+		fts, nc, err := h.db.GetBumpedThreads(bc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		if err != nil {
+			log.Println(err.Error())
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.BumpCursor = nc
+		tr.ThreadThumbs = fts
+	}
+	err = threadsT.ExecuteTemplate(w, "base", tr)
+	if err != nil {
+		log.Println(err.Error())
+	}
 }

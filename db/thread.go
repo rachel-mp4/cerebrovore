@@ -105,7 +105,8 @@ func (s *Store) GetAllThreads(ctx context.Context) ([]types.Thread, error) {
 	rows, err := s.pool.Query(ctx, `
 		SELECT
 			id,
-			topic
+			topic,
+			reply_count
 		FROM threads
 		`)
 	if err != nil {
@@ -115,7 +116,7 @@ func (s *Store) GetAllThreads(ctx context.Context) ([]types.Thread, error) {
 	tt := make([]types.Thread, 0)
 	for rows.Next() {
 		var t types.Thread
-		rows.Scan(&t.ID, &t.Topic)
+		rows.Scan(&t.ID, &t.Topic, &t.ReplyCount)
 		tt = append(tt, t)
 	}
 	return tt, nil
@@ -129,10 +130,11 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 	q := `
 		SELECT
 			id,
-			topic
+			topic,
+			reply_count
 		FROM threads
-		ORDER BY id DESC
 		%s
+		ORDER BY id DESC
 		LIMIT $1
 	`
 	var rows pgx.Rows
@@ -156,7 +158,7 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 			break
 		}
 		var thread types.Thread
-		err = rows.Scan(&thread.ID, &thread.Topic)
+		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount)
 		cursor = &thread.ID
 		if err != nil {
 			return nil, nil, err
@@ -173,12 +175,46 @@ func (m *MockStore) GetBumpedThreads(before *time.Time, limit int, ctx context.C
 	return nil, nil, nil
 }
 
+func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error) {
+	var rows pgx.Rows
+	rows, err = s.pool.Query(ctx, `
+		SELECT
+			id,
+			topic
+		FROM threads
+		ORDER BY bumped_at DESC
+		LIMIT 5
+		`)
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer rows.Close()
+	threads = make([]types.Thread, 0, 5)
+	for rows.Next() {
+		var thread types.Thread
+		err = rows.Scan(&thread.ID, &thread.Topic)
+		if err != nil {
+			return nil, nil
+		}
+		threads = append(threads, thread)
+	}
+	return threads, nil
+}
+
+func (m *MockStore) GetBumps(ctx context.Context) (threads []types.Thread, err error) {
+	return nil, nil
+}
+
 func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
 	q := `
 		SELECT
 			id,
 			topic,
-			bumped_at
+			bumped_at,
+			reply_count
 		FROM threads
 		%s
 		ORDER BY bumped_at DESC
@@ -206,7 +242,7 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 		}
 		var thread types.Thread
 		var bumpt time.Time
-		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt)
+		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount)
 		cursor = &bumpt
 		if err != nil {
 			return nil, nil, err
@@ -225,8 +261,8 @@ func (m *MockStore) GetThread(id uint32, before *uint32, limit int, ctx context.
 
 func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Context) (thread *types.Thread, cursor *uint32, err error) {
 	thread = &types.Thread{ID: id}
-	row := s.pool.QueryRow(ctx, "SELECT topic FROM threads WHERE id=$1", id)
-	err = row.Scan(&thread.Topic)
+	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1", id)
+	err = row.Scan(&thread.Topic, &thread.ReplyCount)
 	if err != nil {
 		log.Println(err.Error())
 		return nil, nil, err
@@ -342,7 +378,6 @@ func (s *Store) UnwatchThread(username string, id uint32, ctx context.Context) e
 }
 
 func (m *MockStore) UnwatchThread(username string, id uint32, ctx context.Context) error {
-
 	return nil
 }
 
@@ -356,4 +391,14 @@ func (s *Store) IsWatched(username string, id uint32, ctx context.Context) bool 
 
 func (m *MockStore) IsWatched(username string, id uint32, ctx context.Context) bool {
 	return false
+}
+
+func (s *Store) RemoveWatchersFor(id uint32, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+		DELETE FROM watched_threads WHERE thread_id = $1
+		`, id)
+	return err
+}
+func (m *MockStore) RemoveWatchersFor(id uint32, ctx context.Context) error {
+	return nil
 }
