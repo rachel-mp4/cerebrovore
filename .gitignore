@@ -2,3 +2,4 @@ frontend/dist
 .env
 uploads
 .fileStore
+migrate
