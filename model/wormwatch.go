@@ -153,7 +153,6 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 				}
 			}
 		default:
-			w.cancel()
 		}
 	}
 	wwd.queue = append(wwd.queue, entries...)

@@ -41,12 +41,7 @@ func (m *Model) NotifyWatchers(forID uint32) {
 		case w.ch <- watchEvent{tm.topic, forID, nil}:
 		case <-w.ctx.Done():
 			delete(tm.watchers, w)
-		// maybe not necessary to delete a connection in this case,
-		// however i think that things get written quickly, and the channel
-		// is buffered, so i'm assuming they disconnected but the context
-		// isn't done for some reason
 		default:
-			delete(tm.watchers, w)
 		}
 	}
 	tm.watchersmu.Unlock()

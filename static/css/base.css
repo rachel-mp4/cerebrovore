@@ -282,3 +282,9 @@ form {
   background-color: var(--fg);
   color: var(--bg);
 }
+
+.thread-link {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

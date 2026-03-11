@@ -146,7 +146,7 @@ func cleaner(m *Model) {
 			m.tmapmu.Lock()
 			for id, tm := range m.tmap {
 				tm.kawaiiDestroyServer()
-				if tm.full && tm.server == nil {
+				if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 {
 					log.Println("threadModelKilled")
 					delete(m.tmap, id)
 				}
