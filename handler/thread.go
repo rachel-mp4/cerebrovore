@@ -270,7 +270,7 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 		code = http.StatusInternalServerError
 		return
 	}
-	out, err := os.CreateTemp("", "upload-*")
+	out, err := os.CreateTemp(dir, "upload-*")
 	if err != nil {
 		code = http.StatusInternalServerError
 		return
