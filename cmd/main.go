@@ -102,7 +102,13 @@ func main() {
 		mid = 0
 	}
 	if err != nil {
-		panic(err)
+		fmt.Println("is this your first time running on this database?(y/n)")
+		var answer string
+		fmt.Scanln(&answer)
+		if answer != "y" {
+			panic(err)
+		}
+		fmt.Println("good luck!")
 	}
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idStore)
