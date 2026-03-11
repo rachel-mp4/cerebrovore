@@ -302,7 +302,7 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 		code = http.StatusInternalServerError
 		return
 	}
-	err = os.Link(out.Name(), path)
+	err = os.Rename(out.Name(), path)
 	if err != nil {
 		if os.IsExist(err) {
 			// perhaps there's a race here, seems kinda unlikely
