@@ -108,6 +108,7 @@ func (s *Store) GetAllThreads(ctx context.Context) ([]types.Thread, error) {
 			topic,
 			reply_count
 		FROM threads
+		WHERE deleted = FALSE
 		`)
 	if err != nil {
 		return nil, err
@@ -133,13 +134,13 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 			topic,
 			reply_count
 		FROM threads
-		%s
+		WHERE deleted = FALSE %s
 		ORDER BY id DESC
 		LIMIT $1
 	`
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "WHERE id < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND id < $2"), limit+1, *before)
 	} else {
 		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
 	}
@@ -182,6 +183,7 @@ func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error
 			id,
 			topic
 		FROM threads
+		WHERE deleted = FALSE
 		ORDER BY bumped_at DESC
 		LIMIT 5
 		`)
@@ -216,13 +218,13 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 			bumped_at,
 			reply_count
 		FROM threads
-		%s
+		WHERE deleted = FALSE %s
 		ORDER BY bumped_at DESC
 		LIMIT $1
 	`
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "WHERE bumped_at < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
 	} else {
 		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
 	}
@@ -261,7 +263,7 @@ func (m *MockStore) GetThread(id uint32, before *uint32, limit int, ctx context.
 
 func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Context) (thread *types.Thread, cursor *uint32, err error) {
 	thread = &types.Thread{ID: id}
-	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1", id)
+	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE", id)
 	err = row.Scan(&thread.Topic, &thread.ReplyCount)
 	if err != nil {
 		log.Println(err.Error())
@@ -287,7 +289,7 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 		FROM post_replies
 		GROUP BY to_id
 	) pr ON pr.to_id = p.id
-	WHERE p.thread_id = $1 %s
+	WHERE p.thread_id = $1 AND p.deleted = FALSE %s
 	ORDER BY p.id DESC
 	LIMIT $2
 	`
@@ -400,5 +402,16 @@ func (s *Store) RemoveWatchersFor(id uint32, ctx context.Context) error {
 	return err
 }
 func (m *MockStore) RemoveWatchersFor(id uint32, ctx context.Context) error {
+	return nil
+}
+
+func (s *Store) DeleteThread(id uint32, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE threads SET deleted = TRUE WHERE id = $1
+		`, id)
+	return err
+}
+
+func (m *MockStore) DeleteThread(id uint32, ctx context.Context) error {
 	return nil
 }

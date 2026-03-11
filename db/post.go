@@ -145,3 +145,14 @@ func (s *Store) GetPostThreadID(postId uint32, ctx context.Context) (uint32, err
 func (m *MockStore) GetPostThreadID(postId uint32, ctx context.Context) (uint32, error) {
 	return 0, nil
 }
+
+func (s *Store) DeletePost(id uint32, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+		UPDATE posts SET deleted = TRUE WHERE id = $1
+		`, id)
+	return err
+}
+
+func (m *MockStore) DeletePost(id uint32, ctx context.Context) error {
+	return nil
+}

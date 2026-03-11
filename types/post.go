@@ -19,6 +19,7 @@ type Post struct {
 	TextContent  *TextContent
 	ImageContent *ImageContent
 	Backlinks    []uint32
+	Deleted      bool
 }
 
 func (p *Post) String() string {
@@ -66,6 +67,7 @@ type Thread struct {
 	ReplyCount int
 	OP         Post
 	Posts      []Post
+	Deleted    bool
 }
 
 func (t *Thread) String() string {

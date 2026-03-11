@@ -7,6 +7,7 @@ import (
 )
 
 var homeT *template.Template
+var moderateT *template.Template
 var meT *template.Template
 var loginT *template.Template
 var accountT *template.Template
@@ -24,6 +25,14 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/home.html",
+	)
+	moderateT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/moderate.html",
 	)
 	meT = newTemplate(
 		"./tmpl/base.html",

@@ -55,6 +55,9 @@ type Storer interface {
 	// in a thread that aren't provided, the cursor will be non-nil, and
 	GetThread(id uint32, before *uint32, limit int, ctx context.Context) (threads *types.Thread, cursor *uint32, err error)
 
+	// DeleteThread sets a thread's deleted column to deleted, to hide it from users
+	DeleteThread(id uint32, ctx context.Context) error
+
 	// watch methods
 	// GetWatchedThreads gets all the threads that a username is watching
 	GetWatchedThreads(username string, ctx context.Context) ([]uint32, error)
@@ -67,6 +70,7 @@ type Storer interface {
 	CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error)
 	GetMaxPostId(ctx context.Context) (uint32, error)
 	GetPostThreadID(postId uint32, ctx context.Context) (uint32, error)
+	DeletePost(id uint32, ctx context.Context) error
 }
 
 type Backlink struct {

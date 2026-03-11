@@ -1,0 +1,15 @@
+{{define "content"}}
+  <form action="/m" method="POST">
+    <div class="form-field">
+      <label for="postid">id</label>
+      <input type="text" name="postid">
+    </div>
+    <div class="form-field">
+      <label for="thread">is thread?</label>
+      <input type="checkbox" name="thread">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="moderate"/>
+    </div>
+  </form>
+{{end}}

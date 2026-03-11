@@ -37,6 +37,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp db.IDStore
 	mux.HandleFunc("GET /", h.AM(h.home))
 	// mux.HandleFunc("GET /catalog", h.AM(h.catalog))
 	mux.HandleFunc("GET /me", h.AM(h.me))
+	mux.HandleFunc("GET /m", h.AM(h.moderate))
+	mux.HandleFunc("POST /m", h.AM(h.postModerate))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /login", h.postLogin)
