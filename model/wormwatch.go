@@ -2,7 +2,6 @@ package model
 
 import (
 	"context"
-	"log"
 	"math"
 	"net/http"
 	"time"
@@ -116,7 +115,6 @@ func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.Handl
 }
 
 func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) {
-	log.Println("add video to queue")
 	if len(pis) == 0 {
 		return
 	}
@@ -145,7 +143,6 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 			Index:    clen + i,
 		})
 	}
-	log.Println(len(tm.wormwatchers))
 	for w := range tm.wormwatchers {
 		select {
 		case w.ch <- wormwatchEvent{Type: TypeQueue, Entries: entries}:
@@ -153,7 +150,6 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 				select {
 				case w.ch <- wormwatchEvent{Type: TypeStart, Index: &clen, Timestamp: &tstartms}:
 				default:
-					log.Println("need to increase size of wormwatchers ch buffer...")
 				}
 			}
 		default:
@@ -176,9 +172,7 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 }
 
 func (tm *threadModel) handleQueue() {
-	log.Println("queueing")
 	<-tm.wormwatchdata.ctx.Done()
-	log.Println("queue state shift")
 	switch context.Cause(tm.wormwatchdata.ctx) {
 	case context.DeadlineExceeded:
 		tm.nextVideo()
@@ -190,7 +184,6 @@ func (tm *threadModel) handleQueue() {
 }
 
 func (tm *threadModel) pauseVideo() {
-	log.Println("queue pause video")
 	wwd := tm.wormwatchdata
 	tm.wormwatchersmu.Lock()
 	tpause := time.Now().Sub(*wwd.start)
@@ -204,16 +197,13 @@ func (tm *threadModel) pauseVideo() {
 		}
 	}
 	tm.wormwatchersmu.Unlock()
-	log.Println("dequeueing")
 }
 
 func (tm *threadModel) nextVideo() {
 	wwd := tm.wormwatchdata
-	log.Println("queue next video")
 	tm.wormwatchersmu.Lock()
 	idx := wwd.index + 1
 	if idx >= len(wwd.queue) {
-		log.Println("actually, queue clear video")
 		for w := range tm.wormwatchers {
 			select {
 			case w.ch <- wormwatchEvent{Type: TypeClear}:
@@ -251,7 +241,6 @@ func (tm *threadModel) nextVideo() {
 }
 
 func (m *Model) Pause(threadID uint32, username string) {
-	log.Println("pause video in queue")
 	m.tmapmu.Lock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.Unlock()
@@ -286,7 +275,6 @@ func (m *Model) Pause(threadID uint32, username string) {
 }
 
 func (m *Model) Skip(threadID uint32, username string) {
-	log.Println("skip video in queue")
 	m.tmapmu.Lock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.Unlock()
@@ -321,7 +309,6 @@ func (m *Model) Skip(threadID uint32, username string) {
 }
 
 func (m *Model) Unpause(threadID uint32, username string) {
-	log.Println("unpause video in queue")
 	m.tmapmu.Lock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.Unlock()
