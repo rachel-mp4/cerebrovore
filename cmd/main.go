@@ -81,14 +81,26 @@ func main() {
 	// all threads. in truth this should be get all threads that haven't
 	// hit post limit, but the post limit does not yet exist
 	threads, err := store.GetAllThreads(context.Background())
+	first := false
 	if err != nil {
-		panic(err)
+		fmt.Println("is this your first time running on this database?(y/n)")
+		var answer string
+		fmt.Scanln(&answer)
+		if answer != "y" {
+			panic(err)
+		}
+		fmt.Println("good luck!")
+		first = true
 	}
 	// we also need the max id in order to allocate post ids properly
 	// cross site. i'm not sure if this is exactly ideal, because it
 	// couples all the threads, but it seems cool + you have to make
 	// dumb decisions to learn
 	mid, err := store.GetMaxPostId(context.Background())
+	if first {
+		err = nil
+		mid = 0
+	}
 	if err != nil {
 		panic(err)
 	}
