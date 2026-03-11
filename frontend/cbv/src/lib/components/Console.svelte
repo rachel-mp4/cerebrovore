@@ -13,7 +13,8 @@
     const left =
       Math.abs((999.999 * Math.sin(l.id * l.id * 22.22)) % 1) * 90 +
       5 * (Math.sin(l.time * 14.14) % 1);
-    return `top: ${top}%; left: ${left}%`;
+    const angle = 3 * Math.sin(l.id * l.id * 33.33);
+    return `top: ${top}%; left: ${left}%; transform: rotate(${angle}deg)`;
   };
 </script>
 
