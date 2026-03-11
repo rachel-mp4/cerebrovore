@@ -381,6 +381,8 @@ func (tm *threadModel) unpauseHOLDINGLOCK() {
 	})
 	wwd.ctx = ctx
 	wwd.cancel = cancel
+	wwd.start = &tstart
+	wwd.pausedAt = nil
 	tm.wormwatchersmu.Unlock()
 	go tm.handleQueue()
 }

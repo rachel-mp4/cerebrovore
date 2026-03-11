@@ -23,8 +23,9 @@
   });
 
   var player: Player;
-  let playerReady = false;
+  let playerReady = $state(false);
   let playerHeight = $state(0);
+  let curID = $state();
   const readyPlayerForAction = (entry: WormWatchEntry) => {
     let reqsite = entry.data.site;
     switch (reqsite) {
@@ -33,6 +34,11 @@
         if (!playerReady) {
           player = YoutubePlayer("worm-watch");
         }
+        if (curID === entry.data.id) {
+          onPlayerReady();
+          return;
+        }
+        curID = entry.data.id;
         player.loadVideoById(entry.data.id).then(() => {
           player
             .setSize(entry.data.width ?? 576, entry.data.height ?? 324)
@@ -71,7 +77,9 @@
 <div class="spacer" style:height="{playerHeight}px"></div>
 
 <div class="sidebar-group">
-  <button onclick={onPlayerReady}>sync up</button>
+  {#if playerReady}
+    <button onclick={onPlayerReady}>sync up</button>
+  {/if}
   <ol class="queue">
     {#each ctx.wwqueue as entry, i}
       <li class="entry{i === ctx.playingIndex ? ' current' : ''}">
