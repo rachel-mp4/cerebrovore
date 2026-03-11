@@ -1,0 +1,99 @@
+/* transmission styles */
+.tx {
+  padding-bottom: 1rem;
+  margin-top: var(--margin);
+  font-size: var(--size);
+}
+
+.tx .body {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  max-width: 100%;
+}
+
+.body a {
+  font-weight: 600;
+}
+
+
+
+/* transmission image styles */
+.image-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.image-wrapper[data-thumb] > img {
+  cursor: pointer;
+}
+
+/* gifs and thumbnails should be rendered nearest-neighbor */
+.image-wrapper:not([data-thumb]) > img, .image-wrapper.thumb > img {
+  image-rendering: crisp-edges;
+}
+
+.image-wrapper .bg-img {
+  position: absolute;
+  z-index: -3;
+}
+
+.image-wrapper .fg-img {
+  position: relative;
+  opacity: 0.5;
+}
+
+
+/* transmission header styles */
+.header {
+  font-weight: 700;
+}
+
+.tx:not(.active) .header {
+  color: var(--accent);
+}
+
+.nick {
+  white-space: pre-wrap;
+}
+
+.handle {
+  color: var(--fl);
+  position: relative;
+}
+
+.tx:not(:hover) .clickable {
+  display: none;
+}
+
+.clickable {
+  color: var(--fl);
+  cursor: pointer;
+}
+
+.clickable:hover {
+  color: var(--fg);
+}
+
+
+/* transmission footer styles */
+.tx > .footer {
+  font-size: .75em;
+}
+
+
+/* command styles */
+.tx .body:has(a[href="/p/big"]) {
+  font-size: 2em;
+}
+
+.tx .body:has(a[href="/p/small"]) {
+  font-size: 0.5em;
+}
+
+:is(a[href="/p/big"], a[href="/p/small"]) {
+  color: var(--gsecondary);
+}
+
+:is(a[href="/p/big"], a[href="/p/small"]):hover {
+  opacity: 0.5;
+}

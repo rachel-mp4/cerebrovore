@@ -1,31 +1,31 @@
 {{define "left-sidebar"}}
-<div class="sidebar-group">
-<div>
-  <a href="/">go home!</a>
-</div>
-<div>
-  <a href="/new">start a new thread!</a>
-</div>
-</div>
-
-<div class="sidebar-group" id="watched-threads">
-  <div>
-    <button>
-      watched threads
-    </button>
+  <div class="sidebar-group">
+    <div>
+      <a href="/">go home</a>
+    </div>
+    <div>
+      <a href="/t">view index</a>
+    </div>
+    <div>
+      <a href="/new">start a new thread</a>
+    </div>
   </div>
-</div>
-
-<div class="sidebar-group" id="bumped-threads">
-  {{template "bumped-threads" .}}
-</div>
-
-{{if .CompiledAssets}}
-<script type="module" src="/{{.CompiledAssets.WatcherPath}}"></script>
-{{range .CompiledAssets.WatcherCss}}
-<link rel="stylesheet" href="/{{.}}">
-{{end}}
-{{else}}
-<script type="module" src="http://localhost:5173/src/watcher.ts"></script>
-{{end}}
+  <div class="sidebar-group" id="watched-threads">
+    <div>
+      <button>
+        watched threads
+      </button>
+    </div>
+  </div>
+  <div class="sidebar-group" id="bumped-threads">
+    {{template "bumped-threads" .}}
+  </div>
+  {{if .CompiledAssets}}
+    <script type="module" src="/{{.CompiledAssets.WatcherPath}}"></script>
+    {{range .CompiledAssets.WatcherCss}}
+      <link rel="stylesheet" href="/{{.}}">
+    {{end}}
+  {{else}}
+    <script type="module" src="http://localhost:5173/src/watcher.ts"></script>
+  {{end}}
 {{end}}

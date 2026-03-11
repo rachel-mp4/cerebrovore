@@ -7,7 +7,9 @@ import (
 )
 
 var homeT *template.Template
-var mockloginT *template.Template
+var meT *template.Template
+var loginT *template.Template
+var accountT *template.Template
 var beepT *template.Template
 var threadT *template.Template
 var newthreadT *template.Template
@@ -23,13 +25,29 @@ func init() {
 		"./tmpl/empty.html",
 		"./tmpl/home.html",
 	)
-	mockloginT = newTemplate(
+	meT = newTemplate(
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
-		"./tmpl/mocklogin.html",
+		"./tmpl/me.html",
+	)
+	loginT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/login.html",
+	)
+	accountT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/account.html",
 	)
 	beepT = newTemplate(
 		"./tmpl/base.html",
@@ -44,7 +62,7 @@ func init() {
 		"./tmpl/threads.html",
 		"./tmpl/partial/threadlink.html",
 		"./tmpl/bumped-threads.html",
-		"./tmpl/empty.html",
+		"./tmpl/wormwatch.html",
 		"./tmpl/thread.html",
 		"./tmpl/partial/post.html",
 	)

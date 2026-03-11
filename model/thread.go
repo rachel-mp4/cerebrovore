@@ -13,28 +13,38 @@ import (
 // threadModel is the model for a thread. if the server is non nil, then
 // it should be started
 type threadModel struct {
-	mu     sync.Mutex
-	id     uint32
-	topic  *string
-	server *lrcd.Server
-	full   bool
+	mu        sync.Mutex
+	id        uint32
+	topic     *string
+	server    *lrcd.Server
+	bumplimit bool
+	full      bool
 
 	watchers   map[*watcher]bool
 	watchersmu sync.Mutex
+
+	wormwatchdata  *wormwatchdata
+	wormwatchers   map[*wormwatcher]bool
+	wormwatchersmu sync.Mutex
 }
 
 // newThreadModel creates a new thread model. it does not create or start
 // an lrc server
 func newThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
-		id:       id,
-		topic:    topic,
-		watchers: make(map[*watcher]bool),
+		id:           id,
+		topic:        topic,
+		watchers:     make(map[*watcher]bool),
+		wormwatchers: make(map[*wormwatcher]bool),
+		wormwatchdata: &wormwatchdata{
+			index:    0,
+			watchers: make(map[string]int),
+		},
 	}
 }
 
 // GetWSHandler returns the wshandler for an lrc server, if it exists
-func (tm *threadModel) GetWSHandler() (http.HandlerFunc, error) {
+func (tm *threadModel) getWSHandler() (http.HandlerFunc, error) {
 	if tm.server == nil {
 		return nil, ErrServerDNE
 	}

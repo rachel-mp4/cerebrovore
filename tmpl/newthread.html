@@ -1,33 +1,35 @@
 {{define "content"}}
   <form action="/t" method="POST" enctype="multipart/form-data">
-  <div>
-  <label for="topic">topic</label>
-  <input type="text" name="topic">
-  </div>
-  <div>
-  <label for="anon">anon</label>
-  <input type="checkbox" name="anon">
-  </div>
-  <div>
-  <label for="nick">nick</label>
-  <input type="text" name="nick">
-  </div>
-  <div>
-  <label for="color">color</label>
-  <input type="color" name="color">
-  </div>
-  <div>
-  <label for="body">body</label>
-  <input type="text" name="body">
-  </div>
-  <div>
-  <label for="image">image</label>
-  <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
-  </div>
-  <div>
-  <label for="alt">alt</label>
-  <input type="text" name="alt">
-  </div>
-  <input type="submit" value="make thread"/>
+    <div class="form-field">
+      <label for="topic">topic</label>
+      <input type="text" name="topic" maxlength="30">
+    </div>
+    <div class="form-field">
+      <label for="anon">anon</label>
+      <input type="checkbox" name="anon">
+    </div>
+    <div class="form-field">
+      <label for="nick">nick</label>
+      <input type="text" name="nick">
+    </div>
+    <div class="form-field">
+      <label for="color">color</label>
+      <input type="color" name="color">
+    </div>
+    <div class="form-field">
+      <label for="body">body</label>
+      <input type="text" name="body">
+    </div>
+    <div class="form-field">
+      <label for="image">image</label>
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
+    </div>
+    <div class="form-field">
+      <label for="alt">alt</label>
+      <input type="text" name="alt">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="make thread"/>
+    </div>
   </form>
 {{end}}

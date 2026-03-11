@@ -26,5 +26,5 @@ func generateVal(i int) float64 {
 }
 
 func generateCss(i int, f float64) string {
-	return fmt.Sprintf(".transmission:nth-last-of-type(%d) {font-size:%frem;}", i, f)
+	return fmt.Sprintf(".tx:nth-last-of-type(%d) {font-size:%frem;}", i, f)
 }

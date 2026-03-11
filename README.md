@@ -55,3 +55,9 @@ threads get an id according to their encoding as base 36 alphanumeric number
 every possible that's just numbers and letters unless it starts with a 0 is NOT
 ok for use as an ID, because html ID should be unique, and this has the
 potential for a collision!
+
+hashtag parser in linkifyjs doesn't like it when the hashtag is just numbers.
+want to create a custom parser here, but be careful because performance here
+matters, and it's nice to maintain flexibility. likely we don't care for any
+commands, and in general as length of post id grows, probability that a post id
+is just numbers approaches 0, so this is very low priority

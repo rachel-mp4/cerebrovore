@@ -12,6 +12,7 @@ export default defineConfig({
         chat: 'src/chat.ts',
         beep: 'src/beep.ts',
         watcher: 'src/watcher.ts',
+        worm: 'src/worm.ts',
       }
     }
   },

@@ -7,6 +7,18 @@ export type WatchThread = {
   bumpLimit: boolean
 }
 
+export type WormWatchEntry = {
+  type: 'wormwatchentry'
+  data: {
+    site: number,
+    id: string,
+    title: string,
+    duration: number,
+    height?: number,
+    width?: number
+  }
+}
+
 export type Item = Message | Media | Enby
 
 export type Enby = {
@@ -84,6 +96,7 @@ export function isMedia(item: Item): item is Media {
 
 export type LogItem = {
   id: number
+  color?: number
   binary: string
   time: number
   type: string

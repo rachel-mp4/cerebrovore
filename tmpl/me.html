@@ -1,0 +1,8 @@
+{{define "content"}}
+  hi {{.Username}}
+  <form action="/logout" method="POST">
+    <div class="form-submit">
+      <input type="submit" value="logout"/>
+    </div>
+  </form>
+{{end}}

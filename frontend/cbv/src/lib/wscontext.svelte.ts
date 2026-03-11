@@ -408,7 +408,12 @@ export class WSContext {
   pushToLog = (id: number, ba: Uint8Array, type: string) => {
     const bstring = Array.from(ba).map(byte => byte.toString(16).padStart(2, "0")).join('')
     const time = Date.now()
-    this.log = [...this.log.filter(li => li.time > Date.now() - 3000), { id: id, binary: bstring, time: time, type: type, key: Math.random() }]
+    var color: number | undefined
+    if (type == "init" || type == "pub") {
+      const item = this.items.find((item) => item.id === id)
+      color = item?.lrcdata.init?.color
+    }
+    this.log = [...this.log.filter(li => li.time > Date.now() - 3000), { id: id, color: color, binary: bstring, time: time, type: type, key: Math.random() }]
     console.log(this.log.length)
   }
 }

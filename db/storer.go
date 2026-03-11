@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+type IDStorer interface {
+	CreateAccount(username string, password string, invite string) error
+	VerifyCredentials(username string, password string) error
+}
+
 type Storer interface {
 	// auth methods
 	CreateAuthRequest(state string, pkceVerifier string, ctx context.Context) error

@@ -5,7 +5,7 @@
   import ImageTransmission from "./ImageTransmission.svelte";
   import type { Item } from "../types";
   import { isMessage, isImage, isEnby } from "../types";
-  import { numIsDark, numToHex } from "../colors";
+  import { numIsDark, numToHex, hexToTransparent } from "../colors";
   interface Props {
     items: Array<Item>;
     mylocaltext?: string;
@@ -31,7 +31,10 @@
     <div
       id={b36encodenumber(item.id)}
       style:--accent={numToHex(item.lrcdata?.init?.color ?? 0)}
-      class="transmission{isActive(item) ? ' active' : ''}{item.lrcdata.init
+      style:--accentl={hexToTransparent(
+        numToHex(item.lrcdata?.init?.color ?? 0),
+      )}
+      class="tx{isActive(item) ? ' active' : ''}{item.lrcdata.init
         ? ''
         : ' late'}{numIsDark(item.lrcdata?.init?.color ?? 0)
         ? ' light'

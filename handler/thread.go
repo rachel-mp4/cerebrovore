@@ -45,7 +45,7 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	if ok && len(topic) > 0 {
 		maxlen := len("brevity is the soul of wit")
 		mytopic := topic[0]
-		if len(topic) > maxlen {
+		if len(mytopic) > maxlen {
 			mytopic = mytopic[:maxlen]
 		}
 		thread.Topic = &mytopic
@@ -68,7 +68,7 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	if ok && len(body) > 0 {
 		b := body[0]
 		thread.OP.TextContent = &types.TextContent{Body: b}
-		thread.OP.Backlinks = utils.ParseBodyForBacklinks(b)
+		thread.OP.Backlinks, _ = utils.ParseBodyForBacklinks(b)
 	}
 	img, _, err := r.FormFile("image")
 	if err == nil {
@@ -339,10 +339,11 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	body, ok := r.MultipartForm.Value["body"]
+	var extras []uint64
 	if ok && len(body) > 0 {
 		b := body[0]
 		post.TextContent = &types.TextContent{Body: b}
-		post.Backlinks = utils.ParseBodyForBacklinks(b)
+		post.Backlinks, extras = utils.ParseBodyForBacklinks(b)
 	}
 	cid, ok := r.MultipartForm.Value["cid"]
 	if ok && len(cid) > 0 {
@@ -403,12 +404,12 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
-	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background())
+	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), extras)
 }
 
 // postPostPostFunFunc is a func that runs post postpost, does assorted fun we want
 // like informing lrc clients of parsed backlinks, and sending events to watchers
-func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context) {
+func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
 	if len(backlinks) != 0 {
 		log.Println("sending backlinks!")
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
@@ -449,6 +450,44 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		}
 	} else if utils.MaxReplies(replyCount) {
 		h.m.ReplyLimit(post.ThreadID)
+	}
+	type commands struct {
+		play    bool
+		skip    bool
+		pause   bool
+		unpause bool
+	}
+	cmd := commands{}
+	for _, bl := range post.Backlinks {
+		switch bl {
+		case utils.PLAY_ID:
+			cmd.play = true
+		case utils.SKIP_ID:
+			cmd.skip = true
+		case utils.PAUSE_ID:
+			cmd.pause = true
+		}
+	}
+	for _, ex := range extras {
+		switch ex {
+		case utils.UNPAUSE_EX:
+			cmd.unpause = true
+		}
+
+	}
+	if cmd.play {
+		res := utils.ParseBodyForPlays(post.TextContent.Body)
+		h.m.Queue(post.ThreadID, c.Username, res)
+	}
+	if cmd.skip {
+		h.m.Skip(post.ThreadID, c.Username)
+	}
+	if cmd.pause {
+		h.m.Pause(post.ThreadID, c.Username)
+	}
+	if cmd.unpause {
+		log.Println("unpause")
+		h.m.Unpause(post.ThreadID, c.Username)
 	}
 }
 
@@ -544,6 +583,23 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 		return
 	}
 	f, err := h.m.GetThreadWSHandler(uint32(tid))
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "error getting ws handler", http.StatusInternalServerError)
+		return
+	}
+	f(w, r)
+}
+
+func (h *Handler) getThreadWW(c *Client, w http.ResponseWriter, r *http.Request) {
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		log.Println(err.Error())
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	f, err := h.m.GetThreadWWHandler(uint32(tid), c.Username)
 	if err != nil {
 		log.Println(err.Error())
 		http.Error(w, "error getting ws handler", http.StatusInternalServerError)

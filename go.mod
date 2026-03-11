@@ -10,6 +10,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/rachel-mp4/lrcd v0.2.7
 	github.com/rachel-mp4/lrcproto v1.3.1
+	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.36.0
 )
 

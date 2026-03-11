@@ -1,6 +1,7 @@
 <script lang="ts">
   import Receiver from "./lib/components/Receiver.svelte";
   import Transmitter from "./lib/components/Transmitter.svelte";
+  import Console from "./lib/components/Console.svelte";
   import { WSContext } from "./lib/wscontext.svelte";
   const url = window.location.href;
   // i think this should work for both http->ws and https->wss schemes, that's
@@ -22,4 +23,5 @@
     onunmute={ctx.unmute}
   />
   <Transmitter {ctx} />
+  <Console log={ctx.log} />
 {/if}

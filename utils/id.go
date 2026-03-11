@@ -19,7 +19,21 @@ func AToID(s string) (id uint32, err error) {
 	return uint32(id64), nil
 }
 
+// AToEx converts a base
+func AToEx(s string) (id uint32, iderr error, ex uint64, exerr error) {
+	ex, exerr = strconv.ParseUint(s, 36, 64)
+	id64, err := strconv.ParseUint(s, 36, 32)
+	id = uint32(id64)
+	iderr = err
+	return
+}
+
 func AToIDf(s string) uint32 {
 	id, _ := AToID(s)
 	return id
+}
+
+func AToExf(s string) uint64 {
+	_, _, ex, _ := AToEx(s)
+	return ex
 }

@@ -1,3 +1,4 @@
 frontend/dist
 .env
 uploads
+.fileStore

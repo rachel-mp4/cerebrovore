@@ -23,7 +23,7 @@ func main() {
 	cold := flag.Bool("cold", false, "disables hot module replacement")
 	port := flag.Int("port", 8080, "port to listen on")
 	dontmock := flag.Bool("db", false, "doesn't mock the database")
-	idp := flag.Bool("idp", false, "doesn't mock the id provider")
+	midp := flag.Bool("midp", false, "uses an in memory id provider")
 	flag.Parse()
 	var ca *handler.CompiledAssets
 	// if not doing hot module replacement, we must read the manifest to figure out
@@ -46,10 +46,13 @@ func main() {
 			BeepCss:     ms.Beep.CSS,
 			WatcherPath: ms.Watcher.File,
 			WatcherCss:  ms.Watcher.CSS,
+			WormPath:    ms.Worm.File,
+			WormCss:     ms.Worm.CSS,
 		}
 	}
 	var store db.Storer
-	if *dontmock && !*idp {
+	var idStore db.IDStorer
+	if *dontmock && !(*midp) {
 		fmt.Println("WARNING WARNING WARNING NOT MOCKING DB AND MOCKING IDP")
 		fmt.Println("IF THIS IS PROD, USERS CAN JUST SET THEIR SESSION ID")
 		fmt.Println("TO WHATEVER THEY WANT")
@@ -70,6 +73,10 @@ func main() {
 		store = mockstore
 	}
 
+	if *midp {
+		idStore = db.NewMemoryIDStore()
+	}
+
 	// in order to initialize our model of the threads, we need to get
 	// all threads. in truth this should be get all threads that haven't
 	// hit post limit, but the post limit does not yet exist
@@ -86,7 +93,7 @@ func main() {
 		panic(err)
 	}
 	m := model.NewModel(threads, mid)
-	h := handler.NewHandler(ca, m, store, *idp)
+	h := handler.NewHandler(ca, m, store, idStore)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
 }
 
@@ -105,4 +112,8 @@ type Manifest struct {
 		File string   `json:"file"`
 		CSS  []string `json:"css,omitempty"`
 	} `json:"src/watcher.ts"`
+	Worm struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/worm.ts"`
 }

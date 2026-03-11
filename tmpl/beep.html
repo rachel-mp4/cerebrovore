@@ -1,12 +1,12 @@
 {{define "content"}}
-<h1 class="chat-title">{{.Title}}</h1>
-<div id="0cbv"></div>
-{{if .CompiledAssets}}
-<script type="module" src="/{{.Prod.BeepPath}}"></script>
-{{range .CompiledAssets.BeepCss}}
-<link rel="stylesheet" href="/{{.}}">
-{{end}}
-{{else}}
-<script type="module" src="http://localhost:5173/src/beep.ts"></script>
-{{end}}
+  <h1 class="chat-title">{{.Title}}</h1>
+  <div id="0cbv"></div>
+  {{if .CompiledAssets}}
+    <script type="module" src="/{{.Prod.BeepPath}}"></script>
+    {{range .CompiledAssets.BeepCss}}
+      <link rel="stylesheet" href="/{{.}}">
+    {{end}}
+  {{else}}
+    <script type="module" src="http://localhost:5173/src/beep.ts"></script>
+  {{end}}
 {{end}}

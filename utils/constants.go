@@ -7,3 +7,7 @@ const THREADS_PER_INDEX_PAGE = 20
 func MaxReplies(replyCount int) bool {
 	return replyCount >= REPLY_LIMIT
 }
+
+func MaxBumps(replyCount int) bool {
+	return replyCount >= BUMP_LIMIT
+}

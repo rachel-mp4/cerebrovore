@@ -1,0 +1,10 @@
+{{define "right-sidebar"}}
+  {{if .CompiledAssets}}
+    <script type="module" src="/{{.CompiledAssets.WormPath}}"></script>
+    {{range .CompiledAssets.ChatCss}}
+      <link rel="stylesheet" href="/{{.}}">
+    {{end}}
+  {{else}}
+    <script type="module" src="http://localhost:5173/src/worm.ts"></script>
+  {{end}}
+{{end}}

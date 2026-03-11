@@ -1,6 +1,5 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { hexToTransparent } from "../colors";
 
   interface Props {
     onBeforeInput?: (event: InputEvent) => void;
@@ -40,7 +39,9 @@
   onMount(adjustWidth);
   $effect(() => {
     value;
-    adjustWidth();
+    setTimeout(() => {
+      adjustWidth();
+    }, 0);
   });
 </script>
 

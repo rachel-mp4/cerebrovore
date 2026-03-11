@@ -1,5 +1,5 @@
 {{define "post"}}
-<div class="transmission {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}">
+<div class="tx {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}; --accentl: {{colorToA .Color}}80">
   <div class="header">
     {{- if .Nick -}}<span class="nick">{{- .Nick }} </span>{{- end -}}
     <button class="reply">#{{- idtoa .ID -}}</button>
