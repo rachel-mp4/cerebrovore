@@ -90,7 +90,7 @@ func ParseBodyForPlays(s string) []*PlayInput {
 				}
 				res = append(res, pi)
 			case "youtu.be":
-				id := playurl.RawPath
+				id := strings.TrimPrefix(playurl.Path, "/")
 				pi, err := getDurationForYoutubeId(id)
 				if err != nil {
 					log.Println(err.Error())
