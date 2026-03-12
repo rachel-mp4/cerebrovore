@@ -8,9 +8,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+
 	"github.com/disintegration/imaging"
 
-	_ "golang.org/x/image/webp"
 	"image"
 	_ "image/gif"
 	_ "image/jpeg"
@@ -23,6 +24,8 @@ import (
 	"path/filepath"
 	"slices"
 	"time"
+
+	_ "golang.org/x/image/webp"
 
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/types"
@@ -137,6 +140,11 @@ func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	cid := r.URL.Query().Get("cid")
 	if len(cid) < 4 {
 		http.Error(w, "cid too short", http.StatusBadRequest)
+		return
+	}
+	if strings.ContainsAny(cid, "\\/") {
+		http.Error(w, "not today, hacker!", http.StatusBadRequest)
+		return
 	}
 	thumb := r.URL.Query().Get("thumb")
 	ext := ""
