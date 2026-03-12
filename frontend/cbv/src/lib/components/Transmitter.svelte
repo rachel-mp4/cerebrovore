@@ -199,7 +199,7 @@
             convertFileToImageItem(event.currentTarget.files[0]);
           }
         }}
-        class="media-upload"
+        id="media-upload"
         type="file"
         accept="image/*"
       />
