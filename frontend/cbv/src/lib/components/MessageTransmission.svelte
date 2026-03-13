@@ -51,9 +51,12 @@
         }
 
         case "url": {
+          const v = link.value.startsWith("http")
+            ? link.value
+            : `https://${link.value}`;
           res.push({
             text: link.value,
-            href: link.value,
+            href: v,
             isLink: true,
             key: res.length,
           });
