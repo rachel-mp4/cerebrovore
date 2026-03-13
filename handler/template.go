@@ -114,6 +114,7 @@ func newTemplate(files ...string) *template.Template {
 				"colorToA":        utils.ColorToAp,
 				"maxReplies":      utils.MaxReplies,
 				"formatTime":      utils.FormatTime,
+				"ftime":           utils.FTime,
 			}).ParseFiles(files...),
 	)
 }

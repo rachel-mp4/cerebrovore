@@ -4,6 +4,7 @@
   import MessageTransmission from "./MessageTransmission.svelte";
   import ImageTransmission from "./ImageTransmission.svelte";
   import type { Item } from "../types";
+  import { smartAbsoluteTimestamp } from "../utils";
   import { isMessage, isImage, isEnby } from "../types";
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
   interface Props {
@@ -43,7 +44,7 @@
       <div class="header">
         {#if item.lrcdata.init}
           {#if item.lrcdata.init.nick}
-            <span class="nick">{item.lrcdata.init.nick}</span>
+            <span class="nick">{item.lrcdata.init.nick + " "}</span>
           {/if}
           {#if item.lrcdata.init.handle !== undefined}
             <span class="handle">@{item.lrcdata.init.handle}</span>
@@ -60,6 +61,11 @@
           >
             mute
           </button>
+        {/if}
+        {#if item.pubAt !== undefined}
+          <time class="time" datetime={new Date(item.pubAt).toISOString()}
+            >posted {smartAbsoluteTimestamp(item.pubAt)}</time
+          >
         {/if}
       </div>
       <div class="body">

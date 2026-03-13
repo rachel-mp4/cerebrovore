@@ -46,6 +46,8 @@
 /* transmission header styles */
 .header {
   font-weight: 700;
+  display: flex;
+  width: 100%
 }
 
 .tx:not(.active) .header {
@@ -72,6 +74,12 @@
 
 .clickable:hover {
   color: var(--fg);
+}
+
+.header .time {
+  margin-left: auto;
+  color: var(--fl);
+  font-size: .75em;
 }
 
 

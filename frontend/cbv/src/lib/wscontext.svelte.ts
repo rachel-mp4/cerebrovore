@@ -204,6 +204,7 @@ export class WSContext {
     deleteMessage(idx, idx2, this)
     this.curMsg = deleteFromAStringBetweenIdxs(this.curMsg, idx, idx2)
   }
+
   mute = (id: number) => {
     muteMessage(id, this)
   }
@@ -215,6 +216,7 @@ export class WSContext {
   setNick = (nick: string) => {
     setNick(nick, this)
   }
+
   setColor = (color: number) => {
     setColor(color, this)
   }
@@ -321,7 +323,7 @@ export class WSContext {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
         return item.id === id && isMessage(item)
-          ? { ...item, type: "message", lrcdata: { ...item.lrcdata, pub: true } }
+          ? { ...item, type: "message", lrcdata: { ...item.lrcdata, pub: true }, pubAt: Date.now() }
           : item
       })
     } else {
@@ -334,7 +336,8 @@ export class WSContext {
           muted: false,
           body: "",
         },
-        replies: []
+        replies: [],
+        pubAt: Date.now()
       })
     }
   }
@@ -348,7 +351,8 @@ export class WSContext {
             lrcdata: {
               ...item.lrcdata,
               pub: pub
-            }
+            },
+            pubAt: Date.now()
           }
           : item
       })
@@ -362,7 +366,8 @@ export class WSContext {
           muted: false,
           pub: pub,
         },
-        replies: []
+        replies: [],
+        pubAt: Date.now()
       })
     }
   }

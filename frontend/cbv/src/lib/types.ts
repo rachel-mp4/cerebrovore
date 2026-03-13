@@ -26,6 +26,7 @@ export type Enby = {
   id: number
   lrcdata: LrcBaseItem
   replies: Array<number>
+  pubAt?: number
 }
 
 export type Message = {
@@ -33,6 +34,7 @@ export type Message = {
   id: number
   lrcdata: LrcMessage
   replies: Array<number>
+  pubAt?: number
 }
 
 export type Media = Image
@@ -42,6 +44,7 @@ export type Image = {
   id: number
   lrcdata: LrcMedia
   replies: Array<number>
+  pubAt?: number
 }
 
 export type LrcMessage = LrcBaseItem & {
