@@ -40,6 +40,14 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 						Type: "bodge",
 						Name: "remove post size scaling on mobile for now",
 					},
+					{
+						Type: "feature",
+						Name: "store nick and color in localStorage",
+					},
+					{
+						Type: "fix",
+						Name: "diff styles respect light vs dark post color",
+					},
 				},
 			},
 			{

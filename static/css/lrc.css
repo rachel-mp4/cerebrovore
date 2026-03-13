@@ -98,12 +98,20 @@
 
 
 /* diff styles */
-.removed {
+.dark .removed {
   text-decoration: line-through var(--fl);
 }
 
-.appended {
+.dark .appended {
   color: var(--fl);
+}
+
+.light .removed {
+  text-decoration: line-through var(--bl);
+}
+
+.light .appended {
+  color: var(--bl);
 }
 
 

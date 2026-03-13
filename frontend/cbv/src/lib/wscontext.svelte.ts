@@ -193,7 +193,10 @@ export class WSContext {
       initMessage(this)
       this.messageactive = true
     }
+    // commented out delay to mock up high ping
+    // setTimeout(() => {
     insertMessage(idx, s, this)
+    // }, 100)
     this.curMsg = insertSIntoAStringAtIdx(s, this.curMsg, idx)
   }
 
@@ -215,10 +218,12 @@ export class WSContext {
 
   setNick = (nick: string) => {
     setNick(nick, this)
+    localStorage.setItem('nick', nick)
   }
 
   setColor = (color: number) => {
     setColor(color, this)
+    localStorage.setItem('color', String(color))
   }
 
   setTopic = (topic: string) => {
