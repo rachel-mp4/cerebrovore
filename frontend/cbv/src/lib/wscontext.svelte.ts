@@ -240,13 +240,13 @@ export class WSContext {
       console.log("you tried to push an item who exists!")
       return
     }
-    if (document.hidden || !document.hasFocus()) {
-      this.audio.currentTime = 0
-      this.audio.play()
-    } else if (!item.lrcdata.mine) {
-      this.shortaudio.currentTime = 0
-      this.shortaudio.play()
-    }
+    // if (document.hidden || !document.hasFocus()) {
+    //   this.audio.currentTime = 0
+    //   this.audio.play()
+    // } else if (!item.lrcdata.mine) {
+    //   this.shortaudio.currentTime = 0
+    //   this.shortaudio.play()
+    // }
     if (item.lrcdata.mine) {
       if (isMessage(item)) {
         this.myMessage = item
