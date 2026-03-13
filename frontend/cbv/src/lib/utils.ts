@@ -38,6 +38,35 @@ export function smartAbsoluteTimestamp(then: number): string {
   }
 }
 
+export function nSecondsToHMS(n: number): string {
+  const nHour = Math.floor(n / 3600)
+  const nMin = Math.floor((n % 3600) / 60)
+  const nSec = Math.floor(n % 60)
+  const fhour = (nHour !== 0) ? String(nHour) : ""
+  const fmin = (fhour !== "") ? String(nMin).padStart(2, '0') : (nMin !== 0) ? String(nMin) : ""
+  const fsec = (fmin !== "") ? String(nSec).padStart(2, '0') : String(nSec)
+  let res = ""
+  if (fhour !== "") res += fhour + ":"
+  if (fmin !== "") res += fmin + ":"
+  res += fsec
+  return res
+}
+
+export function nSecondsOutOfMax(n: number, maxN: string): string {
+  if (n < 0) {
+    n = 0
+  }
+  const nHour = Math.floor(n / 3600)
+  const nMin = Math.floor((n % 3600) / 60)
+  const nSec = Math.floor(n % 60)
+  if (maxN.length > 6) {
+    return `${nHour}:${String(nMin).padStart(2, '0')}:${String(nSec).padStart(2, '0')}`
+  } else if (maxN.length > 3) {
+    return `${String(nMin)}:${String(nSec).padStart(2, '0')}`
+  }
+  return String(nSec)
+}
+
 export function dumbAbsoluteTimestamp(then: number): string {
   return (new Date(then)).toString()
 }

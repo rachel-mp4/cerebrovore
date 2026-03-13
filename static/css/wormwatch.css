@@ -18,3 +18,9 @@
   right:0;
   border-radius: 0 0 0 4rem;
 }
+
+.sync-time {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}

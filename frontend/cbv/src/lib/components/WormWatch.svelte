@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { WormWatchEntry } from "../types";
   import { onMount } from "svelte";
-  import { b36encodenumber } from "../utils";
+  import { b36encodenumber, nSecondsOutOfMax, nSecondsToHMS } from "../utils";
   import { WormWatchContext } from "../wormwatchcontext.svelte";
   import YoutubePlayer from "youtube-player";
   import type { YouTubePlayer as Player } from "youtube-player/dist/types";
@@ -9,17 +9,50 @@
     ctx: WormWatchContext;
   }
   let { ctx }: Props = $props();
+
+  let time: string | undefined = $state();
+  let maxTime: string | undefined = $state();
+  let interval: number | undefined;
+
   onMount(() => {
     const startHandler = () => {
+      interval = setInterval(() => {
+        if (ctx.pause !== undefined) {
+          return;
+        }
+        const nTime = ctx.getTimeToStart();
+        if (nTime !== undefined) {
+          const n = Math.floor(nTime / -1000);
+          if (maxTime === undefined) {
+            time = nSecondsToHMS(n);
+          } else {
+            time = nSecondsOutOfMax(n, maxTime);
+          }
+        } else {
+          time = undefined;
+        }
+      }, 1000);
       const entry = ctx.wwqueue[ctx.playingIndex!];
+      if (entry) {
+        // duration from go is given as Nanosecond
+        maxTime = nSecondsToHMS(Math.floor(entry.data.duration / 1000000000));
+      }
       readyPlayerForAction(entry);
     };
     const pauseHandler = () => {
       player.pauseVideo();
     };
+    const clearHandler = () => {
+      clearInterval(interval);
+      time = undefined;
+      maxTime = undefined;
+      interval = undefined;
+
+      destroyPlayer();
+    };
     ctx.addEventListener("start", startHandler);
     ctx.addEventListener("pause", pauseHandler);
-    ctx.addEventListener("clear", destroyPlayer);
+    ctx.addEventListener("clear", clearHandler);
   });
 
   var player: Player;
@@ -78,7 +111,14 @@
 
 <div class="sidebar-group">
   {#if playerReady}
-    <button onclick={onPlayerReady}>sync up</button>
+    <div class="sync-time">
+      <button onclick={onPlayerReady}>sync up</button>
+      <span>
+        {time}{time !== undefined && maxTime !== undefined
+          ? " / "
+          : ""}{maxTime}
+      </span>
+    </div>
   {/if}
   <ol class="queue">
     {#each ctx.wwqueue as entry, i}

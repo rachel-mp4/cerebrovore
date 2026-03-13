@@ -35,6 +35,7 @@ export class WormWatchContext extends EventTarget {
         case "start": {
           this.playingIndex = wwe.index
           this.start = wwe.timestamp + this.offset
+          this.pause = undefined
           this.dispatchEvent(
             new CustomEvent("start", { detail: wwe })
           )
@@ -50,6 +51,8 @@ export class WormWatchContext extends EventTarget {
         }
 
         case "clear": {
+          this.start = undefined
+          this.pause = undefined
           this.wwqueue = []
           this.dispatchEvent(
             new CustomEvent("clear", { detail: wwe })
