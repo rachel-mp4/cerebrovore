@@ -1,0 +1,9 @@
+{{define "patch"}}
+  <h2>cerebrovore {{ .Release }}</h2>
+  <time timestamp="{{.Timestamp}}">{{.Timestamp}}</time>
+  <ol>
+    {{range .Notes}}
+      {{template "note" .}}
+    {{end}}
+  </ol>
+{{end}}

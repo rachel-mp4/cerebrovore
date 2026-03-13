@@ -16,6 +16,7 @@ var threadT *template.Template
 var newthreadT *template.Template
 var bumpedT *template.Template
 var threadsT *template.Template
+var patchT *template.Template
 
 func init() {
 	homeT = newTemplate(
@@ -25,6 +26,16 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/home.html",
+	)
+	patchT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/patch-notes.html",
+		"./tmpl/partial/patch.html",
+		"./tmpl/partial/note.html",
 	)
 	moderateT = newTemplate(
 		"./tmpl/base.html",
