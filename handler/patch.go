@@ -29,6 +29,16 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		},
 		[]types.Patch{
 			{
+				Release:   "α.1.3",
+				Timestamp: "2026-03-13",
+				Notes: []types.Note{
+					{
+						Type: "bodge",
+						Name: "remove post size scaling on mobile for now",
+					},
+				},
+			},
+			{
 				Release:   "α.1.2",
 				Timestamp: "2026-03-13",
 				Notes: []types.Note{
@@ -104,4 +114,3 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 
 }
-

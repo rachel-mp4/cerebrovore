@@ -6,6 +6,7 @@ import (
 )
 
 func main() {
+	fmt.Println("@media (min-width: 36rem) {")
 	i := 1
 	var v = generateVal(i)
 	for v > 1 {
@@ -13,6 +14,7 @@ func main() {
 		i++
 		v = generateVal(i)
 	}
+	fmt.Println("}")
 
 }
 
