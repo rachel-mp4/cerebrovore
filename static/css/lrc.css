@@ -99,11 +99,11 @@
 
 /* diff styles */
 .removed {
-  text-decoration: line-through var(--dg);
+  text-decoration: line-through var(--fl);
 }
 
 .appended {
-  color: var(--dg);
+  color: var(--fl);
 }
 
 

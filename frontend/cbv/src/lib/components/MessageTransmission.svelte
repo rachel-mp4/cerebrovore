@@ -117,7 +117,7 @@
   };
   let mfrags = $derived(convertLinksToMessageFrags(message.lrcdata.body));
   let diffs = $derived(
-    message.lrcdata.pub && message.lrcdata.mine && mylocaltext
+    !message.lrcdata.pub && message.lrcdata.mine && mylocaltext
       ? diff(message.lrcdata.body, mylocaltext)
       : null,
   );
