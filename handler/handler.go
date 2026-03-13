@@ -62,6 +62,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp db.IDStore
 	mux.Handle("GET /css/", http.FileServer(http.Dir("./static")))
 	mux.Handle("GET /js/", http.FileServer(http.Dir("./static")))
 	mux.Handle("GET /font/", Add1YCache(http.FileServer(http.Dir("./static"))))
+	mux.Handle("GET /wav/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /svg/", http.FileServer(http.Dir("./static")))
 	mux.Handle("GET /assets/", http.FileServer(http.Dir("./frontend/dist")))
 	h.mux = mux

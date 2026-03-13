@@ -23,6 +23,9 @@ export class WSContext {
   myMedia: cbv.Media | undefined
   mediaactive: boolean = false
 
+  audio: HTMLAudioElement = new Audio('/wav/notif.wav')
+  shortaudio: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
+
   shouldTransmit: boolean = $state(true)
   lrceventqueue: Array<lrc.Edit> = []
 
@@ -229,6 +232,13 @@ export class WSContext {
     if (this.existingindices.get(item.id)) {
       console.log("you tried to push an item who exists!")
       return
+    }
+    if (document.hidden || !document.hasFocus()) {
+      this.audio.currentTime = 0
+      this.audio.play()
+    } else if (!item.lrcdata.mine) {
+      this.shortaudio.currentTime = 0
+      this.shortaudio.play()
     }
     if (item.lrcdata.mine) {
       if (isMessage(item)) {
