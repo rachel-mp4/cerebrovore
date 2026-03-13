@@ -80,6 +80,8 @@
   margin-left: auto;
   color: var(--fl);
   font-size: .75em;
+  position: relative;
+  z-index: -2;
 }
 
 
