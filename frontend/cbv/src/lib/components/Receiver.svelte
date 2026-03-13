@@ -25,6 +25,21 @@
       return false;
     }
   };
+  let el = document.getElementById("main-content");
+  $effect(() => {
+    if (mylocaltext) {
+      checknscroll();
+    }
+  });
+  const checknscroll = () => {
+    // i just use a big value here (100) because i can't figure it out...
+    // besides, if you're typing, you probably want to be at bottom
+    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+      setTimeout(() => {
+        if (el) el.scrollTo(0, el.scrollHeight);
+      }, 0);
+    }
+  };
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}

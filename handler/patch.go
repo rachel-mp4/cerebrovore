@@ -29,6 +29,16 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		},
 		[]types.Patch{
 			{
+				Release:   "α.1.2",
+				Timestamp: "2026-03-13",
+				Notes: []types.Note{
+					{
+						Type: "fix",
+						Name: "stick to bottom when application of local diffs causes line break",
+					},
+				},
+			},
+			{
 				Release:   "α.1.1",
 				Timestamp: "2026-03-13",
 				Notes: []types.Note{
@@ -94,3 +104,4 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 
 }
+
