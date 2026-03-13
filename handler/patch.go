@@ -29,6 +29,20 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		},
 		[]types.Patch{
 			{
+				Release:   "α.1.1",
+				Timestamp: "2026-03-13",
+				Notes: []types.Note{
+					{
+						Type: "fix",
+						Name: "links that don't start with protocol now work",
+					},
+					{
+						Type: "fix",
+						Name: "diffing of recieved message with local copy now works",
+					},
+				},
+			},
+			{
 				Release:   "α.1.0",
 				Timestamp: "2026-03-13",
 				Notes: []types.Note{
