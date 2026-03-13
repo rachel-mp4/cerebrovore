@@ -33,6 +33,10 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 				Timestamp: "2026-03-13",
 				Notes: []types.Note{
 					{
+						Type: "fix",
+						Name: "use base 36 encoding of reply count on index",
+					},
+					{
 						Type: "bodge",
 						Name: "remove post size scaling on mobile for now",
 					},
@@ -114,3 +118,4 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 
 }
+
