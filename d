@@ -167,17 +167,22 @@ if [[ "$NEEDS_SETUP" == true ]]; then
     printf "   ${G}(G)${RT}enerate random / ${R}(M)${RT}anual entry: "
     read -r SECRET_MODE
 
+    # generate url safe passwords (standard hex is fine)
     case "$SECRET_MODE" in
         [gG])
-            SESSION_KEY=$(openssl rand -base64 48)
-            LRCD_SECRET=$(openssl rand -base64 48)
-            POSTGRES_PASSWORD=$(openssl rand -base64 48)
+            SESSION_KEY=$(openssl rand -hex 32)
+            LRCD_SECRET=$(openssl rand -hex 32)
+            POSTGRES_PASSWORD=$(openssl rand -hex 32)
             log_ok "generated random secrets"
             ;;
         [mM])
             printf "   SESSION_KEY: " && read -r SESSION_KEY
             printf "   LRCD_SECRET: " && read -r LRCD_SECRET
             printf "   POSTGRES_PASSWORD: " && read -r POSTGRES_PASSWORD
+            if [[ "$POSTGRES_PASSWORD" =~ [^a-zA-Z0-9_.-] ]]; then
+                log_warn "password contains URL-unsafe characters (/, +, @, etc.)"
+                log_fail "use only alphanumeric, dash, dot, underscore"
+            fi
             log_ok "manual secrets set"
             ;;
         *)
@@ -284,7 +289,20 @@ fi
 
 log_step "starting postgres"
 quiet docker compose up -d --wait db
-log_ok "postgres container is up"
+
+# -reset-db bug
+# generating .env -> nuke db -> sometimes pg not ready
+log_info "waiting for postgres to accept connections..."
+for i in $(seq 1 15); do
+    if docker compose exec -T db pg_isready -U "$POSTGRES_USER" &>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+if ! docker compose exec -T db pg_isready -U "$POSTGRES_USER" &>/dev/null; then
+    log_fail "postgres didn't become ready in 15s, check docker logs"
+fi
+log_ok "postgres is ready"
 
 # migrations
 log_step "database migrations"
