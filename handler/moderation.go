@@ -1,10 +1,10 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 	"os"
 
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/utils"
 )
 
@@ -18,7 +18,7 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("moderation: %s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 		return
 	}
@@ -30,7 +30,7 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("moderation: %s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 }
@@ -48,7 +48,7 @@ func (h *Handler) postModerate(c *Client, w http.ResponseWriter, r *http.Request
 	nid := r.FormValue("postid")
 	id, err := utils.AToID(nid)
 	if err != nil {
-		log.Println(nid)
+		clog.Warn("moderation: invalid id %s", nid)
 		http.Error(w, "id should be correct!", http.StatusBadRequest)
 		return
 	}

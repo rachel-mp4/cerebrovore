@@ -2,8 +2,9 @@ package model
 
 import (
 	"fmt"
-	"log"
 	"net/http"
+
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -147,7 +148,7 @@ func cleaner(m *Model) {
 			for id, tm := range m.tmap {
 				tm.kawaiiDestroyServer()
 				if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 {
-					log.Println("threadModelKilled")
+					clog.Dbug("thread model killed: %d", id)
 					delete(m.tmap, id)
 				}
 			}

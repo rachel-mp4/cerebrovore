@@ -7,8 +7,9 @@ import (
 	"fmt"
 	"html"
 	"html/template"
-	"log"
 	"net/http"
+
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"net/url"
 	"os"
 	"regexp"
@@ -77,7 +78,7 @@ func ParseBodyForPlays(s string) []*PlayInput {
 			literal := strings.TrimPrefix(l, "#play ")
 			playurl, err := url.Parse(literal)
 			if err != nil {
-				log.Println(err.Error())
+				clog.Warn("post parse: %s", err)
 				continue
 			}
 			switch playurl.Host {
@@ -85,7 +86,7 @@ func ParseBodyForPlays(s string) []*PlayInput {
 				id := playurl.Query().Get("v")
 				pi, err := getDurationForYoutubeId(id)
 				if err != nil {
-					log.Println(err.Error())
+					clog.Warn("post parse: %s", err)
 					continue
 				}
 				res = append(res, pi)
@@ -93,7 +94,7 @@ func ParseBodyForPlays(s string) []*PlayInput {
 				id := strings.TrimPrefix(playurl.Path, "/")
 				pi, err := getDurationForYoutubeId(id)
 				if err != nil {
-					log.Println(err.Error())
+					clog.Warn("post parse: %s", err)
 					continue
 				}
 				res = append(res, pi)
@@ -207,7 +208,7 @@ func ExpandUrls(s string) string {
 		tryurl := s[start:end]
 		yesurl, err := url.Parse(tryurl)
 		if err != nil {
-			log.Println("parse error")
+			clog.Warn("url parse error")
 			out.WriteString(html.EscapeString(tryurl))
 			last = end
 			continue

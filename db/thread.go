@@ -3,23 +3,23 @@ package db
 import (
 	"context"
 	"fmt"
-	"log"
 	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
 )
 
 func (m *MockStore) CreateThread(thread *types.Thread, ctx context.Context) error {
-	log.Println(thread.String())
+	clog.Dbug("create thread: %s", thread.String())
 	return nil
 }
 
 func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return err
 	}
 	defer tx.Rollback(ctx)
@@ -28,7 +28,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 		VALUES ($1, $2)
 		`, thread.ID, thread.Topic)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return err
 	}
 	_, err = tx.Exec(ctx, `
@@ -36,7 +36,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 		VALUES ($1, $1, $2, $3, $4, $5)
 		`, thread.OP.ID, thread.OP.Username, thread.OP.Anon, thread.OP.Nick, thread.OP.Color)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return err
 	}
 	if thread.OP.TextContent != nil {
@@ -45,7 +45,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 			VALUES ($1, $2)
 			`, thread.ID, thread.OP.TextContent.Body)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return err
 		}
 	}
@@ -55,7 +55,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 			VALUES ($1, $2, $3)
 			`, thread.OP.ID, thread.OP.ImageContent.CID, thread.OP.ImageContent.Alt)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return err
 		}
 	}
@@ -67,7 +67,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 			ON CONFLICT DO NOTHING
 			`, thread.ID, thread.OP.Backlinks)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return err
 		}
 	}
@@ -80,7 +80,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 		ON CONFLICT DO NOTHING
 		`, thread.ID)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return err
 	}
 
@@ -91,7 +91,7 @@ func (s *Store) CreateThread(thread *types.Thread, ctx context.Context) error {
 		AND (p.from_id = $1 OR p.to_id = $1)
 		`, thread.ID)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return err
 	}
 	return tx.Commit(ctx)
@@ -266,7 +266,7 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE", id)
 	err = row.Scan(&thread.Topic, &thread.ReplyCount)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return nil, nil, err
 	}
 	q := `
@@ -300,7 +300,7 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND p.id < $3"), id, limit+1, *before)
 	}
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return
 	}
 	defer rows.Close()
@@ -318,7 +318,7 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 		var alt *string
 		err = rows.Scan(&p.ID, &p.Username, &p.Anon, &p.Nick, &p.Color, &p.PostedAt, &b, &cid, &alt, &p.Backlinks)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return
 		}
 		if b != nil {

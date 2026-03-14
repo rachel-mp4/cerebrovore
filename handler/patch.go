@@ -1,9 +1,9 @@
 package handler
 
 import (
-	"log"
 	"net/http"
 
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
 )
 
@@ -75,7 +75,7 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("patch notes: %s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 
