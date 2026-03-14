@@ -11,7 +11,12 @@
   // (meaning jump to id)
   // and have the /ws not be interpreted as part of the hashtag
   const address = `ws${sansproto.split("#")[0]}/ws`;
-  const ctx = new WSContext("wanderer", 4534186);
+  const nick = localStorage.getItem("nick");
+  const color = localStorage.getItem("color");
+  const ctx = new WSContext(
+    nick ?? "wanderer",
+    color ? parseInt(color, 10) : 4534186,
+  );
   ctx.connect(address);
 </script>
 

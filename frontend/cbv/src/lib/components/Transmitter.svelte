@@ -5,10 +5,9 @@
   import diff from "fast-diff";
   interface Props {
     ctx: WSContext;
-    defaultNick?: string;
   }
   let { ctx }: Props = $props();
-  let nick = $state("wanderer");
+  let nick = $state(ctx.nick);
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
   let image: HTMLImageElement | undefined = $state();
@@ -17,10 +16,6 @@
       ctx.setNick(nick);
     }
   });
-  const setName = (event: Event) => {
-    const el = event.target as HTMLInputElement;
-    ctx.nick = el.value;
-  };
 
   let message = $state("");
   const addReply = (str: string) => {
@@ -168,7 +163,6 @@
       {color}
       size={4}
       placeholder="alice!"
-      onInput={setName}
       maxlength={12}
       bold={true}
     />
