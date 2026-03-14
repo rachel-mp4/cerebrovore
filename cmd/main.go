@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
 	"github.com/rachel-mp4/cerebrovore/clog"
@@ -115,6 +117,16 @@ func main() {
 		}
 		clog.Okay("good luck!")
 	}
+	// catch sigint and sigterm (ctrl+c)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sig
+		clog.Okay("my brain has been eaten, GOOD BYE")
+		clog.Close()
+		os.Exit(0)
+	}()
+
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idStore)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())

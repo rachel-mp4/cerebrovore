@@ -61,7 +61,7 @@ log_info()  { echo "[~] $*"; }
 log_frfr()  {
     echo ""
     echo "${R}   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-    echo "${BD}       PLEASE PAY ATTENTION${RT}"
+    echo "${BD}        PLEASE PAY ATTENTION${RT}"
     echo "${R}   !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
     echo ""
 }
@@ -358,23 +358,16 @@ fi
 PIDS=()
 
 if [[ "$DEPLOY" == false ]]; then
-    # dev: vite watch
-    log_step "starting vite in watch mode"
+    # dev: vite w/ hmr
+    log_step "starting vite with HMR"
     if [[ "$VERBOSE" == true ]]; then
-        (cd "$FRONTEND" && npx vite build --watch) &
+        (cd "$FRONTEND" && npx vite dev) &
     else
-        (cd "$FRONTEND" && npx vite build --watch) &>/dev/null &
+        (cd "$FRONTEND" && npx vite dev) &>/dev/null &
     fi
     PIDS+=($!)
-    log_info "vite watch pid: $!"
-
-    # wait to finish the initial build so manifest exists first
-    log_info "waiting for initial frontend build..."
-    sleep 1
-    while [[ ! -f "$ROOT/frontend/dist/.vite/manifest.json" ]]; do
-        sleep 0.3
-    done
-    log_ok "frontend built, manifest found"
+    log_info "vite dev pid: $!"
+    log_ok "vite started"
 else
     # deploy: one-shot vite build
     log_step "building frontend (production)"
@@ -391,24 +384,26 @@ fi
 log_ok "go $(go version | awk '{print $3}')"
 
 if [[ "$DEPLOY" == false ]]; then
-    # dev: go run 
-    GO_FLAGS="-cold -db -midp -dev"
+    GO_FLAGS="-db -midp -dev"
     log_step "starting go backend (dev: $GO_FLAGS)"
 
+    CLEANED=false
     cleanup() {
+        [[ "$CLEANED" == true ]] && return
+        CLEANED=true
+        set +e
         log_step "stopping..."
         for pid in "${PIDS[@]}"; do
-            if kill -0 "$pid" 2>/dev/null; then
-                kill "$pid" 2>/dev/null
-                log_info "stopped pid $pid"
-            fi
+            pkill -P "$pid" 2>/dev/null
+            kill "$pid" 2>/dev/null
+            log_info "stopped pid $pid"
         done
         log_ok "so long..."
     }
-    trap cleanup EXIT
+    trap cleanup EXIT INT TERM
 
     log_ok "http://localhost:8080/"
-    go run ./cmd/main.go $GO_FLAGS
+    go run ./cmd/main.go $GO_FLAGS || true
 else
     # deploy, build binary + systemd
     # seriously this isnt tested so probably dont do this yet
