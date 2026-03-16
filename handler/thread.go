@@ -17,7 +17,6 @@ import (
 	_ "image/jpeg"
 	_ "image/png"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -27,6 +26,7 @@ import (
 
 	_ "golang.org/x/image/webp"
 
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
@@ -77,13 +77,13 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	if err == nil {
 		cid, err, code := saveFileToContentAddress(img)
 		if err != nil {
-			log.Println(err)
+			clog.Warn("image save: %s", err)
 			http.Error(w, "some error apropos image", code)
 			return
 		}
 		err = genThumbnail(cid)
 		if err != nil {
-			log.Println(err)
+			clog.Warn("thumbnail: %s", err)
 			http.Error(w, "some error apropos image 222", code)
 			return
 		}
@@ -103,10 +103,10 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	ntid := utils.IDToA(tid)
 	err = h.db.CreateThread(&thread, r.Context())
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("create thread: %s", err)
 		err = h.m.DeleteThread(tid)
 		if err != nil {
-			log.Println("real bad case!!!!!")
+			clog.Fail("create thread rollback failed: %s", err)
 			http.Error(w, "failed to create thread", http.StatusInternalServerError)
 			return
 		}
@@ -133,7 +133,6 @@ func mimeToExt(contentType string) (string, error) {
 
 func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
-		log.Println("hi")
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
@@ -161,7 +160,7 @@ func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	buf := make([]byte, 512)
 	n, err := io.ReadFull(file, buf)
 	if err != nil && err != io.ErrUnexpectedEOF {
-		log.Println(err)
+		clog.Warn("blob read: %s", err)
 		http.Error(w, "can't read file mime", http.StatusInternalServerError)
 		return
 	}
@@ -187,13 +186,13 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	cid, err, code := saveFileToContentAddress(file)
 	if err != nil {
-		log.Println(err)
+		clog.Warn("blob save: %s", err)
 		http.Error(w, "encountered an error", code)
 		return
 	}
 	err = genThumbnail(cid)
 	if err != nil {
-		log.Println(err)
+		clog.Warn("blob thumbnail: %s", err)
 		http.Error(w, "encountered an error 2", http.StatusInternalServerError)
 	}
 	// i'm not really sure why there's a uuid, but i remember a few months ago
@@ -205,7 +204,7 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(blobresp{cid, r.FormValue("uuid")})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("blob json encode: %s", err)
 	}
 }
 
@@ -367,20 +366,20 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
 	post.ThreadID = tid
 	id, ok := r.MultipartForm.Value["id"]
 	if !ok || len(id) < 1 {
-		log.Println("require post id")
+		clog.Warn("require post id")
 		http.Error(w, "requires post id", http.StatusBadRequest)
 		return
 	}
 	ii, err := utils.AToID(id[0])
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "invalid post id", http.StatusBadRequest)
 		return
 	}
@@ -392,8 +391,8 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	mynonce, err := base64.StdEncoding.DecodeString(nonce[0])
 	if err != nil {
-		log.Println(nonce[0])
-		log.Println(err.Error())
+		clog.Warn("bad nonce: %s", nonce[0])
+		clog.Warn("%s", err)
 		http.Error(w, "nonce encoded wrong", http.StatusBadRequest)
 		return
 	}
@@ -406,7 +405,7 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 
 	rc, backlinks, err := h.db.CreatePost(&post, r.Context())
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "failed to create post", http.StatusInternalServerError)
 		return
 	}
@@ -419,7 +418,7 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 // like informing lrc clients of parsed backlinks, and sending events to watchers
 func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
 	if len(backlinks) != 0 {
-		log.Println("sending backlinks!")
+		clog.Dbug("sending backlinks")
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
 		for _, bl := range backlinks {
 			if bl.From == post.ID {
@@ -433,7 +432,7 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 				}
 				replies = append(replies, &reply)
 			} else {
-				log.Println("BAD BACKLINK!")
+				clog.Fail("bad backlink: from=%d to=%d", bl.From, bl.To)
 			}
 		}
 
@@ -448,13 +447,13 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.NotifyWatchers(post.ThreadID)
 		err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
 		if err != nil {
-			log.Println(err)
+			clog.Warn("%s", err)
 		}
 	} else if replyCount == utils.BUMP_LIMIT {
 		h.m.NotifyBumpLimit(post.ThreadID)
 		err := h.db.RemoveWatchersFor(post.ThreadID, ctx)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("%s", err)
 		}
 	} else if utils.MaxReplies(replyCount) {
 		h.m.ReplyLimit(post.ThreadID)
@@ -494,7 +493,7 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.Pause(post.ThreadID, c.Username)
 	}
 	if cmd.unpause {
-		log.Println("unpause")
+		clog.Dbug("unpause")
 		h.m.Unpause(post.ThreadID, c.Username)
 	}
 }
@@ -529,7 +528,7 @@ func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 	err = bumpedT.ExecuteTemplate(w, "bumped-threads", tbumpedresp{tt})
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 	}
 }
 
@@ -550,7 +549,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if tcrsr != nil {
-		log.Println(fmt.Sprintf("thread %d (#%s) has over REPLY_LIMIT replies (%d)", tid, ntid, t.ReplyCount))
+		clog.Warn("thread %d (#%s) has over REPLY_LIMIT replies (%d)", tid, ntid, t.ReplyCount)
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
@@ -578,7 +577,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	err = threadT.ExecuteTemplate(w, "base", gtr)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 	}
 }
 
@@ -586,13 +585,13 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
 	f, err := h.m.GetThreadWSHandler(uint32(tid))
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "error getting ws handler", http.StatusInternalServerError)
 		return
 	}
@@ -603,13 +602,13 @@ func (h *Handler) getThreadWW(c *Client, w http.ResponseWriter, r *http.Request)
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
 	f, err := h.m.GetThreadWWHandler(uint32(tid), c.Username)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "error getting ws handler", http.StatusInternalServerError)
 		return
 	}
@@ -623,7 +622,7 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 	}
 	ids, err := h.db.GetWatchedThreads(c.Username, r.Context())
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "error finding watched threads", http.StatusInternalServerError)
 		return
 	}
@@ -645,7 +644,7 @@ func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request)
 	}
 	err = h.db.WatchThread(c.Username, tid, r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error watching thread", http.StatusInternalServerError)
 		return
 	}
@@ -685,7 +684,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 		http.Error(w, "error getting bumps", http.StatusInternalServerError)
 		return
 	}
@@ -711,7 +710,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_INDEX_PAGE, r.Context())
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
 			return
 		}
@@ -725,7 +724,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 		fts, nc, err := h.db.GetBumpedThreads(bc, utils.THREADS_PER_INDEX_PAGE, r.Context())
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
 			return
 		}
@@ -734,6 +733,6 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	err = threadsT.ExecuteTemplate(w, "base", tr)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("%s", err)
 	}
 }

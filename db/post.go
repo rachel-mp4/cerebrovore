@@ -2,20 +2,21 @@ package db
 
 import (
 	"context"
+
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
-	"log"
 )
 
 func (m *MockStore) CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error) {
-	log.Println(post.String())
+	clog.Dbug("create post: %s", post.String())
 	return 0, nil, nil
 }
 
 func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error) {
 	tx, err := s.pool.Begin(ctx)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return 0, nil, err
 	}
 	defer tx.Rollback(ctx)
@@ -41,7 +42,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 		VALUES ($1, $2, $3, $4, $5, $6)
 		`, post.ID, post.ThreadID, post.Username, post.Anon, post.Nick, post.Color)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return 0, nil, err
 	}
 	if post.TextContent != nil {
@@ -50,7 +51,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 			VALUES ($1, $2)
 			`, post.ID, post.TextContent.Body)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return 0, nil, err
 		}
 	}
@@ -60,7 +61,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 			VALUES ($1, $2, $3)
 			`, post.ID, post.ImageContent.CID, post.ImageContent.Alt)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return 0, nil, err
 		}
 	}
@@ -72,7 +73,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 			ON CONFLICT DO NOTHING
 			`, post.ID, post.Backlinks)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return 0, nil, err
 		}
 	}
@@ -86,7 +87,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 		RETURNING from_id, to_id
 		`, post.ID)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return 0, nil, err
 	}
 	defer rows.Close()
@@ -95,7 +96,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 		var bl Backlink
 		err := rows.Scan(&bl.From, &bl.To)
 		if err != nil {
-			log.Println(err.Error())
+			clog.Warn("db: %s", err)
 			return 0, nil, err
 		}
 		res = append(res, bl)
@@ -108,7 +109,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 		AND (p.from_id = $1 OR p.to_id = $1)
 		`, post.ID)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return 0, nil, err
 	}
 	return rc, res, tx.Commit(ctx)
@@ -124,7 +125,7 @@ func (s *Store) GetMaxPostId(ctx context.Context) (uint32, error) {
 	var id uint32
 	err := row.Scan(&id)
 	if err != nil {
-		log.Println(err.Error())
+		clog.Warn("db: %s", err)
 		return 0, err
 	}
 	return id, nil

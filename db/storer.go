@@ -3,10 +3,12 @@ package db
 import (
 	"context"
 	"fmt"
-	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/rachel-mp4/cerebrovore/types"
 	"os"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/rachel-mp4/cerebrovore/clog"
+	"github.com/rachel-mp4/cerebrovore/types"
 )
 
 type IDStorer interface {
@@ -110,6 +112,6 @@ func initialize() (*pgxpool.Pool, error) {
 	if pingErr != nil {
 		return nil, pingErr
 	}
-	fmt.Println("connected!")
+	clog.Okay("connected!")
 	return pool, nil
 }

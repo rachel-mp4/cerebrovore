@@ -3,3 +3,5 @@ frontend/dist
 uploads
 .fileStore
 migrate
+cerebrovore.log
+/cerebrovore

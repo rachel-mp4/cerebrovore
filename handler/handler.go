@@ -2,11 +2,11 @@ package handler
 
 import (
 	"crypto/rand"
-	"log"
 	"net/http"
 	"os"
 
 	"github.com/gorilla/sessions"
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/model"
 )
@@ -91,7 +91,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 		return
 	}
@@ -103,7 +103,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 }
@@ -118,7 +118,7 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 		return
 	}
@@ -130,7 +130,7 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 }
@@ -141,7 +141,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 		return
 	}
@@ -153,7 +153,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 }
@@ -164,7 +164,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 		return
 	}
@@ -176,7 +176,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error templating", http.StatusInternalServerError)
 	}
 }
@@ -214,7 +214,7 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 	session.Values["id"] = id
 	err := session.Save(r, w)
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error saving session", http.StatusInternalServerError)
 		return
 	}
@@ -245,7 +245,7 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	session.Values["id"] = id
 	err := session.Save(r, w)
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error saving session", http.StatusInternalServerError)
 		return
 	}
@@ -259,7 +259,7 @@ func (h *Handler) beep(w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 	}
 	beepT.ExecuteTemplate(w, "base", beepresp{
@@ -289,7 +289,7 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
-		log.Println(err)
+		clog.Warn("%s", err)
 		http.Error(w, "error getting threads", http.StatusInternalServerError)
 	}
 	meT.ExecuteTemplate(w, "base", meresp{

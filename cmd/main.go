@@ -7,24 +7,36 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/joho/godotenv"
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/handler"
 	"github.com/rachel-mp4/cerebrovore/model"
 )
 
 func main() {
-	fmt.Println("*eats ur brain*")
-	err := godotenv.Load(".env")
-	if err != nil {
-		panic(err)
-	}
 	cold := flag.Bool("cold", false, "disables hot module replacement")
 	port := flag.Int("port", 8080, "port to listen on")
 	dontmock := flag.Bool("db", false, "doesn't mock the database")
 	midp := flag.Bool("midp", false, "uses an in memory id provider")
+	dev := flag.Bool("dev", false, "run in dev mode (file logging, debug output)")
 	flag.Parse()
+
+	clog.Dev = *dev
+	if err := clog.Init("cerebrovore.log"); err != nil {
+		clog.Warn("could not open log file: %s", err)
+	}
+	defer clog.Close()
+
+	clog.Info("*eats ur brain*")
+
+	err := godotenv.Load(".env")
+	if err != nil {
+		panic(err)
+	}
 	var ca *handler.CompiledAssets
 	// if not doing hot module replacement, we must read the manifest to figure out
 	// where the required scripts are, so that way we can link them accordingly when
@@ -53,11 +65,12 @@ func main() {
 	var store db.Storer
 	var idStore db.IDStorer
 	if *dontmock && !(*midp) {
-		fmt.Println("WARNING WARNING WARNING NOT MOCKING DB AND MOCKING IDP")
-		fmt.Println("IF THIS IS PROD, USERS CAN JUST SET THEIR SESSION ID")
-		fmt.Println("TO WHATEVER THEY WANT")
-		fmt.Println("press enter to confirm")
-		fmt.Scanln()
+		clog.Warn("NOT MOCKING DB AND MOCKING IDP")
+		clog.Warn("IF THIS IS PROD, USERS CAN SET THEIR SESSION ID TO WHATEVER THEY WANT")
+		if !clog.InputYN("continue anyway?") {
+			clog.Fail("aborted")
+			os.Exit(1)
+		}
 	}
 	if *dontmock {
 		realstore, err := db.Init()
@@ -83,13 +96,10 @@ func main() {
 	threads, err := store.GetAllThreads(context.Background())
 	first := false
 	if err != nil {
-		fmt.Println("is this your first time running on this database?(y/n)")
-		var answer string
-		fmt.Scanln(&answer)
-		if answer != "y" {
+		if !clog.InputYN("is this your first time running on this database?") {
 			panic(err)
 		}
-		fmt.Println("good luck!")
+		clog.Okay("good luck!")
 		first = true
 	}
 	// we also need the max id in order to allocate post ids properly
@@ -102,14 +112,21 @@ func main() {
 		mid = 0
 	}
 	if err != nil {
-		fmt.Println("is this your first time running on this database?(y/n)")
-		var answer string
-		fmt.Scanln(&answer)
-		if answer != "y" {
+		if !clog.InputYN("is this your first time running on this database?") {
 			panic(err)
 		}
-		fmt.Println("good luck!")
+		clog.Okay("good luck!")
 	}
+	// catch sigint and sigterm (ctrl+c)
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sig
+		clog.Okay("my brain has been eaten, GOOD BYE")
+		clog.Close()
+		os.Exit(0)
+	}()
+
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idStore)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
