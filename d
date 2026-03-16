@@ -36,7 +36,6 @@ if [[ "$_DEPLOY" == true ]]; then
 else
     echo "      ⠤⠤⠤⠣${P} dev ${B}⠱⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤⠤"
 fi
-echo ""
 echo "${RT}"
 
 # help cmd
