@@ -3,6 +3,7 @@ import { isMessage, isImage, isMedia } from "./types"
 import { b36encodenumber } from "./utils"
 import * as lrc from '@rachel-mp4/lrcproto/gen/ts/lrc'
 import { numToHex } from "./colors"
+import { getFocusPingVolume, getPingVolume, getVolume, onVolumeChange, onVolumeFocusPingChange, onVolumePingChange } from "./volume"
 
 export class WSContext {
   existingindices: Map<number, boolean> = new Map()
@@ -23,8 +24,11 @@ export class WSContext {
   myMedia: cbv.Media | undefined
   mediaactive: boolean = false
 
-  audio: HTMLAudioElement = new Audio('/wav/notif.wav')
-  shortaudio: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
+  volume: number
+  ping: HTMLAudioElement = new Audio('/wav/notif.wav')
+  pingvolume: number
+  focusping: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
+  focuspingvolume: number
 
   shouldTransmit: boolean = $state(true)
   lrceventqueue: Array<lrc.Edit> = []
@@ -32,6 +36,24 @@ export class WSContext {
   constructor(defaultNick: string, defaultColor: number) {
     this.nick = defaultNick
     this.color = defaultColor
+    this.volume = getVolume()
+    this.pingvolume = getPingVolume()
+    this.focuspingvolume = getFocusPingVolume()
+    this.ping.volume = this.volume * this.pingvolume
+    this.focusping.volume = this.volume * this.focuspingvolume
+    onVolumeChange((e) => {
+      this.volume = e.detail.volume
+      this.ping.volume = this.volume * this.pingvolume
+      this.focusping.volume = this.volume * this.focuspingvolume
+    })
+    onVolumePingChange((e) => {
+      this.pingvolume = e.detail.volume
+      this.ping.volume = this.volume * this.pingvolume
+    })
+    onVolumeFocusPingChange((e) => {
+      this.focuspingvolume = e.detail.volume
+      this.focusping.volume = this.volume * this.focuspingvolume
+    })
   }
 
   connect(url: string) {
@@ -240,13 +262,13 @@ export class WSContext {
       console.log("you tried to push an item who exists!")
       return
     }
-    // if (document.hidden || !document.hasFocus()) {
-    //   this.audio.currentTime = 0
-    //   this.audio.play()
-    // } else if (!item.lrcdata.mine) {
-    //   this.shortaudio.currentTime = 0
-    //   this.shortaudio.play()
-    // }
+    if (document.hidden || !document.hasFocus()) {
+      this.ping.currentTime = 0
+      this.ping.play()
+    } else if (!item.lrcdata.mine) {
+      this.focusping.currentTime = 0
+      this.focusping.play()
+    }
     if (item.lrcdata.mine) {
       if (isMessage(item)) {
         this.myMessage = item

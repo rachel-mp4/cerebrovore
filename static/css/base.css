@@ -288,3 +288,7 @@ form {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.volume-settings {
+  accent-color: var(--primary);
+}

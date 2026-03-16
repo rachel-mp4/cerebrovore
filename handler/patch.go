@@ -29,6 +29,24 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		},
 		[]types.Patch{
 			{
+				Release:   "α.2.0",
+				Timestamp: "2026-03-16",
+				Notes: []types.Note{
+					{
+						Type: "feature",
+						Name: "add volume settings",
+					},
+					{
+						Type: "bts",
+						Name: "add a cool start script to streamline development",
+					},
+					{
+						Type: "fix",
+						Name: "actually use base 36 encoding of reply count on index",
+					},
+				},
+			},
+			{
 				Release:   "α.1.3",
 				Timestamp: "2026-03-13",
 				Notes: []types.Note{
@@ -126,4 +144,3 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 
 }
-

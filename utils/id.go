@@ -10,6 +10,10 @@ func IDToA(id uint32) string {
 	return strconv.FormatUint(uint64(id), 36)
 }
 
+func IntTo36A(i int) string {
+	return strconv.FormatInt(int64(i), 36)
+}
+
 // AToID converts a base 36 alphanumeric number to an id
 func AToID(s string) (id uint32, err error) {
 	id64, err := strconv.ParseUint(s, 36, 32)

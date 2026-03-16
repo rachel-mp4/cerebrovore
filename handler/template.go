@@ -119,6 +119,7 @@ func newTemplate(files ...string) *template.Template {
 		template.New("").Funcs(
 			template.FuncMap{
 				"idtoa":           utils.IDToA,
+				"intto36a":        utils.IntTo36A,
 				"renderImageBody": utils.RenderImageBody,
 				"renderTextBody":  utils.RenderTextBody,
 				"colorIsDark":     utils.ColorIsDark,

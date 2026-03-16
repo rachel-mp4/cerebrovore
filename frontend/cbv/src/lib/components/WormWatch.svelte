@@ -5,6 +5,13 @@
   import { WormWatchContext } from "../wormwatchcontext.svelte";
   import YoutubePlayer from "youtube-player";
   import type { YouTubePlayer as Player } from "youtube-player/dist/types";
+  import {
+    getVolume,
+    getWormWatchVolume,
+    onVolumeChange,
+    onVolumeWormWatchChange,
+  } from "../volume";
+  import VolumeSettings from "./VolumeSettings.svelte";
   interface Props {
     ctx: WormWatchContext;
   }
@@ -13,6 +20,9 @@
   let time: string | undefined = $state();
   let maxTime: string | undefined = $state();
   let interval: number | undefined;
+  let volume: number = getVolume();
+  let wwvolume: number = getWormWatchVolume();
+  let showVolumeSettings = $state(false);
 
   onMount(() => {
     const startHandler = () => {
@@ -53,6 +63,25 @@
     ctx.addEventListener("start", startHandler);
     ctx.addEventListener("pause", pauseHandler);
     ctx.addEventListener("clear", clearHandler);
+    const removeVC = onVolumeChange((e) => {
+      volume = e.detail.volume;
+      if (playerReady) {
+        player.setVolume(Math.floor(volume * wwvolume * 100));
+      }
+    });
+    const removeWWVC = onVolumeWormWatchChange((e) => {
+      wwvolume = e.detail.volume;
+      if (playerReady) {
+        player.setVolume(Math.floor(volume * wwvolume * 100));
+      }
+    });
+    return () => {
+      ctx.removeEventListener("start", startHandler);
+      ctx.removeEventListener("pause", pauseHandler);
+      ctx.removeEventListener("clear", clearHandler);
+      removeVC();
+      removeWWVC();
+    };
   });
 
   var player: Player;
@@ -76,9 +105,11 @@
           player
             .setSize(entry.data.width ?? 576, entry.data.height ?? 324)
             .then(() => {
-              playerReady = true;
-              playerHeight = entry.data.height ?? 324;
-              onPlayerReady();
+              player.setVolume(Math.floor(volume * wwvolume * 100)).then(() => {
+                playerReady = true;
+                playerHeight = entry.data.height ?? 324;
+                onPlayerReady();
+              });
             });
         });
         break;
@@ -110,6 +141,16 @@
 <div class="spacer" style:height="{playerHeight}px"></div>
 
 <div class="sidebar-group">
+  <div>
+    <button
+      onclick={() => {
+        showVolumeSettings = !showVolumeSettings;
+      }}>{showVolumeSettings ? "hide" : "show"} volume settings</button
+    >
+    {#if showVolumeSettings}
+      <VolumeSettings />
+    {/if}
+  </div>
   {#if playerReady}
     <div class="sync-time">
       <button onclick={onPlayerReady}>sync up</button>
@@ -119,6 +160,9 @@
           : ""}{maxTime}
       </span>
     </div>
+  {/if}
+  {#if ctx.wwqueue.length !== 0 && !ctx.start}
+    <div>paused</div>
   {/if}
   <ol class="queue">
     {#each ctx.wwqueue as entry, i}

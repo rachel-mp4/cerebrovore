@@ -1,12 +1,26 @@
 import type * as cbv from "./types"
 import { b36encodenumber } from "./utils"
+import { getVolume, getWatcherVolume, onVolumeChange, onVolumeWatcherChange } from "./volume"
 export class WatcherContext {
   watchthreads: Array<cbv.WatchThread> = $state([])
   ws: WebSocket
 
-  shortaudio: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
+  volume: number
+  watcherping: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
+  watchervolume: number
 
   constructor() {
+    this.volume = getVolume()
+    this.watchervolume = getWatcherVolume()
+    this.watcherping.volume = this.volume * this.watchervolume
+    onVolumeChange((e) => {
+      this.volume = e.detail.volume
+      this.watcherping.volume = this.volume * this.watchervolume
+    })
+    onVolumeWatcherChange((e) => {
+      this.watchervolume = e.detail.volume
+      this.watcherping.volume = this.volume * this.watchervolume
+    })
     const ws = new WebSocket("/ts")
     ws.onopen = () => console.log("i'm watching (4) you")
     ws.onmessage = (event) => {
@@ -16,8 +30,8 @@ export class WatcherContext {
       if (document.getElementById(b36encodenumber(twe.id))) {
         return
       }
-      this.shortaudio.currentTime = 0
-      this.shortaudio.play()
+      this.watcherping.currentTime = 0
+      this.watcherping.play()
       if (this.watchthreads.find((wti) => wti.id === twe.id)) {
         this.watchthreads = this.watchthreads.map((wti) => {
           return wti.id === twe.id ? { ...wti, bumps: wti.bumps + 1, bumpedAt: Date.now(), ...(twe.bumpLimit && { bumpLimit: twe.bumpLimit }) } : wti
