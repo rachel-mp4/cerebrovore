@@ -15,7 +15,7 @@
     </h2>
   {{end}}
   {{range .ThreadThumbs}}
-    <div class="thread-tail" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
+    <div class="thread-tail{{if maxReplies .ReplyCount}} archived{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
       <div>
         <a href="/t/{{idtoa .ID}}">
           <span class="topic">{{topicOrIdtoa .}}</span>
