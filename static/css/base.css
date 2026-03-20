@@ -393,7 +393,7 @@ form {
   transform: translateY(0.5rem)
 }
 
-.catalog .topic {
+:is(.catalog, .thread-tail) .topic {
   font-size: 2rem;
   word-break: break-word;
 }
