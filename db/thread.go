@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
+	"github.com/rachel-mp4/cerebrovore/utils"
 )
 
 func (m *MockStore) CreateThread(thread *types.Thread, ctx context.Context) error {
@@ -244,9 +245,10 @@ func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error
 			topic
 		FROM threads
 		WHERE deleted = FALSE
+		AND reply_count + 1 < $1
 		ORDER BY bumped_at DESC
 		LIMIT 5
-		`)
+		`, utils.BUMP_LIMIT)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

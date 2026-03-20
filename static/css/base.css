@@ -401,3 +401,7 @@ form {
 .catalog .tx {
   padding-bottom: 0;
 }
+
+.archived {
+  opacity: 0.5;
+}
