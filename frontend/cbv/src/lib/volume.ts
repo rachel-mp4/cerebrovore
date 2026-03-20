@@ -9,7 +9,12 @@ export function onVolumeChange(handler: (e: any) => void) {
 }
 
 export function getVolume(): number {
-  const volume = Number(localStorage.getItem("volume"))
+  const stored = localStorage.getItem("volume")
+  if (stored === null) {
+    localStorage.setItem("volume", String(1))
+    return 1
+  }
+  const volume = Number(stored)
   if (!Number.isFinite(volume)) {
     localStorage.setItem("volume", String(1))
     return 1
@@ -33,7 +38,12 @@ export function onVolumeWatcherChange(handler: (e: any) => void) {
 }
 
 export function getWatcherVolume(): number {
-  const volume = Number(localStorage.getItem("volumewatcher"))
+  const stored = localStorage.getItem("volumewatcher")
+  if (stored === null) {
+    localStorage.setItem("volumewatcher", String(1))
+    return 1
+  }
+  const volume = Number(stored)
   if (!Number.isFinite(volume)) {
     localStorage.setItem("volumewatcher", String(1))
     return 1
@@ -57,7 +67,12 @@ export function onVolumeWormWatchChange(handler: (e: any) => void) {
 }
 
 export function getWormWatchVolume(): number {
-  const volume = Number(localStorage.getItem("volumewormwatch"))
+  const stored = localStorage.getItem("volumewormwatcher")
+  if (stored === null) {
+    localStorage.setItem("volumewormwatcher", String(1))
+    return 1
+  }
+  const volume = Number(stored)
   if (!Number.isFinite(volume)) {
     localStorage.setItem("volumewormwatch", String(1))
     return 1
@@ -81,7 +96,12 @@ export function onVolumeFocusPingChange(handler: (e: any) => void) {
 }
 
 export function getFocusPingVolume(): number {
-  const volume = Number(localStorage.getItem("volumefocusping"))
+  const stored = localStorage.getItem("volumefocusping")
+  if (stored === null) {
+    localStorage.setItem("volumefocusping", String(1))
+    return 1
+  }
+  const volume = Number(stored)
   if (!Number.isFinite(volume)) {
     localStorage.setItem("volumefocusping", String(1))
     return 1
@@ -105,7 +125,12 @@ export function onVolumePingChange(handler: (e: any) => void) {
 }
 
 export function getPingVolume(): number {
-  const volume = Number(localStorage.getItem("volumeping"))
+  const stored = localStorage.getItem("volumeping")
+  if (stored === null) {
+    localStorage.setItem("volumeping", String(1))
+    return 1
+  }
+  const volume = Number(stored)
   if (!Number.isFinite(volume)) {
     localStorage.setItem("volumeping", String(1))
     return 1
