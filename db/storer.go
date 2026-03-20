@@ -11,11 +11,6 @@ import (
 	"github.com/rachel-mp4/cerebrovore/types"
 )
 
-type IDStorer interface {
-	CreateAccount(username string, password string, invite string) error
-	VerifyCredentials(username string, password string) error
-}
-
 type Storer interface {
 	// auth methods
 	CreateAuthRequest(state string, pkceVerifier string, ctx context.Context) error
@@ -38,18 +33,19 @@ type Storer interface {
 	// Consider caching this in Storer implementation
 	GetBumps(ctx context.Context) ([]types.Thread, error)
 
-	// GetRecentThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 3
+	GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+	// GetRecentCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+
+	// GetRecentThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently posted limit threads before before (if given).
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
-	// DOES NOT CURRENTLY GET ANY POSTS
 	GetRecentThreads(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
 
-	// GetBumpedThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 3
+	// GetBumpedThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently bumped limit threads before before (if given).
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
-	// DOES NOT CURRENTLY GET ANY POSTS
 	GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
 
 	// GetThread gets all the stored information about a thread, and up to limit replies,
@@ -63,8 +59,8 @@ type Storer interface {
 	// watch methods
 	// GetWatchedThreads gets all the threads that a username is watching
 	GetWatchedThreads(username string, ctx context.Context) ([]uint32, error)
-	WatchThread(username string, id uint32, ctx context.Context) error
-	UnwatchThread(username string, id uint32, ctx context.Context) error
+	WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
+	UnwatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
 	IsWatched(username string, id uint32, ctx context.Context) bool
 	RemoveWatchersFor(id uint32, ctx context.Context) error
 

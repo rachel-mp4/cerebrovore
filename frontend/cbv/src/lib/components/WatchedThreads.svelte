@@ -1,10 +1,14 @@
 <script lang="ts">
   import type { WatchThread } from "../types";
   import WatchedThread from "./WatchedThread.svelte";
+  import NewThread from "./NewThread.svelte";
   interface Props {
     items: Array<WatchThread>;
+    newitems: Array<WatchThread>;
+    watchIdx: (idx: number) => void;
+    rmIdx: (idx: number) => void;
   }
-  let { items }: Props = $props();
+  let { items, newitems, watchIdx, rmIdx }: Props = $props();
   let bumpOrder = $derived(
     items
       .toSorted((a: WatchThread, b: WatchThread) => b.bumpedAt - a.bumpedAt)
@@ -20,6 +24,7 @@
     "#watched-threads button",
   ) as HTMLButtonElement;
   button.onclick = () => {
+    button.classList.toggle("recent-activity");
     usingBumpOrdering = button.classList.toggle("total-activity");
   };
   let order = $derived(usingBumpOrdering ? bumpsOrder : bumpOrder);
@@ -30,5 +35,11 @@
 {:else}
   {#each order as item}
     <WatchedThread {item} />
+  {/each}
+{/if}
+{#if newitems.length !== 0}
+  <div>new threads</div>
+  {#each newitems.slice(0, 3) as item, idx}
+    <NewThread {item} {idx} {watchIdx} {rmIdx} />
   {/each}
 {/if}

@@ -24,6 +24,7 @@
   <Receiver
     items={ctx.items}
     mylocaltext={ctx.curMsg}
+    mylocalimage={ctx.curImageBlobURL}
     onmute={ctx.mute}
     onunmute={ctx.unmute}
   />

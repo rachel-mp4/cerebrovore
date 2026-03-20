@@ -10,7 +10,9 @@
     {{- renderImageBody .ImageContent.CID .ImageContent.Alt -}}
     {{- end -}}
     {{- if .TextContent -}}
-      {{- renderTextBody .TextContent.Body -}}
+      <div>
+        {{- renderTextBody .TextContent.Body -}}
+      </div>
     {{- end -}}
   </div>
   <div class="footer">

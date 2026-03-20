@@ -114,6 +114,7 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	go h.m.NotifyNewThread(tid)
 }
 
 func mimeToExt(contentType string) (string, error) {
@@ -445,9 +446,12 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 	}
 	if replyCount < utils.BUMP_LIMIT {
 		h.m.NotifyWatchers(post.ThreadID)
-		err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
+		changed, err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
 		if err != nil {
 			clog.Warn("%s", err)
+		}
+		if changed {
+			h.m.Watch(c.Username, post.ThreadID)
 		}
 	} else if replyCount == utils.BUMP_LIMIT {
 		h.m.NotifyBumpLimit(post.ThreadID)
@@ -570,6 +574,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			title,
 			tt,
+			h.crack,
 		},
 		Thread:   t,
 		Watched:  watched,
@@ -620,14 +625,8 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	ids, err := h.db.GetWatchedThreads(c.Username, r.Context())
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error finding watched threads", http.StatusInternalServerError)
-		return
-	}
 
-	f := h.m.GetThreadSocketHandler(ids)
+	f := h.m.GetThreadSocketHandler(c.Username, h.db.GetWatchedThreads)
 	f(w, r)
 }
 
@@ -642,11 +641,25 @@ func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	err = h.db.WatchThread(c.Username, tid, r.Context())
+	changed, err := h.db.WatchThread(c.Username, tid, r.Context())
 	if err != nil {
 		clog.Warn("%s", err)
 		http.Error(w, "error watching thread", http.StatusInternalServerError)
 		return
+	}
+	if changed {
+		bl := h.m.Watch(c.Username, tid)
+		if bl {
+			changed, err := h.db.UnwatchThread(c.Username, tid, r.Context())
+			if err != nil {
+				clog.Warn("%s", err)
+				http.Error(w, "error watching thread", http.StatusInternalServerError)
+				return
+			}
+			if !changed {
+				clog.Warn("change back fail?")
+			}
+		}
 	}
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }
@@ -662,12 +675,82 @@ func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Reques
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	err = h.db.UnwatchThread(c.Username, tid, r.Context())
+	changed, err := h.db.UnwatchThread(c.Username, tid, r.Context())
 	if err != nil {
 		http.Error(w, "error watching thread", http.StatusInternalServerError)
 		return
 	}
+	if changed {
+		h.m.Unwatch(c.Username, tid)
+	}
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+}
+func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	type catalogresp struct {
+		baseresp
+		IsChrono     bool
+		ChronoCursor *uint32
+		BumpCursor   *time.Time
+		ThreadThumbs []types.Thread
+	}
+	tt, err := h.db.GetBumps(r.Context())
+	if err != nil {
+		clog.Warn("%s", err)
+		http.Error(w, "error getting bumps", http.StatusInternalServerError)
+		return
+	}
+	chrono := r.URL.Query().Get("chrono")
+	isChrono := chrono != ""
+	tr := catalogresp{
+		baseresp{
+			h.ca,
+			"threads",
+			tt,
+			h.crack,
+		},
+		isChrono,
+		nil,
+		nil,
+		nil,
+	}
+	cursor := r.URL.Query().Get("cursor")
+	if isChrono {
+		var cc *uint32
+		id, err := utils.AToID(cursor)
+		if err == nil {
+			cc = &id
+		}
+		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
+		if err != nil {
+			clog.Warn("%s", err)
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.ChronoCursor = nc
+		tr.ThreadThumbs = fts
+	} else {
+		var bc *time.Time
+		t, err := utils.ParseTime(cursor)
+		if err == nil {
+			bc = &t
+		}
+		fts, nc, err := h.db.GetBumpedCatalog(bc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
+		if err != nil {
+			clog.Warn("%s", err)
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.BumpCursor = nc
+		tr.ThreadThumbs = fts
+	}
+	err = catalogT.ExecuteTemplate(w, "base", tr)
+	if err != nil {
+		clog.Warn("%s", err)
+	}
 }
 
 func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -695,6 +778,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"threads",
 			tt,
+			h.crack,
 		},
 		isChrono,
 		nil,

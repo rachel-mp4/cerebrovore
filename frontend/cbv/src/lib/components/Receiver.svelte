@@ -10,10 +10,11 @@
   interface Props {
     items: Array<Item>;
     mylocaltext?: string;
+    mylocalimage?: string | undefined;
     onmute?: (id: number) => void;
     onunmute?: (id: number) => void;
   }
-  let { items, mylocaltext, onmute, onunmute }: Props = $props();
+  let { items, mylocaltext, mylocalimage, onmute, onunmute }: Props = $props();
   const isActive = (item: Item): boolean => {
     if (isEnby(item)) {
       return true;
@@ -99,7 +100,16 @@
               src={item.lrcdata.pub.contentAddress}
               alt={item.lrcdata.pub.alt}
             />
-          {:else}i don't have image yet{/if}
+          {:else if item.lrcdata.mine && !item.lrcdata.pub}
+            <ImageTransmission
+              src={mylocalimage ?? ""}
+              alt={undefined}
+              gifoverride={true}
+            />
+            <div>THIS IS A PREVIEW THAT ONLY YOU CAN SEE</div>
+          {:else}
+            i don't have image yet
+          {/if}
         {/if}
       </div>
       {#if item.replies !== null}

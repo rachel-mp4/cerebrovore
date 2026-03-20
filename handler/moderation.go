@@ -27,6 +27,7 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"moderation",
 			tt,
+			h.crack,
 		},
 	})
 	if err != nil {

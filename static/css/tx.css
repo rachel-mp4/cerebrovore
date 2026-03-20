@@ -21,6 +21,7 @@
 .image-wrapper {
   position: relative;
   display: inline-block;
+  float: left;
 }
 
 .image-wrapper[data-thumb] > img {
@@ -88,6 +89,7 @@
 /* transmission footer styles */
 .tx > .footer {
   font-size: .75em;
+  clear: left
 }
 
 

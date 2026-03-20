@@ -2,9 +2,10 @@
   interface Props {
     src: string;
     alt: string | undefined;
+    gifoverride?: boolean;
   }
-  let { src, alt }: Props = $props();
-  let isgif = src.endsWith(".gif");
+  let { src, alt, gifoverride }: Props = $props();
+  let isgif = $derived(src.endsWith(".gif") || gifoverride);
 </script>
 
 {#if isgif}

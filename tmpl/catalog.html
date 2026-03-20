@@ -1,0 +1,44 @@
+{{define "content"}}
+  <h1>thread catalog</h1>
+  <div>
+    <a href="/new">start a new thread</a>
+  </div>
+  {{if .IsChrono}}
+    <h2>
+      sorted reverse chronologically
+      <a href="/catalog">(switch to bump order)</a>
+    </h2>
+  {{else}}
+    <h2>
+      sorted by bump order
+      <a href="/catalog?chrono=yes">(switch to reverse chronological)</a>
+    </h2>
+  {{end}}
+  <div class="catalog">
+    {{range .ThreadThumbs}}
+      <div class="catalog-thumb" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
+        <div>
+          <a href="/t/{{idtoa .ID}}">
+            <span class="topic">{{topicOrIdtoa .}}</span>
+          </a>
+        </div>
+        {{template "post" .OP}}
+        <div>
+          <a href="/t/{{idtoa .ID}}">
+            <span>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}({{intto36a .ReplyCount}} replies){{end}}</span>
+          </a>
+        </div>
+      </div>
+    {{end}}
+  </div>
+  {{if .IsChrono}}
+    {{if .ChronoCursor}}
+      <a href="/catalog?chrono=yes&cursor={{idtoa .ChronoCursor}}">Next page</a>
+    {{end}}
+  {{else}}
+    {{if .BumpCursor}}
+      <a href="/catalog?cursor={{formatTime .BumpCursor}}">Next page</a>
+    {{end}}
+  {{end}}
+  <script src="/js/thumb.js"></script>
+{{end}}

@@ -17,6 +17,7 @@ export class WSContext {
 
   nick: string = "wanderer"
   curMsg: string = $state("")
+  curImageBlobURL: string | undefined = $state()
   myMessage: cbv.Message | undefined
   messageactive: boolean = false
   myImageRef: string | undefined = $state()
@@ -129,11 +130,11 @@ export class WSContext {
   }
 
   pubImage = (alt: string) => {
+    this.curImageBlobURL = undefined
     if (this.myMedia) {
       if (this.myImageRef) {
         const contentAddress = `/blob?cid=${this.myImageRef}`
         pubImage(alt, contentAddress, this)
-        let body = this.curMsg
         const fd = new FormData()
         fd.append("id", b36encodenumber(this.myMedia.id))
         fd.append("color", numToHex(this.color))
@@ -174,15 +175,17 @@ export class WSContext {
   cancelImage = () => {
     if (this.mediaactive) {
       pubImage(undefined, undefined, this)
+      this.curImageBlobURL = undefined
       this.myMedia = undefined
       this.myImageRef = undefined
       this.mediaactive = false
     }
   }
 
-  initImage = (blob: File) => {
+  initImage = (blob: File, blobUrl: string) => {
     if (!this.myMedia) {
       initImage(this)
+      this.curImageBlobURL = blobUrl
       this.mediaactive = true
       const uuid = crypto.randomUUID()
       const formData = new FormData()

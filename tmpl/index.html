@@ -15,11 +15,20 @@
     </h2>
   {{end}}
   {{range .ThreadThumbs}}
-    <div class="thread-tail">
-      <a href="/t/{{idtoa .ID}}">
-        {{if .Topic}}<div class="topic">{{.Topic}}</div>{{end}}
-        <div>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}{{intto36a .ReplyCount}} replies{{end}}</div>
-      </a>
+    <div class="thread-tail" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
+      <div>
+        <a href="/t/{{idtoa .ID}}">
+          <span class="topic">{{topicOrIdtoa .}}</span>
+          <span>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}({{intto36a .ReplyCount}} replies){{end}}</span>
+        </a>
+      </div>
+      {{template "post" .OP}}
+      {{if gt .ReplyCount 5}}
+      <div style="margin-top:-1rem">⋮</div>
+      {{end}}
+      {{range .Posts}}
+        {{template "post" .}}
+      {{end}}
     </div>
   {{end}}
   {{if .IsChrono}}
@@ -31,4 +40,6 @@
       <a href="/t?cursor={{formatTime .BumpCursor}}">Next page</a>
     {{end}}
   {{end}}
+  <script src="/js/thumb.js"></script>
+  <script src="/js/hydratetime.js"></script>
 {{end}}

@@ -9,8 +9,12 @@
       <input type="password" name="password"/>
     </div>
     <div class="form-field">
-      <label for="cofirm">confirm password</label>
+      <label for="confirm">confirm password</label>
       <input type="password" name="confirm"/>
+    </div>
+    <div class="form-field">
+      <label for="invite">invite code</label>
+      <input type="text" name="invite" {{if .Invite}}value="{{.Invite}}"{{end}}/>
     </div>
     <div class="form-submit">
       <input type="submit" value="create account"/>

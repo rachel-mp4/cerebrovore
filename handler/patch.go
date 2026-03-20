@@ -26,8 +26,44 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 			h.ca,
 			"brainworm",
 			tt,
+			h.crack,
 		},
 		[]types.Patch{
+			{
+				Release:   "β.-0.0",
+				Timestamp: "2026-03-16",
+				Notes: []types.Note{
+					{
+						Type:        "release",
+						Name:        "this is beta prelease zero",
+						Description: "that's why it's negative zero",
+					},
+					{
+						Type: "upgrade",
+						Name: "thread watcher no longer requires refresh to update preferences",
+					},
+					{
+						Type: "feature",
+						Name: "thread watcher informs you of new threads",
+					},
+					{
+						Type: "feature",
+						Name: "invite codes and identity provider service",
+					},
+					{
+						Type: "feature",
+						Name: "index page shows last 5 posts + op",
+					},
+					{
+						Type: "feature",
+						Name: "add catalog",
+					},
+					{
+						Type: "feature",
+						Name: "preview pasted image in thread",
+					},
+				},
+			},
 			{
 				Release:   "α.2.0",
 				Timestamp: "2026-03-16",

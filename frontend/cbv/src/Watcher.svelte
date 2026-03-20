@@ -4,4 +4,9 @@
   const wc = new WatcherContext();
 </script>
 
-<WatchedThreads items={wc.watchthreads} />
+<WatchedThreads
+  items={wc.watchthreads}
+  newitems={wc.newthreads}
+  watchIdx={wc.watchIdx.bind(wc)}
+  rmIdx={wc.rmIdx.bind(wc)}
+/>

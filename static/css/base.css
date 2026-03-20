@@ -77,8 +77,12 @@ textarea:not([rows]) {
   --fl: var(--gfl); /*foreground light*/
   --gprimary: #452faa; /*global primary*/
   --primary: var(--gprimary); /*primary*/
+  --gprimaryl: #452faa80; /*global primary light*/
+  --primaryl: var(--gprimaryl); /*primary light*/
   --gsecondary: #fea2db; /*global secondary*/
   --secondary: var(--gsecondary); /*secondary*/
+  --gsecondaryl: #fea2db80; /*global secondary light*/
+  --secondaryl: var(--gsecondaryl); /*secondary light*/
 }
 @font-face {
   font-family: 'SourceSans';
@@ -196,20 +200,44 @@ body {
   right: 0;
   left: -3rem;
   text-align:right;
-  content: 'sort by total activity';
   overflow: visible;
+  white-space: nowrap;
   color: var(--fg);
+}
 
+#watched-threads button.recent-activity:hover::before {
+  content: 'sort by total activity';
+}
+
+#watched-threads button.ignore-thread:hover::before {
+  left: 0;
+  right: 3rem;
+  text-align: left;
+  content: 'click to ignore';
+}
+
+.new-thread:has(.ignore-thread:hover) .watch-thread {
+  color: transparent;
+}
+
+#watched-threads button.watch-thread:hover::before {
+  content: 'click to watch';
 }
 
 #watched-threads button.total-activity:hover::before {
   content: 'sort by recent activity'
 }
 
-.watched-thread {
+.watched-thread, .new-thread {
   display: flex;
   width: 100%;
   justify-content: space-between;
+}
+
+.watch-thread {
+  width: 90%;
+  overflow: hidden;
+  text-align: right;
 }
 
 #left-sidebar {
@@ -273,9 +301,20 @@ form {
   flex-direction: column;
 }
 
-.form-field > input {
+.form-field {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+}
+
+.form-field > :is(input, textarea) {
   background-color: var(--fg);
   color: var(--bg);
+  flex-grow: 1;
+}
+
+.form-submit {
+  margin-top: 1rem;
 }
 
 .form-submit > input {
@@ -291,4 +330,74 @@ form {
 
 .volume-settings {
   accent-color: var(--primary);
+}
+
+.thread-tail {
+  padding-bottom: 1rem;
+}
+
+.thread-tail:hover > div {
+  transform: translateX(1rem);
+}
+
+.thread-tail:hover > div .time {
+  transform: translateX(-1rem);
+}
+
+.thread-tail:hover {
+  background: var(--accentl);
+}
+
+.thread-tail > div {
+  transition-duration: .07s;
+  transition-delay: 0s;
+}
+
+.thread-tail > div .time {
+  transition-duration: .07s;
+  transition-delay: 0s;
+}
+
+.catalog-thumb:hover::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index:-1;
+  background: var(--accentl);
+  transform: translateY(-0.5rem);
+}
+
+.catalog-thumb::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index:-1;
+  transition-property: transform;
+  transition-duration: .07s;
+  transform: translateY(0rem);
+}
+
+.catalog {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-rows: masonry;
+}
+
+.catalog-thumb {
+  padding-bottom: 1rem;
+  transition-duration: .07s;
+  position: relative;
+}
+
+.catalog-thumb:hover {
+  transform: translateY(0.5rem)
+}
+
+.catalog .topic {
+  font-size: 2rem;
+  word-break: break-word;
+}
+
+.catalog .tx {
+  padding-bottom: 0;
 }

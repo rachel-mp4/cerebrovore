@@ -15,8 +15,11 @@ import (
 )
 
 type Model struct {
-	tmapmu sync.Mutex
+	tmapmu sync.RWMutex
 	tmap   map[uint32]*threadModel
+
+	watchersmu sync.RWMutex
+	watchers   map[string]*userWatcherCtx
 
 	id  uint32
 	pid uint32 // "prestige" id // lol what drugs was i onnnnnn
@@ -26,6 +29,7 @@ type Model struct {
 func NewModel(threads []types.Thread, maxid uint32) *Model {
 	m := &Model{id: maxid}
 	m.tmap = make(map[uint32]*threadModel, len(threads))
+	m.watchers = make(map[string]*userWatcherCtx)
 	for _, thread := range threads {
 		m.recreateThread(thread)
 	}

@@ -16,7 +16,10 @@ var threadT *template.Template
 var newthreadT *template.Template
 var bumpedT *template.Template
 var threadsT *template.Template
+var catalogT *template.Template
 var patchT *template.Template
+var codeT *template.Template
+var codeerrT *template.Template
 
 func init() {
 	homeT = newTemplate(
@@ -55,17 +58,13 @@ func init() {
 	)
 	loginT = newTemplate(
 		"./tmpl/base.html",
-		"./tmpl/threads.html",
-		"./tmpl/partial/threadlink.html",
-		"./tmpl/bumped-threads.html",
+		"./tmpl/emptyl.html",
 		"./tmpl/empty.html",
 		"./tmpl/login.html",
 	)
 	accountT = newTemplate(
 		"./tmpl/base.html",
-		"./tmpl/threads.html",
-		"./tmpl/partial/threadlink.html",
-		"./tmpl/bumped-threads.html",
+		"./tmpl/emptyl.html",
 		"./tmpl/empty.html",
 		"./tmpl/account.html",
 	)
@@ -101,10 +100,26 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/index.html",
+		"./tmpl/partial/post.html",
+	)
+	catalogT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/catalog.html",
+		"./tmpl/partial/post.html",
 	)
 	bumpedT = newTemplate(
 		"./tmpl/bumped-threads.html",
 		"./tmpl/partial/threadlink.html",
+	)
+	codeT = newTemplate(
+		"./tmpl/code.html",
+	)
+	codeerrT = newTemplate(
+		"./tmpl/codeerr.html",
 	)
 }
 
@@ -112,6 +127,7 @@ type baseresp struct {
 	CompiledAssets *CompiledAssets
 	Title          string
 	Threads        []types.Thread
+	Crack          string
 }
 
 func newTemplate(files ...string) *template.Template {
@@ -127,6 +143,7 @@ func newTemplate(files ...string) *template.Template {
 				"maxReplies":      utils.MaxReplies,
 				"formatTime":      utils.FormatTime,
 				"ftime":           utils.FTime,
+				"topicOrIdtoa":    types.TopicOrIdtoa,
 			}).ParseFiles(files...),
 	)
 }

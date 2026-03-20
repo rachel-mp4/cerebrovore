@@ -83,6 +83,13 @@ func (t *Thread) String() string {
 		len(Posts): %d`, t.ID, utils.IDToA(t.ID), safeprint(t.Topic), t.PostedAt.String(), t.BumpedAt.String(), t.OP.String(), len(t.Posts))
 }
 
+func TopicOrIdtoa(t Thread) string {
+	if t.Topic != nil && *t.Topic != "" {
+		return *t.Topic
+	}
+	return fmt.Sprintf("#%s", utils.IDToA(t.ID))
+}
+
 func safeprint(s *string) string {
 	if s == nil {
 		return "<nil>"

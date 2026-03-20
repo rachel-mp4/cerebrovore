@@ -1,4 +1,4 @@
-const eub = document.getElementById("eats-ur-brain")
+const eub = document.getElementById("main-content")
 const times = eub.querySelectorAll(".time")
 const tft = (then) => {
   const now = Date.now()

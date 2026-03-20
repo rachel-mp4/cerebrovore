@@ -14,14 +14,16 @@ import (
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/handler"
+	"github.com/rachel-mp4/cerebrovore/id"
 	"github.com/rachel-mp4/cerebrovore/model"
 )
 
 func main() {
 	cold := flag.Bool("cold", false, "disables hot module replacement")
 	port := flag.Int("port", 8080, "port to listen on")
+	sidp := flag.Int("sidp", 9009, "uses a service id provider listening on port")
 	dontmock := flag.Bool("db", false, "doesn't mock the database")
-	midp := flag.Bool("midp", false, "uses an in memory id provider")
+	midp := flag.Bool("midp", false, "uses an in memory id provider instead of service id provider")
 	dev := flag.Bool("dev", false, "run in dev mode (file logging, debug output)")
 	flag.Parse()
 
@@ -63,15 +65,6 @@ func main() {
 		}
 	}
 	var store db.Storer
-	var idStore db.IDStorer
-	if *dontmock && !(*midp) {
-		clog.Warn("NOT MOCKING DB AND MOCKING IDP")
-		clog.Warn("IF THIS IS PROD, USERS CAN SET THEIR SESSION ID TO WHATEVER THEY WANT")
-		if !clog.InputYN("continue anyway?") {
-			clog.Fail("aborted")
-			os.Exit(1)
-		}
-	}
 	if *dontmock {
 		realstore, err := db.Init()
 		if err != nil {
@@ -86,8 +79,11 @@ func main() {
 		store = mockstore
 	}
 
+	var idp id.Provider
 	if *midp {
-		idStore = db.NewMemoryIDStore()
+		idp = id.NewMemoryProvider()
+	} else {
+		idp = id.NewServicerProvider(*sidp)
 	}
 
 	// in order to initialize our model of the threads, we need to get
@@ -122,13 +118,19 @@ func main() {
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
 	go func() {
 		<-sig
+		// i add this just in case for whatever stupid reason clog blocks & oh no!
+		// the program hangs + doesn't respond to SIGINT / SIGTERM
+		go func() {
+			<-sig
+			os.Exit(1)
+		}()
 		clog.Okay("my brain has been eaten, GOOD BYE")
 		clog.Close()
 		os.Exit(0)
 	}()
 
 	m := model.NewModel(threads, mid)
-	h := handler.NewHandler(ca, m, store, idStore)
+	h := handler.NewHandler(ca, m, store, idp)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
 }
 

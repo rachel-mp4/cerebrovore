@@ -82,7 +82,7 @@
   const convertFileToImageItem = (blob: File) => {
     cancelimagepost();
     const blobUrl = URL.createObjectURL(blob);
-    ctx.initImage(blob);
+    ctx.initImage(blob, blobUrl);
     imageURL = blobUrl;
   };
   const cancelimagepost = () => {
@@ -201,7 +201,6 @@
   </div>
   {#if imageURL !== undefined}
     <div>
-      <img bind:this={image} src={imageURL} alt={imageAlt} />
       <AutoGrowInput
         bind:value={imageAlt}
         placeholder="alt text"

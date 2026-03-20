@@ -20,8 +20,8 @@ type threadModel struct {
 	bumplimit bool
 	full      bool
 
-	watchers   map[*watcher]bool
-	watchersmu sync.Mutex
+	watchers   map[string]bool
+	watchersmu sync.RWMutex
 
 	wormwatchdata  *wormwatchdata
 	wormwatchers   map[*wormwatcher]bool
@@ -34,7 +34,7 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
 		id:           id,
 		topic:        topic,
-		watchers:     make(map[*watcher]bool),
+		watchers:     make(map[string]bool),
 		wormwatchers: make(map[*wormwatcher]bool),
 		wormwatchdata: &wormwatchdata{
 			index:    0,

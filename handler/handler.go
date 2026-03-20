@@ -2,12 +2,15 @@ package handler
 
 import (
 	"crypto/rand"
+	"errors"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/gorilla/sessions"
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
+	"github.com/rachel-mp4/cerebrovore/id"
 	"github.com/rachel-mp4/cerebrovore/model"
 )
 
@@ -17,7 +20,8 @@ type Handler struct {
 	m            *model.Model
 	sessionStore *sessions.CookieStore
 	db           db.Storer
-	idp          db.IDStorer
+	idp          id.Provider
+	crack        string
 }
 
 type CompiledAssets struct {
@@ -31,11 +35,11 @@ type CompiledAssets struct {
 	WormCss     []string
 }
 
-func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp db.IDStorer) Handler {
+func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider) Handler {
 	h := Handler{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", h.AM(h.home))
-	// mux.HandleFunc("GET /catalog", h.AM(h.catalog))
+	mux.HandleFunc("GET /catalog", h.AM(h.catalog))
 	mux.HandleFunc("GET /patch-notes", h.AM(h.patchnotes))
 	mux.HandleFunc("GET /me", h.AM(h.me))
 	mux.HandleFunc("GET /m", h.AM(h.moderate))
@@ -60,7 +64,9 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp db.IDStore
 	mux.HandleFunc("GET /t/{ntid}/ws", h.AM(h.getThreadWS))
 	mux.HandleFunc("GET /t/{ntid}/ww", h.AM(h.getThreadWW))
 	mux.HandleFunc("GET /new", h.AM(h.newThread))
-	mux.Handle("GET /css/", http.FileServer(http.Dir("./static")))
+	mux.HandleFunc("POST /gen-code", h.AM(h.gencode))
+	mux.HandleFunc("POST /gen-public-code", h.AM(h.genpubliccode))
+	mux.Handle("GET /css/", h.StripCrack(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /js/", http.FileServer(http.Dir("./static")))
 	mux.Handle("GET /font/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /wav/", Add1YCache(http.FileServer(http.Dir("./static"))))
@@ -73,8 +79,48 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp db.IDStore
 	h.sessionStore = sessionStore
 	h.db = db
 	h.idp = idp
+	if h.idp == nil {
+		panic("you shouldn't be allowed to do that anymore")
+	}
+	h.crack = "-" + string(rand.Text()[:5])
 
 	return h
+}
+
+func (h *Handler) gencode(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		return
+	}
+	code, err := h.idp.GenerateCode(c.Username, r.Context())
+	if err != nil {
+		type codeerrResp struct {
+			Reason string
+		}
+		codeerrT.ExecuteTemplate(w, "codeerr", codeerrResp{err.Error()})
+		return
+	}
+	type codeResp struct {
+		Code string
+	}
+	codeT.ExecuteTemplate(w, "code", codeResp{code})
+}
+
+func (h *Handler) genpubliccode(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		return
+	}
+	code, err := h.idp.GeneratePublicCode(c.Username, r.Context())
+	if err != nil {
+		type codeerrResp struct {
+			Reason string
+		}
+		codeerrT.ExecuteTemplate(w, "codeerr", codeerrResp{err.Error()})
+		return
+	}
+	type codeResp struct {
+		Code string
+	}
+	codeT.ExecuteTemplate(w, "code", codeResp{code})
 }
 
 func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -100,6 +146,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"brainworm",
 			tt,
+			h.crack,
 		},
 	})
 	if err != nil {
@@ -127,6 +174,7 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"new thread",
 			tt,
+			h.crack,
 		},
 	})
 	if err != nil {
@@ -137,20 +185,12 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
-		baseresp
+		Title string
+		Crack string
 	}
-	tt, err := h.db.GetBumps(r.Context())
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
-	}
-	err = loginT.ExecuteTemplate(w, "base", loginresp{
-		baseresp{
-			h.ca,
-			"login",
-			tt,
-		},
+	err := loginT.ExecuteTemplate(w, "base", loginresp{
+		"login",
+		h.crack,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -160,20 +200,15 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
-		baseresp
+		Title  string
+		Crack  string
+		Invite string
 	}
-	tt, err := h.db.GetBumps(r.Context())
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
-	}
-	err = accountT.ExecuteTemplate(w, "base", loginresp{
-		baseresp{
-			h.ca,
-			"create account",
-			tt,
-		},
+	invite := r.URL.Query().Get("invite")
+	err := accountT.ExecuteTemplate(w, "base", loginresp{
+		"create account",
+		h.crack,
+		invite,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -196,9 +231,18 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if h.idp != nil {
-		err := h.idp.CreateAccount(username, password, invite)
+		err := h.idp.CreateAccount(username, password, invite, r.Context())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			if errors.Is(err, id.ErrCodeDNE) ||
+				errors.Is(err, id.ErrCodeUsed) ||
+				errors.Is(err, id.ErrCodeExpired) ||
+				errors.Is(err, id.ErrUserExists) ||
+				errors.Is(err, id.ErrBadData) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			clog.Warn(err.Error())
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -226,11 +270,20 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	username := r.Form.Get("username")
 	password := r.Form.Get("password")
-	id := rand.Text()
+	myid := rand.Text()
 	if h.idp != nil {
-		err := h.idp.VerifyCredentials(username, password)
+		err := h.idp.VerifyCredentials(username, password, r.Context())
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			if errors.Is(err, id.ErrNotAuthorized) ||
+				errors.Is(err, id.ErrUserDNE) ||
+				errors.Is(err, id.ErrUserBanned) ||
+				errors.Is(err, id.ErrUserDeleted) ||
+				errors.Is(err, id.ErrBadData) {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			clog.Warn(err.Error())
+			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
 	}
@@ -242,14 +295,14 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	session.Values = map[any]any{}
 	session.Values["username"] = username
-	session.Values["id"] = id
+	session.Values["id"] = myid
 	err := session.Save(r, w)
 	if err != nil {
 		clog.Warn("%s", err)
 		http.Error(w, "error saving session", http.StatusInternalServerError)
 		return
 	}
-	h.db.CreateSession(id, username, r.Context())
+	h.db.CreateSession(myid, username, r.Context())
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -267,6 +320,7 @@ func (h *Handler) beep(w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"beep",
 			tt,
+			h.crack,
 		},
 	})
 }
@@ -297,6 +351,7 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.ca,
 			"beep",
 			tt,
+			h.crack,
 		},
 		c.Username,
 	})
@@ -318,7 +373,7 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 		id, ok := s.Values["id"].(string)
 		username, bok := s.Values["username"].(string)
 		if !ok || !bok {
-			f(nil, w, r)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		// check that they haven't been logged out
@@ -326,7 +381,7 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 		if err != nil || username != whynotcheck {
 			s.Options.MaxAge = -1
 			s.Save(r, w)
-			f(nil, w, r)
+			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
 		c := &Client{ID: id, Username: username}
@@ -340,6 +395,13 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 func Add1YCache(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		h.ServeHTTP(w, r)
+	})
+}
+
+func (hdlr *Handler) StripCrack(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		r.URL.Path = strings.TrimSuffix(r.URL.Path, hdlr.crack)
 		h.ServeHTTP(w, r)
 	})
 }

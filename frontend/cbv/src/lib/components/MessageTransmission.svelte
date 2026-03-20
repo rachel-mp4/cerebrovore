@@ -126,22 +126,24 @@
   );
 </script>
 
-{#if diffs}
-  {#each diffs as diff}
-    {#if diff[0] === -1}
-      <span class="removed">{diff[1]}</span>
-    {:else if diff[0] === 0}
-      <span>{diff[1]}</span>
-    {:else}
-      <span class="appended">{diff[1]}</span>
-    {/if}
-  {/each}
-{:else}
-  {#each mfrags as part (part.key)}
-    {#if part.isLink}
-      <a href={part.href} target="_blank" rel="noopener">{part.text}</a>
-    {:else}
-      {@html part.text}
-    {/if}
-  {/each}
-{/if}
+<div>
+  {#if diffs}
+    {#each diffs as diff}
+      {#if diff[0] === -1}
+        <span class="removed">{diff[1]}</span>
+      {:else if diff[0] === 0}
+        <span>{diff[1]}</span>
+      {:else}
+        <span class="appended">{diff[1]}</span>
+      {/if}
+    {/each}
+  {:else}
+    {#each mfrags as part (part.key)}
+      {#if part.isLink}
+        <a href={part.href} target="_blank" rel="noopener">{part.text}</a>
+      {:else}
+        {@html part.text}
+      {/if}
+    {/each}
+  {/if}
+</div>

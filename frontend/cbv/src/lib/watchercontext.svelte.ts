@@ -3,6 +3,7 @@ import { b36encodenumber } from "./utils"
 import { getVolume, getWatcherVolume, onVolumeChange, onVolumeWatcherChange } from "./volume"
 export class WatcherContext {
   watchthreads: Array<cbv.WatchThread> = $state([])
+  newthreads: Array<cbv.WatchThread> = $state([])
   ws: WebSocket
 
   volume: number
@@ -32,6 +33,18 @@ export class WatcherContext {
       }
       this.watcherping.currentTime = 0
       this.watcherping.play()
+      const isNew = twe.new ?? false
+      if (isNew) {
+        const newt: cbv.WatchThread = {
+          type: 'watchthread',
+          id: twe.id,
+          ...(twe.topic && { topic: twe.topic }),
+          bumps: 0,
+          bumpedAt: Date.now(),
+        }
+        this.newthreads = [newt, ...this.newthreads]
+        return
+      }
       if (this.watchthreads.find((wti) => wti.id === twe.id)) {
         this.watchthreads = this.watchthreads.map((wti) => {
           return wti.id === twe.id ? { ...wti, bumps: wti.bumps + 1, bumpedAt: Date.now(), ...(twe.bumpLimit && { bumpLimit: twe.bumpLimit }) } : wti
@@ -51,5 +64,25 @@ export class WatcherContext {
     ws.onerror = (error) => console.error(error)
     ws.onclose = () => console.log("see ya!")
     this.ws = ws
+  }
+
+  rmIdx(idx: number) {
+    const newt = this.newthreads[idx]
+    if (newt === undefined) {
+      return
+    }
+    this.newthreads = this.newthreads.filter((_, i) => i !== idx)
+  }
+
+  watchIdx(idx: number) {
+    const newt = this.newthreads[idx]
+    if (newt === undefined) {
+      return
+    }
+    this.newthreads = this.newthreads.filter((_, i) => i !== idx)
+    const endpoint = `/w/${b36encodenumber(newt.id)}`
+    fetch(endpoint, {
+      method: "POST"
+    }).then((resp) => console.log(resp))
   }
 }

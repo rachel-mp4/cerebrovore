@@ -1,38 +1,54 @@
 @media (min-width: 36rem) {
-.tx:nth-last-of-type(1) {font-size:2.000000rem;}
-.tx:nth-last-of-type(2) {font-size:2.000000rem;}
-.tx:nth-last-of-type(3) {font-size:2.000000rem;}
-.tx:nth-last-of-type(4) {font-size:2.000000rem;}
-.tx:nth-last-of-type(5) {font-size:2.000000rem;}
-.tx:nth-last-of-type(6) {font-size:2.000000rem;}
-.tx:nth-last-of-type(7) {font-size:2.000000rem;}
-.tx:nth-last-of-type(8) {font-size:1.997114rem;}
-.tx:nth-last-of-type(9) {font-size:1.989345rem;}
-.tx:nth-last-of-type(10) {font-size:1.980402rem;}
-.tx:nth-last-of-type(11) {font-size:1.970010rem;}
-.tx:nth-last-of-type(12) {font-size:1.957804rem;}
-.tx:nth-last-of-type(13) {font-size:1.943297rem;}
-.tx:nth-last-of-type(14) {font-size:1.925826rem;}
-.tx:nth-last-of-type(15) {font-size:1.904481rem;}
-.tx:nth-last-of-type(16) {font-size:1.877998rem;}
-.tx:nth-last-of-type(17) {font-size:1.844637rem;}
-.tx:nth-last-of-type(18) {font-size:1.802076rem;}
-.tx:nth-last-of-type(19) {font-size:1.747500rem;}
-.tx:nth-last-of-type(20) {font-size:1.678326rem;}
-.tx:nth-last-of-type(21) {font-size:1.594223rem;}
-.tx:nth-last-of-type(22) {font-size:1.500000rem;}
-.tx:nth-last-of-type(23) {font-size:1.405777rem;}
-.tx:nth-last-of-type(24) {font-size:1.321674rem;}
-.tx:nth-last-of-type(25) {font-size:1.252500rem;}
-.tx:nth-last-of-type(26) {font-size:1.197924rem;}
-.tx:nth-last-of-type(27) {font-size:1.155363rem;}
-.tx:nth-last-of-type(28) {font-size:1.122002rem;}
-.tx:nth-last-of-type(29) {font-size:1.095519rem;}
-.tx:nth-last-of-type(30) {font-size:1.074174rem;}
-.tx:nth-last-of-type(31) {font-size:1.056703rem;}
-.tx:nth-last-of-type(32) {font-size:1.042196rem;}
-.tx:nth-last-of-type(33) {font-size:1.029990rem;}
-.tx:nth-last-of-type(34) {font-size:1.019598rem;}
-.tx:nth-last-of-type(35) {font-size:1.010655rem;}
-.tx:nth-last-of-type(36) {font-size:1.002886rem;}
+#eats-ur-brain .tx:nth-last-of-type(1) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(2) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(3) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(4) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(5) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(6) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(7) {font-size:2.000000rem;}
+#eats-ur-brain .tx:nth-last-of-type(8) {font-size:1.997114rem;}
+#eats-ur-brain .tx:nth-last-of-type(9) {font-size:1.989345rem;}
+#eats-ur-brain .tx:nth-last-of-type(10) {font-size:1.980402rem;}
+#eats-ur-brain .tx:nth-last-of-type(11) {font-size:1.970010rem;}
+#eats-ur-brain .tx:nth-last-of-type(12) {font-size:1.957804rem;}
+#eats-ur-brain .tx:nth-last-of-type(13) {font-size:1.943297rem;}
+#eats-ur-brain .tx:nth-last-of-type(14) {font-size:1.925826rem;}
+#eats-ur-brain .tx:nth-last-of-type(15) {font-size:1.904481rem;}
+#eats-ur-brain .tx:nth-last-of-type(16) {font-size:1.877998rem;}
+#eats-ur-brain .tx:nth-last-of-type(17) {font-size:1.844637rem;}
+#eats-ur-brain .tx:nth-last-of-type(18) {font-size:1.802076rem;}
+#eats-ur-brain .tx:nth-last-of-type(19) {font-size:1.747500rem;}
+#eats-ur-brain .tx:nth-last-of-type(20) {font-size:1.678326rem;}
+#eats-ur-brain .tx:nth-last-of-type(21) {font-size:1.594223rem;}
+#eats-ur-brain .tx:nth-last-of-type(22) {font-size:1.500000rem;}
+#eats-ur-brain .tx:nth-last-of-type(23) {font-size:1.405777rem;}
+#eats-ur-brain .tx:nth-last-of-type(24) {font-size:1.321674rem;}
+#eats-ur-brain .tx:nth-last-of-type(25) {font-size:1.252500rem;}
+#eats-ur-brain .tx:nth-last-of-type(26) {font-size:1.197924rem;}
+#eats-ur-brain .tx:nth-last-of-type(27) {font-size:1.155363rem;}
+#eats-ur-brain .tx:nth-last-of-type(28) {font-size:1.122002rem;}
+#eats-ur-brain .tx:nth-last-of-type(29) {font-size:1.095519rem;}
+#eats-ur-brain .tx:nth-last-of-type(30) {font-size:1.074174rem;}
+#eats-ur-brain .tx:nth-last-of-type(31) {font-size:1.056703rem;}
+#eats-ur-brain .tx:nth-last-of-type(32) {font-size:1.042196rem;}
+#eats-ur-brain .tx:nth-last-of-type(33) {font-size:1.029990rem;}
+#eats-ur-brain .tx:nth-last-of-type(34) {font-size:1.019598rem;}
+#eats-ur-brain .tx:nth-last-of-type(35) {font-size:1.010655rem;}
+#eats-ur-brain .tx:nth-last-of-type(36) {font-size:1.002886rem;}
 }
+.thread-tail:hover > div:nth-of-type(1) {transition-delay: .000s; transition-duration: .07s}
+.thread-tail:hover > div:nth-of-type(1) .time {transition-delay: .000s; transition-duration: .07s}
+.thread-tail:hover > div:nth-of-type(2) {transition-delay: .011s; transition-duration: .09s}
+.thread-tail:hover > div:nth-of-type(2) .time {transition-delay: .011s; transition-duration: .09s}
+.thread-tail:hover > div:nth-of-type(3) {transition-delay: .022s; transition-duration: .11s}
+.thread-tail:hover > div:nth-of-type(3) .time {transition-delay: .022s; transition-duration: .11s}
+.thread-tail:hover > div:nth-of-type(4) {transition-delay: .033s; transition-duration: .13s}
+.thread-tail:hover > div:nth-of-type(4) .time {transition-delay: .033s; transition-duration: .13s}
+.thread-tail:hover > div:nth-of-type(5) {transition-delay: .044s; transition-duration: .15s}
+.thread-tail:hover > div:nth-of-type(5) .time {transition-delay: .044s; transition-duration: .15s}
+.thread-tail:hover > div:nth-of-type(6) {transition-delay: .055s; transition-duration: .17s}
+.thread-tail:hover > div:nth-of-type(6) .time {transition-delay: .055s; transition-duration: .17s}
+.thread-tail:hover > div:nth-of-type(7) {transition-delay: .066s; transition-duration: .19s}
+.thread-tail:hover > div:nth-of-type(7) .time {transition-delay: .066s; transition-duration: .19s}
+.thread-tail:hover > div:nth-of-type(8) {transition-delay: .077s; transition-duration: .21s}
+.thread-tail:hover > div:nth-of-type(8) .time {transition-delay: .077s; transition-duration: .21s}

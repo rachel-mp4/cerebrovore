@@ -15,7 +15,10 @@ func main() {
 		v = generateVal(i)
 	}
 	fmt.Println("}")
-
+	for i := range 8 {
+		fmt.Println(generateDelays(i))
+		fmt.Println(generateDelays2(i))
+	}
 }
 
 func generateVal(i int) float64 {
@@ -28,5 +31,13 @@ func generateVal(i int) float64 {
 }
 
 func generateCss(i int, f float64) string {
-	return fmt.Sprintf(".tx:nth-last-of-type(%d) {font-size:%frem;}", i, f)
+	return fmt.Sprintf("#eats-ur-brain .tx:nth-last-of-type(%d) {font-size:%frem;}", i, f)
+}
+
+func generateDelays(i int) string {
+	return fmt.Sprintf(".thread-tail:hover > div:nth-of-type(%d) {transition-delay: .%03ds; transition-duration: .%02ds}", i+1, i*11, 7+2*i)
+}
+
+func generateDelays2(i int) string {
+	return fmt.Sprintf(".thread-tail:hover > div:nth-of-type(%d) .time {transition-delay: .%03ds; transition-duration: .%02ds}", i+1, i*11, 7+2*i)
 }
