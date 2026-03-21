@@ -6,12 +6,14 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gorilla/sessions"
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/id"
 	"github.com/rachel-mp4/cerebrovore/model"
+	"github.com/rachel-mp4/cerebrovore/types"
 )
 
 type Handler struct {
@@ -22,6 +24,8 @@ type Handler struct {
 	db           db.Storer
 	idp          id.Provider
 	crack        string
+	notes        []types.Patch
+	live         *time.Time
 }
 
 type CompiledAssets struct {
@@ -83,6 +87,9 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 		panic("you shouldn't be allowed to do that anymore")
 	}
 	h.crack = "-" + string(rand.Text()[:5])
+	h.notes = getNotes()
+	t := time.Now()
+	h.live = &t
 
 	return h
 }
@@ -134,6 +141,8 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	type homeresp struct {
 		baseresp
+		Version string
+		Time    *time.Time
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
@@ -148,6 +157,8 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 			tt,
 			h.crack,
 		},
+		h.notes[0].Release,
+		h.live,
 	})
 	if err != nil {
 		clog.Warn("%s", err)

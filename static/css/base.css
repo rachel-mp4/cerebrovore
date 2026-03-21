@@ -382,6 +382,15 @@ form {
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   grid-template-rows: masonry;
 }
+.catalog::after {
+  content: "looks best with mozilla firefox with masonry flag enabled in about:config!"
+}
+
+@supports (grid-template-rows: masonry) {
+  .catalog::after {
+    content: ""
+  }
+}
 
 .catalog-thumb {
   padding-bottom: 1rem;

@@ -34,7 +34,7 @@ type Storer interface {
 	GetBumps(ctx context.Context) ([]types.Thread, error)
 
 	GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
-	// GetRecentCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+	GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
 
 	// GetRecentThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently posted limit threads before before (if given).

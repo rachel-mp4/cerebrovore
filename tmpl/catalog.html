@@ -16,7 +16,7 @@
   {{end}}
   <div class="catalog">
     {{range .ThreadThumbs}}
-  <div class="catalog-thumb{{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
+      <div class="catalog-thumb{{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
         <div>
           <a href="/t/{{idtoa .ID}}">
             <span class="topic">{{topicOrIdtoa .}}</span>

@@ -724,7 +724,7 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			cc = &id
 		}
-		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
+		fts, nc, err := h.db.GetRecentCatalog(cc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)

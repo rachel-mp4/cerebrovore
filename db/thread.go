@@ -450,9 +450,82 @@ func (s *Store) GetBumpedCatalog(before *time.Time, limit int, ctx context.Conte
 		threads = append(threads, thread)
 		cursor = &bumpt
 	}
-	// this means we ran out of threads before we hit limit, so we
-	// didn't add the lastthread we were creating to the threads,
-	// and there should be NO cursor
+	// this means we ran out of threads before we hit limit
+	// so there should be NO cursor
+	if i != limit+1 {
+		cursor = nil
+	}
+	return threads, cursor, nil
+}
+
+func (m *MockStore) GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
+	return nil, nil, nil
+}
+
+func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
+	q := `
+		SELECT
+			t.id,
+			t.topic,
+			t.reply_count,
+			p.id,
+			p.nick,
+			p.username,
+			p.anon,
+			p.color,
+			p.posted_at,
+			tp.body,
+			ip.cid,
+			ip.alt
+		FROM threads t
+		LEFT JOIN posts p ON p.id = t.id
+		LEFT JOIN text_posts tp ON tp.post_id = p.id
+		LEFT JOIN image_posts ip ON ip.post_id = p.id
+		WHERE t.deleted = FALSE %s
+		ORDER BY t.id DESC
+		LIMIT $1
+	`
+	var rows pgx.Rows
+	if before != nil {
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
+	} else {
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+	}
+	if err != nil {
+		if err == pgx.ErrNoRows {
+			return nil, nil, nil
+		}
+		return nil, nil, err
+	}
+	defer rows.Close()
+	threads = make([]types.Thread, 0)
+	i := 0
+	for rows.Next() {
+		i = i + 1
+		if i == limit+1 {
+			break
+		}
+		var thread types.Thread
+		var post types.Post
+		var body *string
+		var cid *string
+		var alt *string
+		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt)
+		if err != nil {
+			return nil, nil, err
+		}
+		if body != nil {
+			post.TextContent = &types.TextContent{Body: *body}
+		}
+		if cid != nil {
+			post.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
+		}
+		thread.OP = post
+		threads = append(threads, thread)
+		cursor = &post.ID
+	}
+	// this means we ran out of threads before we hit limit
+	// so there should be NO cursor
 	if i != limit+1 {
 		cursor = nil
 	}
