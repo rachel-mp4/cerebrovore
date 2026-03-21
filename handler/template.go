@@ -141,6 +141,7 @@ func newTemplate(files ...string) *template.Template {
 				"colorIsDark":     utils.ColorIsDark,
 				"colorToA":        utils.ColorToAp,
 				"maxReplies":      utils.MaxReplies,
+				"maxBumps":        utils.MaxBumps,
 				"formatTime":      utils.FormatTime,
 				"ftime":           utils.FTime,
 				"topicOrIdtoa":    types.TopicOrIdtoa,

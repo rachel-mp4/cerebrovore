@@ -405,3 +405,7 @@ form {
 .archived {
   opacity: 0.5;
 }
+
+.bump-limit {
+  opacity: 0.75;
+}
