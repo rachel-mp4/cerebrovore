@@ -33,7 +33,14 @@ type Storer interface {
 	// Consider caching this in Storer implementation
 	GetBumps(ctx context.Context) ([]types.Thread, error)
 
+	// GetBumpedCatalog gets the thread info and the OP for the limit most recently
+	// bumped threads before before (if given). If cursor is non-nil, provide it as
+	// the next value of before to get the next limit threads
 	GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+
+	// GetRecentCatalog gets the thread info and the OP for the limit most recently
+	// posted threads before before (if given). If cursor is non-nil, provide it as
+	// the next value of before to get the next limit threads
 	GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
 
 	// GetRecentThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
@@ -57,12 +64,26 @@ type Storer interface {
 	DeleteThread(id uint32, ctx context.Context) error
 
 	// watch methods
-	// GetWatchedThreads gets all the threads that a username is watching
+
+	// GetWatchedThreads gets all the threads that a username is currently watching
 	GetWatchedThreads(username string, ctx context.Context) ([]uint32, error)
+
+	// WatchThread watches a thread for a user, and if they weren't already watching
+	// it, returns changed = true
 	WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
+
+	// UnwatchThread watches a thread for a user, and if they were already watching
+	// it, returns changed = true
 	UnwatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
+
+	// IsWatched returns if a user is watching a thread
 	IsWatched(username string, id uint32, ctx context.Context) bool
+
+	// RemoveWatchesFor removes all watchers for a thread
 	RemoveWatchersFor(id uint32, ctx context.Context) error
+
+	// ThreadStatus returns if a thread is at bump limit, or reply limit
+	ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error)
 
 	// post methods
 	CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error)

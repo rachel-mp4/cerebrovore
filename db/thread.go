@@ -641,6 +641,10 @@ func (m *MockStore) WatchThread(username string, id uint32, ctx context.Context)
 }
 
 func (s *Store) WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error) {
+	bl, _, err := s.ThreadStatus(id, ctx)
+	if err != nil || bl {
+		return
+	}
 	tag, err := s.pool.Exec(ctx, `
 		INSERT INTO watched_threads (username, thread_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
 		`, username, id)
@@ -652,6 +656,10 @@ func (s *Store) WatchThread(username string, id uint32, ctx context.Context) (ch
 }
 
 func (s *Store) UnwatchThread(username string, id uint32, ctx context.Context) (changed bool, err error) {
+	bl, _, err := s.ThreadStatus(id, ctx)
+	if err != nil || bl {
+		return
+	}
 	tag, err := s.pool.Exec(ctx, `
 		DELETE FROM watched_threads WHERE username = $1 AND thread_id = $2
 		`, username, id)
@@ -697,4 +705,24 @@ func (s *Store) DeleteThread(id uint32, ctx context.Context) error {
 
 func (m *MockStore) DeleteThread(id uint32, ctx context.Context) error {
 	return nil
+}
+
+func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT reply_count
+		FROM threads
+		WHERE id = $1
+		`)
+	var rc int
+	err = row.Scan(&rc)
+	if err != nil {
+		return
+	}
+	bumplimit = utils.MaxBumps(rc)
+	replylimit = utils.MaxReplies(rc)
+	return
+}
+
+func (m *MockStore) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error) {
+	return
 }

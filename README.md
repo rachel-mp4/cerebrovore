@@ -3,7 +3,12 @@
  ⠣⠤ ⠣⠭ ⠏  ⠣⠭ ⠧⠜ ⠏  ⠣⠜ ⠱⠃ ⠣⠜ ⠏  ⠣⠭
 ```
 
-initial setup
+auto setup
+1. `./d`
+2. follow the instructions
+3. hopefully everything works! if not, let me know!
+
+manual setup
 1. install go
 2. install npm
 3. install docker (required for database, which is currently required since
@@ -18,29 +23,28 @@ initial setup
 
 hopefully it's not too confusing...
 
-dev build
+manual dev build
 1. `cd frontend/cbv`
 2. `npm run dev`
 3. open another terminal
-4. `go run ./cmd -db`
+4. `go run ./cmd -db -midp`
 
 at some point or maybe never i'll make it so you can run a lousy version
 without db for dev purposes to make it easier if you just wanna do frontend
 
-prod build
+manual prod build
 1. `cd frontend/cbv`
 2. `npm run build`
 3. `cd -`
-4. `go run ./cmd -cold -db -idp`
+4. `go run ./cmd -cold -db -midp`
 
 the flags are explained a bit if you run `go run ./cmd -h`
 
-but the basic idea is that in production ideally there is some identity
-provider service (not yet implemented) that we direct unauthorized users to,
-where they authorize, and then call a callback endpoint at which point we add
-to database. if you want a more traditional imageboard experience without
-accounts, or you're just doing development, it's totally fine to use db flag
-without idp
+the one strange thing is that we have an identity provider, which at the moment
+is either an in-memory store of username:hashedPassword that gets backed up to
+a file (`-midp`), or an external service that we communicate with through http
+api (`-sidp {port}`) (not included in this repo, it's private). cerebrovore
+sends the credentials to that service and it responds accordingly
 
 ### KNOWN BUGS AND BAD BEHAVIOR THATS ANNOYING 
 when you click on a thumbnail, swapping it out for the full-size image, it's
@@ -54,7 +58,7 @@ this is correct behavior that's fine, but note that since rendered posts in
 threads get an id according to their encoding as base 36 alphanumeric number
 every possible that's just numbers and letters unless it starts with a 0 is NOT
 ok for use as an ID, because html ID should be unique, and this has the
-potential for a collision!
+potential for a collision! for this reason, prefer html IDs with a dash
 
 hashtag parser in linkifyjs doesn't like it when the hashtag is just numbers.
 want to create a custom parser here, but be careful because performance here

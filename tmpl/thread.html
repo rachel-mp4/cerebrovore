@@ -2,18 +2,20 @@
   {{if .Thread.Topic}}
     <h1 class="thread-topic">{{.Thread.Topic}}</h1>
   {{end}}
-  {{if .Watched}}
-    <form action="/u/{{idtoa .Thread.ID}}" method="POST">
-      <div class="form-submit">
-        <input type="submit" value="unwatch">
-      </div>
-    </form>
-  {{else}}
-    <form action="/w/{{idtoa .Thread.ID}}" method="POST">
-      <div class="form-submit">
-        <input type="submit" value="watch">
-      </div>
-    </form>
+  {{if not (maxBumps .Thread.ReplyCount)}}
+    {{if .Watched}}
+      <form action="/u/{{idtoa .Thread.ID}}" method="POST">
+        <div class="form-submit">
+          <input type="submit" value="unwatch">
+        </div>
+      </form>
+    {{else}}
+      <form action="/w/{{idtoa .Thread.ID}}" method="POST">
+        <div class="form-submit">
+          <input type="submit" value="watch">
+        </div>
+      </form>
+    {{end}}
   {{end}}
   <div id="eats-ur-brain">
     {{range .Thread.Posts}}
