@@ -79,11 +79,14 @@ func main() {
 		store = mockstore
 	}
 
+	var reqcode bool
 	var idp id.Provider
 	if *midp {
 		idp = id.NewMemoryProvider()
+		reqcode = false
 	} else {
-		idp = id.NewServicerProvider(*sidp)
+		idp = id.NewServiceProvider(*sidp)
+		reqcode = true
 	}
 
 	// in order to initialize our model of the threads, we need to get
@@ -130,7 +133,7 @@ func main() {
 	}()
 
 	m := model.NewModel(threads, mid)
-	h := handler.NewHandler(ca, m, store, idp)
+	h := handler.NewHandler(ca, m, store, idp, reqcode)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
 }
 

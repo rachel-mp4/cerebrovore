@@ -26,6 +26,7 @@ type Handler struct {
 	crack        string
 	notes        []types.Patch
 	live         *time.Time
+	reqcode      bool
 }
 
 type CompiledAssets struct {
@@ -39,7 +40,7 @@ type CompiledAssets struct {
 	WormCss     []string
 }
 
-func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider) Handler {
+func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider, reqcode bool) Handler {
 	h := Handler{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", h.AM(h.home))
@@ -90,6 +91,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	h.notes = getNotes()
 	t := time.Now()
 	h.live = &t
+	h.reqcode = reqcode
 
 	return h
 }
@@ -211,15 +213,17 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
-		Title  string
-		Crack  string
-		Invite string
+		Title        string
+		Crack        string
+		Invite       string
+		RequiresCode bool
 	}
 	invite := r.URL.Query().Get("invite")
 	err := accountT.ExecuteTemplate(w, "base", loginresp{
 		"create account",
 		h.crack,
 		invite,
+		h.reqcode,
 	})
 	if err != nil {
 		clog.Warn("%s", err)

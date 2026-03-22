@@ -17,7 +17,7 @@ type ServiceProvider struct {
 	cli  *http.Client
 }
 
-func NewServicerProvider(port int) *ServiceProvider {
+func NewServiceProvider(port int) *ServiceProvider {
 	return &ServiceProvider{port, http.DefaultClient}
 }
 
