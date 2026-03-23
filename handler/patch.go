@@ -10,6 +10,20 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.-0.2",
+			Timestamp: "2026-03-21",
+			Notes: []types.Note{
+				{
+					Type: "fix",
+					Name: "watch thread query typo",
+				},
+				{
+					Type: "upgrade",
+					Name: "hide invite codes in UI if identity provider does not use them",
+				},
+			},
+		},
+		{
 			Release:   "β.-0.1",
 			Timestamp: "2026-03-21",
 			Notes: []types.Note{

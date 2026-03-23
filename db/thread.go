@@ -712,7 +712,7 @@ func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, re
 		SELECT reply_count
 		FROM threads
 		WHERE id = $1
-		`)
+		`, id)
 	var rc int
 	err = row.Scan(&rc)
 	if err != nil {
