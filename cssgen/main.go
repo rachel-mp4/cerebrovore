@@ -5,6 +5,7 @@ import (
 	"math"
 )
 
+// generates css styles that you don't wanna do by hand: "go run ./cssgen > ./static/css/postsizes.go"
 func main() {
 	fmt.Println("@media (min-width: 36rem) {")
 	i := 1

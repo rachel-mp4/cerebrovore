@@ -23,10 +23,19 @@ type Handler struct {
 	sessionStore *sessions.CookieStore
 	db           db.Storer
 	idp          id.Provider
-	crack        string
-	notes        []types.Patch
-	live         *time.Time
-	reqcode      bool
+
+	// crack is a string we append to static assets that we want clients to
+	// redownload
+	crack string
+
+	// notes is the list of patch notes, for flavor
+	notes []types.Patch
+
+	// live is the time that the site went live last, just for flavor
+	live *time.Time
+
+	// reqcode is true if the current id provider requires invite codes for account registration
+	reqcode bool
 }
 
 type CompiledAssets struct {
@@ -372,7 +381,6 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 		c.Username,
 		h.reqcode,
 	})
-
 }
 
 func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
@@ -416,6 +424,8 @@ func Add1YCache(h http.Handler) http.Handler {
 	})
 }
 
+// StripCrack is a middleware function to remove the cache crack string
+// from a path that might have it
 func (hdlr *Handler) StripCrack(h http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		r.URL.Path = strings.TrimSuffix(r.URL.Path, hdlr.crack)

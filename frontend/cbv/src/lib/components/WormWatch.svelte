@@ -86,7 +86,11 @@
 
   var player: Player;
   let playerReady = $state(false);
+  let scale = $state(1);
   let playerHeight = $state(0);
+  let playerAspect = $state(0);
+  let pointerstart: number | undefined = $state();
+  let pointercur: number | undefined = $state();
   let curID = $state();
   const readyPlayerForAction = (entry: WormWatchEntry) => {
     let reqsite = entry.data.site;
@@ -103,11 +107,15 @@
         curID = entry.data.id;
         player.loadVideoById(entry.data.id).then(() => {
           player
-            .setSize(entry.data.width ?? 576, entry.data.height ?? 324)
+            .setSize(
+              (entry.data.width ?? 576) * scale,
+              (entry.data.height ?? 324) * scale,
+            )
             .then(() => {
               player.setVolume(Math.floor(volume * wwvolume * 100)).then(() => {
                 playerReady = true;
                 playerHeight = entry.data.height ?? 324;
+                playerAspect = (entry.data.width ?? 576) / playerHeight;
                 onPlayerReady();
               });
             });
@@ -120,6 +128,7 @@
     player.destroy();
     playerReady = false;
     playerHeight = 0;
+    playerAspect = 0;
   };
 
   const onPlayerReady = () => {
@@ -134,11 +143,54 @@
       }, st);
     }
   };
+  let guesscale = $state(1);
 </script>
 
 <div id="worm-watch"></div>
 
-<div class="spacer" style:height="{playerHeight}px"></div>
+<div
+  class={pointerstart !== undefined ? "currently-resizing" : ""}
+  style="position:absolute; z-index:-1; top: 0; right: 0;"
+  style:height="{playerHeight * guesscale}px"
+  style:width="{playerAspect * playerHeight * guesscale}px"
+></div>
+
+<div
+  role="separator"
+  aria-orientation="vertical"
+  style:height="{playerHeight * scale}px"
+  style:width="{playerAspect * playerHeight * scale}px"
+  onpointerdown={(event: PointerEvent) => {
+    if (event.button !== 0) {
+      return;
+    }
+    const spacer = event.target as HTMLDivElement;
+    if (spacer) {
+      spacer.setPointerCapture(event.pointerId);
+      pointerstart = event.clientY;
+      pointercur = event.clientY;
+    }
+  }}
+  onpointermove={(event: PointerEvent) => {
+    if (pointerstart) {
+      pointercur = event.clientY;
+      guesscale = Math.min(
+        Math.max((scale * pointercur) / pointerstart, 0.5),
+        2,
+      );
+    }
+  }}
+  onpointerup={(event: PointerEvent) => {
+    pointercur = event.clientY;
+    if (pointerstart) {
+      const newScale = pointercur / pointerstart;
+      scale = Math.min(Math.max(scale * newScale, 0.5), 2);
+      player.setSize(playerHeight * playerAspect * scale, playerHeight * scale);
+      pointerstart = undefined;
+      pointercur = undefined;
+    }
+  }}
+></div>
 
 <div class="sidebar-group">
   <div>

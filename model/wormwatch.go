@@ -199,8 +199,14 @@ func (tm *threadModel) pauseVideo() {
 }
 
 func (tm *threadModel) nextVideo() {
-	wwd := tm.wormwatchdata
 	tm.wormwatchersmu.Lock()
+	tm.nv()
+}
+
+// nv plays the nextVideo in queue, or clears it if the queue is currently on
+// the last video in queue. THIS ASSUMES WE HAVE THE LOCK
+func (tm *threadModel) nv() {
+	wwd := tm.wormwatchdata
 	idx := wwd.index + 1
 	if idx >= len(wwd.queue) {
 		for w := range tm.wormwatchers {
@@ -222,6 +228,7 @@ func (tm *threadModel) nextVideo() {
 	tstartms := tstart.UnixMilli()
 	wwd.index = idx
 	wwd.start = &tstart
+	wwd.pausedAt = nil
 	for w := range tm.wormwatchers {
 		select {
 		case w.ch <- wormwatchEvent{Type: TypeStart, Index: &idx, Timestamp: &tstartms}:
@@ -290,7 +297,12 @@ func (m *Model) Skip(threadID uint32, username string) {
 	entry := wwd.queue[wwd.index]
 	if entry.username == username {
 		// i can always skip my own wormwatch entry
-		wwd.cancel(skipped)
+		if wwd.pausedAt == nil {
+			wwd.cancel(skipped)
+		} else {
+			tm.nv()
+			return
+		}
 	} else {
 		// if its someone elses video, we have to check the number of votes
 		if entry.voteskip == nil {
@@ -300,8 +312,12 @@ func (m *Model) Skip(threadID uint32, username string) {
 		nvotes := len(entry.voteskip)
 		nwatchers := len(wwd.watchers)
 		if float64(nvotes) >= math.Log2(float64(nwatchers)) {
-			entry.voteskip = make(map[string]bool)
-			wwd.cancel(skipped)
+			if wwd.pausedAt == nil {
+				wwd.cancel(skipped)
+			} else {
+				tm.nv()
+				return
+			}
 		}
 	}
 	tm.wormwatchersmu.Unlock()

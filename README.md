@@ -65,3 +65,7 @@ want to create a custom parser here, but be careful because performance here
 matters, and it's nice to maintain flexibility. likely we don't care for any
 commands, and in general as length of post id grows, probability that a post id
 is just numbers approaches 0, so this is very low priority
+
+i believe the bug in wormwatch where a video appears to be unavailable is a
+result of adblockers in firefox. refreshing the page a few times seems to fix
+it, but this is of course not ideal

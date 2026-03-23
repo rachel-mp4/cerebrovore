@@ -10,8 +10,22 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.-0.3",
+			Timestamp: "2026-03-23",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "click and drag wormwatch to resize it",
+				},
+				{
+					Type: "upgrade",
+					Name: "skip during pause should work right now",
+				},
+			},
+		},
+		{
 			Release:   "β.-0.2",
-			Timestamp: "2026-03-21",
+			Timestamp: "2026-03-23",
 			Notes: []types.Note{
 				{
 					Type: "fix",

@@ -24,3 +24,9 @@
   width: 100%;
   justify-content: space-between;
 }
+
+.currently-resizing {
+  border-left: 1px solid var(--fg);
+  border-bottom: 1px solid var(--fg);
+  border-radius: 0 0 0 4rem;
+}
