@@ -354,7 +354,8 @@ type Client struct {
 func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 	type meresp struct {
 		baseresp
-		Username string
+		Username     string
+		RequiresCode bool
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
@@ -369,6 +370,7 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.crack,
 		},
 		c.Username,
+		h.reqcode,
 	})
 
 }

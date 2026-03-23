@@ -5,23 +5,25 @@
       <input type="submit" value="logout"/>
     </div>
   </form>
-  <p>
-  if you've been a member of the community for a while, you might have accumulated mana, which you can use to generate an invite code
-  </p>
-  <p>
-    note that a public code costs more mana, and its duration starts ticking immediately once you generate it
-  </p>
-  <div>
-    <button hx-post="/gen-code" hx-target="this" hx-swap="outerHTML" hx-trigger="click">
-      generate personal 1-time use invite code
-    </button>
-  </div>
-  <div>
-    <button hx-post="/gen-public-code" hx-target="this" hx-swap="outerHTML" hx-trigger="click">
-      generate public multi-use time-limited invite code
-    </button>
-  </div>
-  <p>
-    if you wanna invite someone or a community and don't have enough mana right now, let a mod know and we'll try to get one to you asap
-  </p>
+  {{if .RequiresCode}}
+    <p>
+    if you've been a member of the community for a while, you might have accumulated mana, which you can use to generate an invite code
+    </p>
+    <p>
+      note that a public code costs more mana, and its duration starts ticking immediately once you generate it
+    </p>
+    <div>
+      <button hx-post="/gen-code" hx-target="this" hx-swap="outerHTML" hx-trigger="click">
+        generate personal 1-time use invite code
+      </button>
+    </div>
+    <div>
+      <button hx-post="/gen-public-code" hx-target="this" hx-swap="outerHTML" hx-trigger="click">
+        generate public multi-use time-limited invite code
+      </button>
+    </div>
+    <p>
+      if you wanna invite someone or a community and don't have enough mana right now, let a mod know and we'll try to get one to you asap
+    </p>
+  {{end}}
 {{end}}
