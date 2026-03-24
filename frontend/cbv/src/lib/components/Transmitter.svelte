@@ -163,7 +163,7 @@
       {color}
       size={4}
       placeholder="alice!"
-      maxlength={12}
+      maxlength={16}
       bold={true}
     />
     <input type="checkbox" name="anon" />
