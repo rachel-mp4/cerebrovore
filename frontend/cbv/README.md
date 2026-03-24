@@ -38,3 +38,31 @@ them so look at `tmpl/beep.html`; but in the case where we are in prod, we want
 to access the field of prod for the compiled code, and in the case where we are
 in dev, we can just link "straight to it" and vite handles the rest
 
+# included islands
+
+## beep
+
+just a basic svelte thing for reference
+
+## chat
+
+lrc chat implementation. see [lrcproto](https://github.com/rachel-mp4/lrcproto)
+and [lrcd](https://github.com/rachel-mp4/lrcd) to get a sense for the protocol
+
+## watcher 
+
+live thread watcher. bumps are recieved as json; the final bump is gonna include 
+field bumplimit value true. new threads have the field new as true
+
+## worm
+
+wormwatch. wormwatch events are sent as json, the initial connection should
+include the server time (type "timeS"), and if there is currently a wormwatch
+queue, the state of the queue (type "queue"). if the queue is not currently
+paused, it will also send an event with the server timestamp that the video
+started (or will start) playing at (type "start"). if the queue is ever paused,
+it will send an event (type "pause") to all clients. when the final video in
+queue finishes, server sends an event letting clients know (type "clear")
+
+
+

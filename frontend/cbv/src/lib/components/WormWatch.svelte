@@ -23,25 +23,34 @@
   let volume: number = getVolume();
   let wwvolume: number = getWormWatchVolume();
   let showVolumeSettings = $state(false);
+  let ui = $state(navigator.userActivation.hasBeenActive);
+  if (!ui) {
+    // @ts-expect-error this works in firefox
+    if (navigator.getAutoplayPolicy("mediaelement") === "allowed") {
+      ui = true;
+    }
+  }
 
   onMount(() => {
     const startHandler = () => {
-      interval = setInterval(() => {
-        if (ctx.pause !== undefined) {
-          return;
-        }
-        const nTime = ctx.getTimeToStart();
-        if (nTime !== undefined) {
-          const n = Math.floor(nTime / -1000);
-          if (maxTime === undefined) {
-            time = nSecondsToHMS(n);
-          } else {
-            time = nSecondsOutOfMax(n, maxTime);
+      if (interval === undefined) {
+        interval = setInterval(() => {
+          if (ctx.pause !== undefined) {
+            return;
           }
-        } else {
-          time = undefined;
-        }
-      }, 1000);
+          const nTime = ctx.getTimeToStart();
+          if (nTime !== undefined) {
+            const n = Math.floor(nTime / -1000);
+            if (maxTime === undefined) {
+              time = nSecondsToHMS(n);
+            } else {
+              time = nSecondsOutOfMax(n, maxTime);
+            }
+          } else {
+            time = undefined;
+          }
+        }, 1000);
+      }
       const entry = ctx.wwqueue[ctx.playingIndex!];
       if (entry) {
         // duration from go is given as Nanosecond
@@ -50,7 +59,20 @@
       readyPlayerForAction(entry);
     };
     const pauseHandler = () => {
-      player.pauseVideo();
+      if (ctx.pause === undefined) {
+        console.error("pause shouldn't be undefined here");
+      }
+      const entry = ctx.wwqueue[ctx.playingIndex!];
+      if (entry) {
+        // duration from go is given as Nanosecond
+        maxTime = nSecondsToHMS(Math.floor(entry.data.duration / 1000000000));
+      }
+      if (maxTime === undefined) {
+        time = nSecondsToHMS((ctx.pause ?? 0) / 1000);
+      } else {
+        time = nSecondsOutOfMax((ctx.pause ?? 0) / 1000, maxTime);
+      }
+      readyPlayerForPause(entry);
     };
     const clearHandler = () => {
       clearInterval(interval);
@@ -60,19 +82,27 @@
 
       destroyPlayer();
     };
+    const interact = () => {
+      ui = true;
+      if (playerReady) {
+        player?.setVolume(ui ? Math.floor(volume * wwvolume * 100) : 0);
+      }
+      window.removeEventListener("pointerdown", interact);
+    };
+    const initplay = window.addEventListener("pointerdown", interact);
     ctx.addEventListener("start", startHandler);
     ctx.addEventListener("pause", pauseHandler);
     ctx.addEventListener("clear", clearHandler);
     const removeVC = onVolumeChange((e) => {
       volume = e.detail.volume;
       if (playerReady) {
-        player.setVolume(Math.floor(volume * wwvolume * 100));
+        player?.setVolume(ui ? Math.floor(volume * wwvolume * 100) : 0);
       }
     });
     const removeWWVC = onVolumeWormWatchChange((e) => {
       wwvolume = e.detail.volume;
       if (playerReady) {
-        player.setVolume(Math.floor(volume * wwvolume * 100));
+        player?.setVolume(ui ? Math.floor(volume * wwvolume * 100) : 0);
       }
     });
     return () => {
@@ -84,14 +114,16 @@
     };
   });
 
-  var player: Player;
+  var player: Player | undefined = $state();
   let playerReady = $state(false);
   let scale = $state(1);
   let playerHeight = $state(0);
   let playerAspect = $state(0);
-  let pointerstart: number | undefined = $state();
-  let pointercur: number | undefined = $state();
-  let curID = $state();
+  let pointerstarty: number | undefined = $state();
+  let pointerstartx: number | undefined;
+  let pointercurx: number | undefined;
+  let pointercury: number | undefined;
+  let curID: string | undefined;
   const readyPlayerForAction = (entry: WormWatchEntry) => {
     let reqsite = entry.data.site;
     switch (reqsite) {
@@ -105,19 +137,56 @@
           return;
         }
         curID = entry.data.id;
-        player.loadVideoById(entry.data.id).then(() => {
+        player?.loadVideoById(entry.data.id).then(() => {
           player
-            .setSize(
+            ?.setSize(
               (entry.data.width ?? 576) * scale,
               (entry.data.height ?? 324) * scale,
             )
             .then(() => {
-              player.setVolume(Math.floor(volume * wwvolume * 100)).then(() => {
-                playerReady = true;
-                playerHeight = entry.data.height ?? 324;
-                playerAspect = (entry.data.width ?? 576) / playerHeight;
-                onPlayerReady();
-              });
+              player
+                ?.setVolume(ui ? Math.floor(volume * wwvolume * 100) : 0)
+                .then(() => {
+                  playerReady = true;
+                  playerHeight = entry.data.height ?? 324;
+                  playerAspect = (entry.data.width ?? 576) / playerHeight;
+                  onPlayerReady();
+                });
+            });
+        });
+        break;
+      }
+    }
+  };
+  const readyPlayerForPause = (entry: WormWatchEntry) => {
+    let reqsite = entry.data.site;
+    switch (reqsite) {
+      // youtube
+      case 0: {
+        if (!playerReady) {
+          player = YoutubePlayer("worm-watch");
+        }
+        if (curID === entry.data.id) {
+          onPlayerPause();
+          return;
+        }
+        curID = entry.data.id;
+        player?.loadVideoById(entry.data.id).then(() => {
+          console.log("loaded");
+          player
+            ?.setSize(
+              (entry.data.width ?? 576) * scale,
+              (entry.data.height ?? 324) * scale,
+            )
+            .then(() => {
+              player
+                ?.setVolume(Math.floor(volume * wwvolume * 100))
+                .then(() => {
+                  playerReady = true;
+                  playerHeight = entry.data.height ?? 324;
+                  playerAspect = (entry.data.width ?? 576) / playerHeight;
+                  onPlayerPause();
+                });
             });
         });
         break;
@@ -125,22 +194,49 @@
     }
   };
   const destroyPlayer = () => {
-    player.destroy();
+    player?.destroy().then(() => {
+      player = undefined;
+    });
     playerReady = false;
     playerHeight = 0;
     playerAspect = 0;
   };
 
-  const onPlayerReady = () => {
+  const onPlayerReady = async () => {
     const st = ctx.getTimeToStart();
     if (st === undefined) {
       return;
     } else if (st < 0) {
-      player.seekTo(st / -1000, true).then(player.playVideo);
+      const listener = player?.on("stateChange", (event: any) => {
+        console.log(event);
+        if (event.data === 1) {
+          const st = ctx.getTimeToStart();
+          if (st === undefined) {
+            console.error("i hate life");
+            return;
+          }
+          console.log("beep");
+          player?.seekTo(st / -1000, true);
+          // @ts-expect-error this function exists, i think the typescript is no good
+          player?.off(listener);
+        }
+      });
+      player?.playVideo();
     } else {
       setTimeout(() => {
-        player.playVideo();
+        player?.playVideo();
       }, st);
+    }
+  };
+
+  const onPlayerPause = () => {
+    const pause = ctx.pause;
+    if (pause === undefined) {
+      return;
+    } else if (pause < 0) {
+      player?.pauseVideo();
+    } else {
+      player?.pauseVideo().then(() => player?.seekTo(pause / 1000, true));
     }
   };
   let guesscale = $state(1);
@@ -149,17 +245,18 @@
 <div id="worm-watch"></div>
 
 <div
-  class={pointerstart !== undefined ? "currently-resizing" : ""}
-  style="position:absolute; z-index:-1; top: 0; right: 0;"
-  style:height="{playerHeight * guesscale}px"
-  style:width="{playerAspect * playerHeight * guesscale}px"
-></div>
-
-<div
   role="separator"
   aria-orientation="vertical"
-  style:height="{playerHeight * scale}px"
-  style:width="{playerAspect * playerHeight * scale}px"
+  class="{pointerstarty !== undefined ? 'currently-resizing' : ''} {player &&
+  !ui
+    ? 'autoplay-disabled'
+    : ''}"
+  style="position:absolute; z-index:0; top: 0; right: 0; cursor: {pointerstarty !==
+  undefined
+    ? 'grabbing'
+    : 'grab'};"
+  style:height="{playerHeight * guesscale}px"
+  style:width="{playerAspect * playerHeight * guesscale}px"
   onpointerdown={(event: PointerEvent) => {
     if (event.button !== 0) {
       return;
@@ -167,29 +264,64 @@
     const spacer = event.target as HTMLDivElement;
     if (spacer) {
       spacer.setPointerCapture(event.pointerId);
-      pointerstart = event.clientY;
-      pointercur = event.clientY;
+      pointerstarty = event.clientY;
+      pointerstartx = event.clientX;
+      pointercurx = event.clientX;
+      pointercury = event.clientY;
     }
   }}
   onpointermove={(event: PointerEvent) => {
-    if (pointerstart) {
-      pointercur = event.clientY;
-      guesscale = Math.min(
-        Math.max((scale * pointercur) / pointerstart, 0.5),
+    if (pointerstarty && pointerstartx) {
+      pointercury = event.clientY;
+      pointercurx = event.clientX;
+      const sx = Math.min(
+        Math.max(
+          (scale * (window.innerWidth - pointercurx)) /
+            (window.innerWidth - pointerstartx),
+          0.5,
+        ),
         2,
       );
+      const sy = Math.min(
+        Math.max((scale * pointercury) / pointerstarty, 0.5),
+        2,
+      );
+      guesscale = Math.max(sx, sy);
     }
   }}
   onpointerup={(event: PointerEvent) => {
-    pointercur = event.clientY;
-    if (pointerstart) {
-      const newScale = pointercur / pointerstart;
-      scale = Math.min(Math.max(scale * newScale, 0.5), 2);
-      player.setSize(playerHeight * playerAspect * scale, playerHeight * scale);
-      pointerstart = undefined;
-      pointercur = undefined;
+    if (pointerstartx && pointerstarty) {
+      pointercury = event.clientY;
+      pointercurx = event.clientX;
+      const sx = Math.min(
+        Math.max(
+          (scale * (window.innerWidth - pointercurx)) /
+            (window.innerWidth - pointerstartx),
+          0.5,
+        ),
+        2,
+      );
+      const sy = Math.min(
+        Math.max((scale * pointercury) / pointerstarty, 0.5),
+        2,
+      );
+      scale = Math.max(sx, sy);
+      player?.setSize(
+        playerHeight * playerAspect * scale,
+        playerHeight * scale,
+      );
     }
+    pointerstarty = undefined;
+    pointercury = undefined;
+    pointerstartx = undefined;
+    pointercurx = undefined;
   }}
+></div>
+
+<div
+  role="separator"
+  aria-orientation="vertical"
+  style:height="{playerHeight * scale}px"
 ></div>
 
 <div class="sidebar-group">
@@ -212,9 +344,6 @@
           : ""}{maxTime}
       </span>
     </div>
-  {/if}
-  {#if ctx.wwqueue.length !== 0 && !ctx.start}
-    <div>paused</div>
   {/if}
   <ol class="queue">
     {#each ctx.wwqueue as entry, i}

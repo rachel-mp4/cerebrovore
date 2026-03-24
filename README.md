@@ -69,3 +69,10 @@ is just numbers approaches 0, so this is very low priority
 i believe the bug in wormwatch where a video appears to be unavailable is a
 result of adblockers in firefox. refreshing the page a few times seems to fix
 it, but this is of course not ideal
+
+### TODO
+- like wormwatch entries
+- #hug thru parser, and hug button thru not parser
+- report
+- 1 click delete for moderators
+

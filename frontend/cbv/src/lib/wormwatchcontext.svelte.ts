@@ -43,6 +43,7 @@ export class WormWatchContext extends EventTarget {
         }
 
         case "pause": {
+          this.playingIndex = wwe.index
           this.pause = wwe.timestamp + this.offset
           this.dispatchEvent(
             new CustomEvent("pause", { detail: wwe })
@@ -72,5 +73,8 @@ export class WormWatchContext extends EventTarget {
       return undefined
     }
     return this.start - Date.now() - this.offset
+  }
+  isPlaying(): boolean {
+    return this.start !== undefined && this.pause === undefined
   }
 }

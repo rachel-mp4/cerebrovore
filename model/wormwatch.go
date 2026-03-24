@@ -90,9 +90,14 @@ func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.Handl
 		if wwd.queue != nil {
 			watcher.ch <- wormwatchEvent{Type: TypeQueue, Entries: wwd.queue}
 		}
-		if wwd.start != nil && wwd.pausedAt == nil {
-			tstartms := wwd.start.UnixMilli()
-			watcher.ch <- wormwatchEvent{Type: TypeStart, Timestamp: &tstartms, Index: &wwd.index}
+		if wwd.start != nil {
+			if wwd.pausedAt == nil {
+				tstartms := wwd.start.UnixMilli()
+				watcher.ch <- wormwatchEvent{Type: TypeStart, Timestamp: &tstartms, Index: &wwd.index}
+			} else {
+				tpausems := wwd.pausedAt.Milliseconds()
+				watcher.ch <- wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}
+			}
 		}
 		tm.wormwatchersmu.Unlock()
 
@@ -191,7 +196,7 @@ func (tm *threadModel) pauseVideo() {
 
 	for w := range tm.wormwatchers {
 		select {
-		case w.ch <- wormwatchEvent{Type: TypePause, Timestamp: &tpausems}:
+		case w.ch <- wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}:
 		default:
 		}
 	}
