@@ -75,4 +75,6 @@ it, but this is of course not ideal
 - #hug thru parser, and hug button thru not parser
 - report
 - 1 click delete for moderators
+- left sidebar left side count posts in thread etc (maybe create ls equiv)
+- render usernames for non-anonymous posts
 

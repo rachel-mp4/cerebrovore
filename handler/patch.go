@@ -10,6 +10,28 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.-0.4",
+			Timestamp: "2026-03-24",
+			Notes: []types.Note{
+				{
+					Type: "upgrade",
+					Name: "resizing wormwatch now works horizontally (a bit jank still)",
+				},
+				{
+					Type: "upgrade",
+					Name: "alias lines with just #play to #unpause",
+				},
+				{
+					Type: "fix",
+					Name: "refresh now seeks to current timestamp properly",
+				},
+				{
+					Type: "feature",
+					Name: "guesses if autoplay works and mutes videos accordingly with info message",
+				},
+			},
+		},
+		{
 			Release:   "β.-0.3",
 			Timestamp: "2026-03-23",
 			Notes: []types.Note{

@@ -12,3 +12,14 @@ func MaxReplies(replyCount int) bool {
 func MaxBumps(replyCount int) bool {
 	return replyCount >= BUMP_LIMIT
 }
+
+var (
+	PLAY_ID        = AToIDp("play")
+	SKIP_ID        = AToIDp("skip")
+	PAUSE_ID       = AToIDp("pause")
+	UNPAUSE_EX     = AToExp("unpause")
+	DEBRAINWORM_EX = AToExp("debrainworm")
+	DESH_ID        = AToIDp("desh")
+	DESHELL_EX     = AToExp("deshell")
+	MOLT_ID        = AToIDp("molt")
+)

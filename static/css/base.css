@@ -262,11 +262,11 @@ body {
 }
 
 @keyframes animate-up {
-  from {
+  0% {
     transform: translateY(25%);
   }
 
-  to {
+  99% {
     transform: translateY(-25%);
   }
 }

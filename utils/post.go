@@ -20,13 +20,6 @@ import (
 
 var hashtagRE = regexp.MustCompile(`#([0-9A-Za-z]+)`)
 
-var (
-	PLAY_ID    = AToIDf("play")
-	SKIP_ID    = AToIDf("skip")
-	PAUSE_ID   = AToIDf("pause")
-	UNPAUSE_EX = AToExf("unpause")
-)
-
 func ParseBodyForBacklinks(s string) (backlinks []uint32, extras []uint64) {
 	matches := hashtagRE.FindAllStringSubmatch(s, -1)
 	backlinks = make([]uint32, 0)
@@ -69,9 +62,9 @@ type PlayInput struct {
 // until the next PlayInput that hasn't looked up its data is up next
 // in queue. if we do it this way, i think we can cut down api calls
 // a lot, however, ux is a bit
-func ParseBodyForPlays(s string) []*PlayInput {
+func ParseBodyForPlays(s string) (res []*PlayInput, unpause bool) {
 	scanner := bufio.NewScanner(strings.NewReader(s))
-	res := make([]*PlayInput, 0)
+	res = make([]*PlayInput, 0)
 	for scanner.Scan() {
 		l := scanner.Text()
 		if strings.HasPrefix(l, "#play ") {
@@ -101,9 +94,11 @@ func ParseBodyForPlays(s string) []*PlayInput {
 				// case "soundcloud.com", "on.soundcloud.com", "www.soundcloud.com":
 				// res = append(res, PlayInput{Soundcloud, literal, literal})
 			}
+		} else if l == "#play" {
+			unpause = true
 		}
 	}
-	return res
+	return
 }
 
 func getDurationForYoutubeId(id string) (*PlayInput, error) {

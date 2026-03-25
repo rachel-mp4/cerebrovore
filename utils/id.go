@@ -37,7 +37,26 @@ func AToIDf(s string) uint32 {
 	return id
 }
 
+// use this only for things we want to be correct at compile time, panics
+// on error (basically i want to precompute commands, and this lets me
+// know if the command's name is too long)
+func AToIDp(s string) uint32 {
+	id, err := AToID(s)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 func AToExf(s string) uint64 {
 	_, _, ex, _ := AToEx(s)
+	return ex
+}
+
+func AToExp(s string) uint64 {
+	_, _, ex, err := AToEx(s)
+	if err != nil {
+		panic(err)
+	}
 	return ex
 }

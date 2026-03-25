@@ -487,8 +487,13 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 
 	}
 	if cmd.play {
-		res := utils.ParseBodyForPlays(post.TextContent.Body)
-		h.m.Queue(post.ThreadID, c.Username, res)
+		res, unpause := utils.ParseBodyForPlays(post.TextContent.Body)
+		if len(res) != 0 {
+			h.m.Queue(post.ThreadID, c.Username, res)
+		}
+		if unpause {
+			h.m.Unpause(post.ThreadID, c.Username)
+		}
 	}
 	if cmd.skip {
 		h.m.Skip(post.ThreadID, c.Username)
