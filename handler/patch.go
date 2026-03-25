@@ -236,18 +236,12 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		baseresp
 		Patches []types.Patch
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("patch notes", r.Context())
 	if err != nil {
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
+		clog.Warn("bumps %s", err)
 	}
 	err = patchT.ExecuteTemplate(w, "base", patchresp{
-		baseresp{
-			h.ca,
-			"brainworm",
-			tt,
-			h.crack,
-		},
+		*base,
 		h.notes,
 	})
 	if err != nil {

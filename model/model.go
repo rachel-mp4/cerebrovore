@@ -54,8 +54,8 @@ func (m *Model) recreateThread(thread types.Thread) {
 // AddThread allocates and returns the id for a new thread,
 // which it creates
 func (m *Model) AddThread(topic *string) uint32 {
-	m.tmapmu.Lock()
-	defer m.tmapmu.Unlock()
+	m.tmapmu.RLock()
+	defer m.tmapmu.RUnlock()
 	threadID := m.getIDAllocator()()
 	nt := newThreadModel(threadID, topic)
 	m.tmap[threadID] = nt
@@ -80,25 +80,36 @@ func (m *Model) DeleteThread(threadID uint32) error {
 
 // GetThreadWSHandler gets the ws handler for a thread's lrc server
 func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
-	m.tmapmu.Lock()
-	defer m.tmapmu.Unlock()
-	thread, ok := m.tmap[threadID]
+	clog.Dbug("acquiring tmapmulock wsh")
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.RUnlock()
+	clog.Dbug("tmapmulock acquired")
 	if !ok {
 		return nil, ErrThreadDNE
 	}
-	if thread.full {
+	clog.Dbug("acquiring lock")
+	tm.mu.Lock()
+	clog.Dbug("lock acquired")
+	if tm.full {
+		tm.mu.Unlock()
 		return nil, ErrThreadFull
 	}
-	if thread.server == nil {
-		err := thread.recreateServer(m.getIDAllocator())
+	if tm.server == nil {
+		clog.Dbug("recreating server")
+		err := tm.recreateServer(m.getIDAllocator())
 		if err != nil {
+			tm.mu.Unlock()
 			return nil, fmt.Errorf("recreateserver: %w", err)
 		}
 	}
-	handler, err := thread.getWSHandler()
+	handler, err := tm.getWSHandler()
 	if err != nil {
+		tm.mu.Unlock()
 		return nil, fmt.Errorf("getwshandler: %w", err)
 	}
+	tm.mu.Unlock()
+	clog.Dbug("returning handler")
 	return handler, nil
 }
 
@@ -112,13 +123,25 @@ func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {
 }
 
 func (m *Model) ReplyLimit(threadID uint32) {
-	m.tmapmu.Lock()
+	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
-	m.tmapmu.Unlock()
+	m.tmapmu.RUnlock()
 	if !ok {
 		return
 	}
+	tm.mu.Lock()
 	tm.full = true
+	tm.mu.Unlock()
+	go func() {
+		tm.subsmu.RLock()
+		defer tm.subsmu.RUnlock()
+		for w := range tm.subs {
+			select {
+			case w.ch <- socketEvent{ReplyLimit: &tm.full}:
+			default:
+			}
+		}
+	}()
 }
 
 // getIDAllocator produces an IDAllocator function that returns an
@@ -151,7 +174,7 @@ func cleaner(m *Model) {
 			m.tmapmu.Lock()
 			for id, tm := range m.tmap {
 				tm.kawaiiDestroyServer()
-				if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 {
+				if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 && len(tm.subs) == 0 {
 					clog.Dbug("thread model killed: %d", id)
 					delete(m.tmap, id)
 				}

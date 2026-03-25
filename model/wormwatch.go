@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/utils"
 )
 
@@ -39,13 +40,6 @@ type wormwatchEvent struct {
 	Timestamp *int64                 `json:"timestamp,omitempty"`
 }
 
-type wormwatcher struct {
-	conn   *websocket.Conn
-	ch     chan wormwatchEvent
-	ctx    context.Context
-	cancel context.CancelFunc
-}
-
 const (
 	TypeTimeS = "timeS"
 	TypeClear = "clear"
@@ -55,8 +49,9 @@ const (
 )
 
 func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.HandlerFunc, error) {
-	m.tmapmu.Lock()
-	defer m.tmapmu.Unlock()
+	clog.Dbug("acquiring ww lock")
+	m.tmapmu.RLock()
+	defer m.tmapmu.RUnlock()
 	tm, ok := m.tmap[threadID]
 	if !ok {
 		return nil, ErrThreadDNE
@@ -64,6 +59,7 @@ func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.Handl
 	if tm.full {
 		return nil, ErrThreadFull
 	}
+	clog.Dbug("ww lock dequired")
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -75,8 +71,8 @@ func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.Handl
 			return
 		}
 		ctx, cancel := context.WithCancel(context.Background())
-		watcher := &wormwatcher{
-			ch:     make(chan wormwatchEvent, 10),
+		watcher := &watcherConn{
+			ch:     make(chan any, 10),
 			conn:   conn,
 			ctx:    ctx,
 			cancel: cancel,
@@ -123,9 +119,9 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 	if len(pis) == 0 {
 		return
 	}
-	m.tmapmu.Lock()
+	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
-	m.tmapmu.Unlock()
+	m.tmapmu.RUnlock()
 	if !ok {
 		return
 	}
@@ -252,9 +248,9 @@ func (tm *threadModel) nv() {
 }
 
 func (m *Model) Pause(threadID uint32, username string) {
-	m.tmapmu.Lock()
+	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
-	m.tmapmu.Unlock()
+	m.tmapmu.RUnlock()
 	wwd := tm.wormwatchdata
 	if !ok {
 		return
@@ -286,9 +282,9 @@ func (m *Model) Pause(threadID uint32, username string) {
 }
 
 func (m *Model) Skip(threadID uint32, username string) {
-	m.tmapmu.Lock()
+	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
-	m.tmapmu.Unlock()
+	m.tmapmu.RUnlock()
 	if !ok {
 		return
 	}
@@ -329,9 +325,9 @@ func (m *Model) Skip(threadID uint32, username string) {
 }
 
 func (m *Model) Unpause(threadID uint32, username string) {
-	m.tmapmu.Lock()
+	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
-	m.tmapmu.Unlock()
+	m.tmapmu.RUnlock()
 	if !ok {
 		return
 	}
@@ -392,43 +388,4 @@ func (tm *threadModel) unpauseHOLDINGLOCK() {
 	wwd.pausedAt = nil
 	tm.wormwatchersmu.Unlock()
 	go tm.handleQueue()
-}
-
-// watch writes events to a watcher's threadsocket
-func (w *wormwatcher) watch() {
-	defer w.cancel()
-	ticker := time.NewTicker(15 * time.Second)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-w.ctx.Done():
-			return
-		case <-ticker.C:
-			err := w.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
-			if err != nil {
-				return
-			}
-		case we := <-w.ch:
-			err := w.conn.WriteJSON(we)
-			if err != nil {
-				return
-			}
-		}
-	}
-}
-
-func (w *wormwatcher) readloop() {
-	defer w.cancel()
-	w.conn.SetReadLimit(512)
-	w.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-
-	w.conn.SetPongHandler(func(string) error {
-		w.conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil
-	})
-	for {
-		if _, _, err := w.conn.ReadMessage(); err != nil {
-			return
-		}
-	}
 }

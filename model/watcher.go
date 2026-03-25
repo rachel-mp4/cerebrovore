@@ -26,7 +26,7 @@ type watchEvent struct {
 // since ATM like all the templates involve the list of threads
 type watcherConn struct {
 	conn   *websocket.Conn
-	ch     chan watchEvent
+	ch     chan any
 	ctx    context.Context
 	cancel context.CancelFunc
 }
@@ -162,26 +162,38 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 		delete(tm.watchers, w)
 	}
 	tm.watchersmu.Unlock()
-	bl := true
-	for _, u := range usernames {
-		m.watchersmu.RLock()
-		watcherctx, ok := m.watchers[u]
-		m.watchersmu.RUnlock()
-		if !ok {
-			continue
+	go func() {
+		bl := true
+		for _, u := range usernames {
+			m.watchersmu.RLock()
+			watcherctx, ok := m.watchers[u]
+			m.watchersmu.RUnlock()
+			if !ok {
+				continue
+			}
+			watcherctx.ocmu.RLock()
+			for w := range watcherctx.openConns {
+				select {
+				case w.ch <- watchEvent{tm.topic, threadID, &bl, nil}:
+				default:
+				}
+			}
+			watcherctx.ocmu.RUnlock()
+			watcherctx.twmu.Lock()
+			delete(watcherctx.threadsWatched, threadID)
+			watcherctx.twmu.Unlock()
 		}
-		watcherctx.ocmu.RLock()
-		for w := range watcherctx.openConns {
+	}()
+	go func() {
+		tm.subsmu.RLock()
+		defer tm.subsmu.RUnlock()
+		for w := range tm.subs {
 			select {
-			case w.ch <- watchEvent{tm.topic, threadID, &bl, nil}:
+			case w.ch <- socketEvent{BumpLimit: &tm.full}:
 			default:
 			}
 		}
-		watcherctx.ocmu.RUnlock()
-		watcherctx.twmu.Lock()
-		delete(watcherctx.threadsWatched, threadID)
-		watcherctx.twmu.Unlock()
-	}
+	}()
 }
 
 // GetThreadSocketHandler gets the websocket handler for a given user's
@@ -193,7 +205,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 // and is less bad than the other race where a watched thread would never send
 // watch notifications (either thing is solved by ending all connections from a
 // user or cycling watch after their userWatcherCtx stabilizes)
-func (m *Model) GetThreadSocketHandler(username string, getWatchedThreads func(string, context.Context) ([]uint32, error)) http.HandlerFunc {
+func (m *Model) GetWatcherHandler(username string, getWatchedThreads func(string, context.Context) ([]uint32, error)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		upgrader := &websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool {
@@ -205,7 +217,7 @@ func (m *Model) GetThreadSocketHandler(username string, getWatchedThreads func(s
 			return
 		}
 		watchr := &watcherConn{}
-		ch := make(chan watchEvent, 10)
+		ch := make(chan any, 10)
 		watchr.ch = ch
 		watchr.conn = conn
 		watchr.ctx, watchr.cancel = context.WithCancel(r.Context())

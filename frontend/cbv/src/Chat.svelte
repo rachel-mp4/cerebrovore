@@ -10,7 +10,7 @@
   // i split on hashtag so that way user can load a page with a hashtag in it
   // (meaning jump to id)
   // and have the /ws not be interpreted as part of the hashtag
-  const address = `ws${sansproto.split("#")[0]}/ws`;
+  const address = `ws${sansproto.split("#")[0]}`;
   const nick = localStorage.getItem("nick");
   const color = localStorage.getItem("color");
   const ctx = new WSContext(

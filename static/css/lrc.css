@@ -151,3 +151,9 @@
 .init {
   color: var(--accent);
 }
+.system-message {
+  position: fixed;
+  font-size: 4rem;
+  top:0;
+  z-index: -1
+}

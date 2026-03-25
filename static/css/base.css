@@ -261,6 +261,17 @@ body {
   animation: animate-up 128s infinite linear;
 }
 
+#left-sidebar::before {
+  content: '';
+  position: absolute;
+  z-index: -3;
+  left: 0;
+  right: calc(100% - 4px);
+  top: 0;
+  bottom: var(--remaining);
+  background: var(--accent);
+}
+
 @keyframes animate-up {
   0% {
     transform: translateY(25%);

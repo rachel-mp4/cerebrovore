@@ -64,7 +64,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /account", h.account)
 	mux.HandleFunc("POST /account", h.postAccount)
 	mux.HandleFunc("GET /beep", h.beep)
-	mux.HandleFunc("GET /ts", h.AM(h.getThreadSocket))
+	mux.HandleFunc("GET /ts", h.AM(h.getWatcherHandler))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
 	mux.HandleFunc("GET /t", h.AM(h.threads))
@@ -76,6 +76,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("POST /w/{ntid}", h.AM(h.watchThread))
 	mux.HandleFunc("POST /u/{ntid}", h.AM(h.unwatchThread))
 	mux.HandleFunc("GET /t/{ntid}/ws", h.AM(h.getThreadWS))
+	mux.HandleFunc("GET /t/{ntid}/ts", h.AM(h.getThreadSocket))
 	mux.HandleFunc("GET /t/{ntid}/ww", h.AM(h.getThreadWW))
 	mux.HandleFunc("GET /new", h.AM(h.newThread))
 	mux.HandleFunc("POST /gen-code", h.AM(h.gencode))
@@ -155,19 +156,12 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		Version string
 		Time    *time.Time
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("brainworm", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
+		clog.Warn("getbumps %s", err)
 	}
 	err = homeT.ExecuteTemplate(w, "base", homeresp{
-		baseresp{
-			h.ca,
-			"brainworm",
-			tt,
-			h.crack,
-		},
+		*base,
 		h.notes[0].Release,
 		h.live,
 	})
@@ -185,19 +179,12 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	type ntresp struct {
 		baseresp
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("new thread", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
+		clog.Warn("bumps %s", err)
 	}
 	err = newthreadT.ExecuteTemplate(w, "base", ntresp{
-		baseresp{
-			h.ca,
-			"new thread",
-			tt,
-			h.crack,
-		},
+		*base,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -207,12 +194,16 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
-		Title string
-		Crack string
+		Title      string
+		Crack      string
+		Accent     string
+		ReplyCount *int
 	}
 	err := loginT.ExecuteTemplate(w, "base", loginresp{
 		"login",
 		h.crack,
+		"var(--primary)",
+		nil,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -224,6 +215,8 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
 		Title        string
 		Crack        string
+		Accent       string
+		ReplyCount   *int
 		Invite       string
 		RequiresCode bool
 	}
@@ -231,6 +224,8 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	err := accountT.ExecuteTemplate(w, "base", loginresp{
 		"create account",
 		h.crack,
+		"var(--primary)",
+		nil,
 		invite,
 		h.reqcode,
 	})
@@ -334,18 +329,12 @@ func (h *Handler) beep(w http.ResponseWriter, r *http.Request) {
 	type beepresp struct {
 		baseresp
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("beep", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
+		clog.Warn("bumps %s", err)
 	}
 	beepT.ExecuteTemplate(w, "base", beepresp{
-		baseresp{
-			h.ca,
-			"beep",
-			tt,
-			h.crack,
-		},
+		*base,
 	})
 }
 
@@ -366,18 +355,12 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 		Username     string
 		RequiresCode bool
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("me", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
+		clog.Warn("bumps %s", err)
 	}
 	meT.ExecuteTemplate(w, "base", meresp{
-		baseresp{
-			h.ca,
-			"beep",
-			tt,
-			h.crack,
-		},
+		*base,
 		c.Username,
 		h.reqcode,
 	})

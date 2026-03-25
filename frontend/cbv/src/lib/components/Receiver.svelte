@@ -60,13 +60,13 @@
       <div class="header">
         {#if item.lrcdata.init}
           {#if item.lrcdata.init.nick}
-            <span class="nick">{item.lrcdata.init.nick + " "}</span>
+            <span class="nick">{item.lrcdata.init.nick}</span>
           {/if}
-          {#if item.lrcdata.init.handle !== undefined}
-            <span class="handle">@{item.lrcdata.init.handle}</span>
+          {#if item.username !== undefined}
+            <span class="handle">@{item.username}</span>
           {/if}
         {/if}
-        <button class="reply">#{b36encodenumber(item.id)}</button>
+        <button class="reply">{` #${b36encodenumber(item.id)}`}</button>
         {#if item.lrcdata.mine !== true}
           <button
             class="mute clickable"

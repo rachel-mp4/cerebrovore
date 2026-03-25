@@ -16,19 +16,12 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 	type moderateresp struct {
 		baseresp
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("moderation", r.Context())
 	if err != nil {
-		clog.Warn("moderation: %s", err)
-		http.Error(w, "error getting threads", http.StatusInternalServerError)
-		return
+		clog.Warn("bumps %s", err)
 	}
 	err = moderateT.ExecuteTemplate(w, "base", moderateresp{
-		baseresp{
-			h.ca,
-			"moderation",
-			tt,
-			h.crack,
-		},
+		*base,
 	})
 	if err != nil {
 		clog.Warn("moderation: %s", err)

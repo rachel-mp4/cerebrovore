@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/rachel-mp4/cerebrovore/clog"
@@ -116,6 +117,8 @@ func main() {
 		}
 		clog.Okay("good luck!")
 	}
+	m := model.NewModel(threads, mid)
+	h := handler.NewHandler(ca, m, store, idp, reqcode)
 	// catch sigint and sigterm (ctrl+c)
 	sig := make(chan os.Signal, 1)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -127,13 +130,16 @@ func main() {
 			<-sig
 			os.Exit(1)
 		}()
+
+		m.SystemMessage(`cerebrovore shutdown sequence initiated!
+you have 15 seconds to get your affairs in order
+good luck!`)
+		time.Sleep(15 * time.Second)
 		clog.Okay("my brain has been eaten, GOOD BYE")
 		clog.Close()
 		os.Exit(0)
 	}()
 
-	m := model.NewModel(threads, mid)
-	h := handler.NewHandler(ca, m, store, idp, reqcode)
 	http.ListenAndServe(fmt.Sprintf(":%d", *port), h.Serve())
 }
 

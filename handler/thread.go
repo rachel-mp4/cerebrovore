@@ -446,6 +446,11 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 	}
 	if replyCount < utils.BUMP_LIMIT {
 		h.m.NotifyWatchers(post.ThreadID)
+		if post.Anon {
+			h.m.NotifyReply(post.ThreadID, post.ID, nil, replyCount)
+		} else {
+			h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, replyCount)
+		}
 		changed, err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
 		if err != nil {
 			clog.Warn("%s", err)
@@ -552,13 +557,10 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	t, tcrsr, err := h.db.GetThread(tid, nil, utils.REPLY_LIMIT, r.Context())
+	t, err := h.db.GetThread(tid, r.Context())
 	if err != nil {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
-	}
-	if tcrsr != nil {
-		clog.Warn("thread %d (#%s) has over REPLY_LIMIT replies (%d)", tid, ntid, t.ReplyCount)
 	}
 	tt, err := h.db.GetBumps(r.Context())
 	if err != nil {
@@ -580,6 +582,8 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 			title,
 			tt,
 			h.crack,
+			&t.ReplyCount,
+			utils.ColorToAp(t.OP.Color),
 		},
 		Thread:   t,
 		Watched:  watched,
@@ -609,6 +613,10 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 }
 
 func (h *Handler) getThreadWW(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
@@ -630,8 +638,24 @@ func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Requ
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		clog.Warn("%s", err)
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	f := h.m.GetThreadSocket(tid)
+	f(w, r)
+}
 
-	f := h.m.GetThreadSocketHandler(c.Username, h.db.GetWatchedThreads)
+func (h *Handler) getWatcherHandler(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+
+	f := h.m.GetWatcherHandler(c.Username, h.db.GetWatchedThreads)
 	f(w, r)
 }
 
@@ -702,21 +726,14 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		BumpCursor   *time.Time
 		ThreadThumbs []types.Thread
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("catalog", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting bumps", http.StatusInternalServerError)
-		return
+		clog.Warn("bumps %s", err)
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
 	tr := catalogresp{
-		baseresp{
-			h.ca,
-			"threads",
-			tt,
-			h.crack,
-		},
+		*base,
 		isChrono,
 		nil,
 		nil,
@@ -770,21 +787,14 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		BumpCursor   *time.Time
 		ThreadThumbs []types.Thread
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	base, err := h.makebase("threads", r.Context())
 	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting bumps", http.StatusInternalServerError)
-		return
+		clog.Warn("bumps %s", err)
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
 	tr := threadsresp{
-		baseresp{
-			h.ca,
-			"threads",
-			tt,
-			h.crack,
-		},
+		*base,
 		isChrono,
 		nil,
 		nil,

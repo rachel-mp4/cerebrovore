@@ -13,9 +13,13 @@ export class WSContext {
   connected: boolean = $state(false)
   conncount = $state(0)
   ws: WebSocket | null = null
+  ts: WebSocket | null = null
   color: number = $state(Math.floor(Math.random() * 16777216))
+  systemMessage: string | undefined = $state()
+  replyLimit: boolean = false
 
   nick: string = "wanderer"
+  anon: boolean = false
   curMsg: string = $state("")
   curImageBlobURL: string | undefined = $state()
   myMessage: cbv.Message | undefined
@@ -55,22 +59,27 @@ export class WSContext {
       this.focuspingvolume = e.detail.volume
       this.focusping.volume = this.volume * this.focuspingvolume
     })
+    this.anon = localStorage.getItem("anon") !== null
   }
 
   connect(url: string) {
     this.ws?.close()
+    this.ts?.close()
     connectTo(url, this)
   }
 
   reconnect = (url: string) => {
     this.ws?.close()
+    this.ts?.close()
     connectTo(url, this)
     this.items = []
   }
 
   disconnect = () => {
     this.ws?.close()
+    this.ts?.close()
     this.ws = null
+    this.ts = null
     this.items = []
   }
 
@@ -100,6 +109,9 @@ export class WSContext {
       fd.append("color", numToHex(this.color))
       fd.append("nick", this.nick)
       fd.append("body", body)
+      if (this.anon) {
+        fd.append("anon", "yes")
+      }
       if (this.myMessage.lrcdata?.init?.nonce) {
         fd.append("nonce", b64encodebytearray(this.myMessage.lrcdata.init.nonce))
       }
@@ -244,6 +256,15 @@ export class WSContext {
   setNick = (nick: string) => {
     setNick(nick, this)
     localStorage.setItem('nick', nick)
+  }
+
+  setAnon = (anon: boolean) => {
+    this.anon = anon
+    if (anon) {
+      localStorage.setItem("anon", "yes")
+    } else {
+      localStorage.removeItem("anon")
+    }
   }
 
   setColor = (color: number) => {
@@ -489,7 +510,7 @@ const deleteFromAStringBetweenIdxs = (a: string, idx1: number, idx2: number) => 
 }
 
 export const connectTo = (url: string, ctx: WSContext) => {
-  const ws = new WebSocket(url, "lrc.v1");
+  const ws = new WebSocket(`${url}/ws`, "lrc.v1");
   ws.binaryType = "arraybuffer";
   ws.onopen = () => {
     console.log("connected")
@@ -533,6 +554,36 @@ export const connectTo = (url: string, ctx: WSContext) => {
     }
   }
   ctx.ws = ws
+  const ts = new WebSocket(`${url}/ts`)
+  ts.onopen = () => {
+    console.log("ghello gworld")
+  }
+  ts.onmessage = (event) => {
+    const tse = JSON.parse(event.data)
+    if (tse.remaining !== undefined) {
+      const ls = document.getElementById("left-sidebar")
+      if (ls !== null) {
+        ls.style.setProperty("--remaining", tse.remaining)
+      }
+    }
+    if (tse.id !== undefined) {
+      ctx.items = ctx.items.map((item) => {
+        return (item.id === tse.id)
+          ? { ...item, ...(tse.username && { username: tse.username }) }
+          : item
+      })
+    }
+    if (tse.systemMessage !== undefined) {
+      ctx.systemMessage = tse.systemMessage
+    }
+    if (tse.bumpLimit !== undefined) {
+      ctx.systemMessage = "bump limit reached, look to find a new thread"
+    }
+    if (tse.replyLimit !== undefined) {
+      ctx.replyLimit = true
+      ctx.systemMessage = "reply limit reached; thread archived. you can continue messaging, but everything will be lost to history"
+    }
+  }
 }
 
 export const initMessage = (ctx: WSContext) => {

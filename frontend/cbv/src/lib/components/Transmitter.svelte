@@ -8,12 +8,19 @@
   }
   let { ctx }: Props = $props();
   let nick = $state(ctx.nick);
+  let anon = $state(ctx.anon);
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
   let image: HTMLImageElement | undefined = $state();
   $effect(() => {
     if (ctx) {
       ctx.setNick(nick);
+    }
+  });
+
+  $effect(() => {
+    if (ctx) {
+      ctx.setAnon(anon);
     }
   });
 
@@ -147,6 +154,9 @@
   };
 </script>
 
+{#if ctx.systemMessage}
+  <div class="system-message">{ctx.systemMessage}</div>
+{/if}
 <div class="transmitter">
   <div class="wrapper" style:--accent={color}>
     <input
@@ -166,7 +176,7 @@
       maxlength={16}
       bold={true}
     />
-    <input type="checkbox" name="anon" />
+    <input type="checkbox" name="anon" bind:checked={anon} />
     <label for="anon">anon</label>
   </div>
   <div class="autogrowwrapper">

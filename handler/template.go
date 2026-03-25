@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
 	"html/template"
@@ -128,23 +129,38 @@ type baseresp struct {
 	Title          string
 	Threads        []types.Thread
 	Crack          string
+	ReplyCount     *int
+	Accent         string
+}
+
+func (h *Handler) makebase(title string, ctx context.Context) (*baseresp, error) {
+	tt, err := h.db.GetBumps(ctx)
+	return &baseresp{
+		h.ca,
+		title,
+		tt,
+		h.crack,
+		nil,
+		"var(--primary)",
+	}, err
 }
 
 func newTemplate(files ...string) *template.Template {
 	return template.Must(
 		template.New("").Funcs(
 			template.FuncMap{
-				"idtoa":           utils.IDToA,
-				"intto36a":        utils.IntTo36A,
-				"renderImageBody": utils.RenderImageBody,
-				"renderTextBody":  utils.RenderTextBody,
-				"colorIsDark":     utils.ColorIsDark,
-				"colorToA":        utils.ColorToAp,
-				"maxReplies":      utils.MaxReplies,
-				"maxBumps":        utils.MaxBumps,
-				"formatTime":      utils.FormatTime,
-				"ftime":           utils.FTime,
-				"topicOrIdtoa":    types.TopicOrIdtoa,
+				"idtoa":            utils.IDToA,
+				"intto36a":         utils.IntTo36A,
+				"renderImageBody":  utils.RenderImageBody,
+				"renderTextBody":   utils.RenderTextBody,
+				"colorIsDark":      utils.ColorIsDark,
+				"colorToA":         utils.ColorToAp,
+				"maxReplies":       utils.MaxReplies,
+				"maxBumps":         utils.MaxBumps,
+				"formatTime":       utils.FormatTime,
+				"ftime":            utils.FTime,
+				"topicOrIdtoa":     types.TopicOrIdtoa,
+				"percentRemaining": utils.PercentRemaining,
 			}).ParseFiles(files...),
 	)
 }

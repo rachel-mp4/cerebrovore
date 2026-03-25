@@ -3,7 +3,6 @@ package db
 import (
 	"context"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -532,17 +531,17 @@ func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context)
 	return threads, cursor, nil
 }
 
-func (m *MockStore) GetThread(id uint32, before *uint32, limit int, ctx context.Context) (*types.Thread, *uint32, error) {
-	return nil, nil, nil
+func (m *MockStore) GetThread(id uint32, ctx context.Context) (*types.Thread, error) {
+	return nil, nil
 }
 
-func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Context) (thread *types.Thread, cursor *uint32, err error) {
+func (s *Store) GetThread(id uint32, ctx context.Context) (thread *types.Thread, err error) {
 	thread = &types.Thread{ID: id}
 	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE", id)
 	err = row.Scan(&thread.Topic, &thread.ReplyCount)
 	if err != nil {
 		clog.Warn("db: %s", err)
-		return nil, nil, err
+		return nil, err
 	}
 	q := `
 	SELECT 
@@ -564,29 +563,18 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 		FROM post_replies
 		GROUP BY to_id
 	) pr ON pr.to_id = p.id
-	WHERE p.thread_id = $1 AND p.deleted = FALSE %s
-	ORDER BY p.id DESC
-	LIMIT $2
+	WHERE p.thread_id = $1 AND p.deleted = FALSE
+	ORDER BY p.id ASC
 	`
 	var rows pgx.Rows
-	if before == nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), id, limit+1)
-	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND p.id < $3"), id, limit+1, *before)
-	}
+	rows, err = s.pool.Query(ctx, q, id)
 	if err != nil {
 		clog.Warn("db: %s", err)
 		return
 	}
 	defer rows.Close()
-	thread.Posts = make([]types.Post, 0, limit)
-	i := 0
+	thread.Posts = make([]types.Post, 0)
 	for rows.Next() {
-
-		i = i + 1
-		if i == limit+1 {
-			break
-		}
 		p := types.Post{}
 		var b *string
 		var cid *string
@@ -603,13 +591,9 @@ func (s *Store) GetThread(id uint32, before *uint32, limit int, ctx context.Cont
 			p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
 		}
 		thread.Posts = append(thread.Posts, p)
-		cursor = &p.ID
 	}
-	if i != limit+1 {
-		cursor = nil
-	}
-	slices.Reverse(thread.Posts)
-	return thread, cursor, nil
+	thread.OP = thread.Posts[0]
+	return thread, nil
 }
 
 func (m *MockStore) GetWatchedThreads(username string, ctx context.Context) ([]uint32, error) {

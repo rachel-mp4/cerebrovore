@@ -47,21 +47,23 @@
 /* transmission header styles */
 .header {
   font-weight: 700;
+  width: 100%;
   display: flex;
-  width: 100%
+  align-items: baseline;
 }
 
 .tx:not(.active) .header {
   color: var(--accent);
 }
 
-.nick {
+.reply {
   white-space: pre-wrap;
 }
 
 .handle {
   color: var(--fl);
   position: relative;
+  font-size: .75em;
 }
 
 .tx:not(:hover) .clickable {

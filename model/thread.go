@@ -12,19 +12,23 @@ import (
 
 // threadModel is the model for a thread. if the server is non nil, then
 // it should be started
+// i grouped the fields based on which mutex relates to what
 type threadModel struct {
-	mu        sync.Mutex
-	id        uint32
-	topic     *string
-	server    *lrcd.Server
-	bumplimit bool
-	full      bool
+	id     uint32
+	topic  *string
+	server *lrcd.Server
+	full   bool
+	mu     sync.Mutex
+
+	subs   map[*watcherConn]bool
+	subsmu sync.RWMutex
 
 	watchers   map[string]bool
+	bumplimit  bool
 	watchersmu sync.RWMutex
 
 	wormwatchdata  *wormwatchdata
-	wormwatchers   map[*wormwatcher]bool
+	wormwatchers   map[*watcherConn]bool
 	wormwatchersmu sync.Mutex
 }
 
@@ -34,8 +38,9 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
 		id:           id,
 		topic:        topic,
+		subs:         make(map[*watcherConn]bool),
 		watchers:     make(map[string]bool),
-		wormwatchers: make(map[*wormwatcher]bool),
+		wormwatchers: make(map[*watcherConn]bool),
 		wormwatchdata: &wormwatchdata{
 			index:    0,
 			watchers: make(map[string]int),
@@ -54,8 +59,6 @@ func (tm *threadModel) getWSHandler() (http.HandlerFunc, error) {
 // recreateServer recreates & starts the server for a given threadModel, according
 // to the threadModel's specs + the given idAllocator
 func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
-	tm.mu.Lock()
-	defer tm.mu.Unlock()
 	// perhaps 2 clients requested thread at same time, the first got lock and
 	// recreated server while the second was waiting and then the second got
 	// lock and the server now exists

@@ -15,7 +15,7 @@
     <script src="/js/htmx.min.js"></script>
   </head>
   <body class="tripartite">
-    <aside id="left-sidebar">
+    <aside id="left-sidebar" style="--accent:{{.Accent}}; {{if .ReplyCount}}--remaining:{{percentRemaining .ReplyCount}}{{end}}">
       {{template "left-sidebar" .}}
     </aside>
     <main id="main-content">
