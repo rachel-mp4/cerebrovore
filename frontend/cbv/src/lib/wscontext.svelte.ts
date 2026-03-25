@@ -153,6 +153,9 @@ export class WSContext {
         fd.append("nick", this.nick)
         fd.append("cid", this.myImageRef)
         fd.append("alt", alt)
+        if (this.anon) {
+          fd.append("anon", "yes")
+        }
         if (this.myMedia.lrcdata?.init?.nonce) {
           fd.append("nonce", b64encodebytearray(this.myMedia.lrcdata.init.nonce))
         }
