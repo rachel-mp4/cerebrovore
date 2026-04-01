@@ -429,3 +429,13 @@ form {
 .bump-limit {
   opacity: 0.75;
 }
+
+::selection {
+  background: var(--accent);
+}
+
+.banned {
+  font-size: 8rem;
+  line-height: 1;
+
+}

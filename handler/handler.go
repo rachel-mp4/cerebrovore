@@ -57,12 +57,15 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /patch-notes", h.AM(h.patchnotes))
 	mux.HandleFunc("GET /me", h.AM(h.me))
 	mux.HandleFunc("GET /m", h.AM(h.moderate))
-	mux.HandleFunc("POST /m", h.AM(h.postModerate))
+	mux.HandleFunc("POST /delete-post", h.AM(h.postDeletePost))
+	mux.HandleFunc("POST /ban-user", h.AM(h.postBanUser))
+	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /login", h.postLogin)
 	mux.HandleFunc("GET /account", h.account)
 	mux.HandleFunc("POST /account", h.postAccount)
+	mux.HandleFunc("POST /appeal", h.postAppeal)
 	mux.HandleFunc("GET /beep", h.beep)
 	mux.HandleFunc("GET /ts", h.AM(h.getWatcherHandler))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
@@ -390,6 +393,27 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			s.Options.MaxAge = -1
 			s.Save(r, w)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
+			return
+		}
+		ban, post, err := h.db.IsBanned(username, r.Context())
+		if err != nil {
+			clog.Info("%s", err)
+			http.Error(w, "error getting ban state", http.StatusInternalServerError)
+			return
+		}
+		if ban != nil {
+			type banresp struct {
+				Title      string
+				Crack      string
+				Accent     string
+				ReplyCount *int
+				Ban        types.Ban
+				Post       *types.Post
+			}
+			err := banT.ExecuteTemplate(w, "base", banresp{"ban", h.crack, "var(--primary)", nil, *ban, post})
+			if err != nil {
+				clog.Info("%s", err)
+			}
 			return
 		}
 		c := &Client{ID: id, Username: username}

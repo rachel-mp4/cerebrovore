@@ -21,6 +21,7 @@ var catalogT *template.Template
 var patchT *template.Template
 var codeT *template.Template
 var codeerrT *template.Template
+var banT *template.Template
 
 func init() {
 	homeT = newTemplate(
@@ -48,6 +49,7 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/moderate.html",
+		"./tmpl/partial/post.html",
 	)
 	meT = newTemplate(
 		"./tmpl/base.html",
@@ -56,6 +58,13 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/empty.html",
 		"./tmpl/me.html",
+	)
+	banT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/emptyl.html",
+		"./tmpl/empty.html",
+		"./tmpl/ban.html",
+		"./tmpl/partial/post.html",
 	)
 	loginT = newTemplate(
 		"./tmpl/base.html",
@@ -158,6 +167,7 @@ func newTemplate(files ...string) *template.Template {
 				"maxReplies":       utils.MaxReplies,
 				"maxBumps":         utils.MaxBumps,
 				"formatTime":       utils.FormatTime,
+				"remainingTime":    utils.RemainingTime,
 				"ftime":            utils.FTime,
 				"topicOrIdtoa":     types.TopicOrIdtoa,
 				"percentRemaining": utils.PercentRemaining,

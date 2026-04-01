@@ -16,10 +16,10 @@ import (
 
 type Model struct {
 	tmapmu sync.RWMutex
-	tmap   map[uint32]*threadModel
+	tmap   map[uint32]*threadModel //keys are thread ids
 
 	watchersmu sync.RWMutex
-	watchers   map[string]*userWatcherCtx
+	watchers   map[string]*userWatcherCtx //keys are usernames
 
 	id  uint32
 	pid uint32 // "prestige" id // lol what drugs was i onnnnnn
@@ -79,7 +79,7 @@ func (m *Model) DeleteThread(threadID uint32) error {
 }
 
 // GetThreadWSHandler gets the ws handler for a thread's lrc server
-func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
+func (m *Model) GetThreadWSHandler(threadID uint32, username string) (http.HandlerFunc, error) {
 	clog.Dbug("acquiring tmapmulock wsh")
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
@@ -103,7 +103,7 @@ func (m *Model) GetThreadWSHandler(threadID uint32) (http.HandlerFunc, error) {
 			return nil, fmt.Errorf("recreateserver: %w", err)
 		}
 	}
-	handler, err := tm.getWSHandler()
+	handler, err := tm.getWSHandler(username)
 	if err != nil {
 		tm.mu.Unlock()
 		return nil, fmt.Errorf("getwshandler: %w", err)
@@ -142,6 +142,34 @@ func (m *Model) ReplyLimit(threadID uint32) {
 			}
 		}
 	}()
+}
+
+// it would be nice to try and collate all the non-lrc websockets
+// into one websocket per page so that i can better kick banned users.
+// it's not a big deal that if they modify their client, they can
+// theoretically continue to recieve bumps and wormwatch events, but
+// this is still not desired behavior, and a signal that we should
+// refactor as appropriate
+func (m *Model) BanUser(name string) {
+	m.watchersmu.RLock()
+	uwctx, ok := m.watchers[name]
+	m.watchersmu.RUnlock()
+	if ok && uwctx != nil {
+		uwctx.ocmu.RLock()
+		for w := range uwctx.openConns {
+			w.cancel()
+		}
+		uwctx.ocmu.RUnlock()
+	}
+	m.tmapmu.RLock()
+	for _, tm := range m.tmap {
+		tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
+		if tm.server != nil {
+			go tm.server.KickExternalId(name)
+		}
+		tm.mu.Unlock()
+	}
+	m.tmapmu.RUnlock()
 }
 
 // getIDAllocator produces an IDAllocator function that returns an

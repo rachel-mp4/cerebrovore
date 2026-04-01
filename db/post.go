@@ -115,6 +115,42 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 	return rc, res, tx.Commit(ctx)
 }
 
+func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
+	row := s.pool.QueryRow(ctx, `
+	SELECT 
+		p.username,
+		p.nick,
+		p.color,
+		p.posted_at,
+		t.body,
+		i.cid,
+		i.alt
+	FROM posts p
+	LEFT JOIN text_posts t ON p.id = t.post_id
+	LEFT JOIN image_posts i ON p.id = i.post_id
+	WHERE p.id = $1
+  `, id)
+	p := types.Post{}
+	var body *string
+	var cid *string
+	var alt *string
+	err := row.Scan(&p.Username, &p.Nick, &p.Color, &p.PostedAt, &body, &cid, &alt)
+	if err != nil {
+		return nil, err
+	}
+	if body != nil {
+		p.TextContent = &types.TextContent{Body: *body}
+	}
+	if cid != nil {
+		p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
+	}
+	return &p, nil
+}
+
+func (m *MockStore) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
+	return nil, nil
+}
+
 func (m *MockStore) GetMaxPostId(ctx context.Context) (uint32, error) {
 	return 0, nil
 }

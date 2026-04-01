@@ -22,13 +22,13 @@ type wormwatchdata struct {
 	ctx      context.Context
 	cancel   context.CancelCauseFunc
 	queue    []*wormwatchqueueentry
-	watchers map[string]int
+	watchers map[string]int // keys are usernames
 }
 
 type wormwatchqueueentry struct {
 	username  string
-	voteskip  map[string]bool
-	votepause map[string]bool
+	voteskip  map[string]bool // keys are usernames
+	votepause map[string]bool // keys are usernames
 	Data      utils.PlayInput `json:"data"`
 	Index     int             `json:"index"`
 }

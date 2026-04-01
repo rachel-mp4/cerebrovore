@@ -468,10 +468,14 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.ReplyLimit(post.ThreadID)
 	}
 	type commands struct {
-		play    bool
-		skip    bool
-		pause   bool
-		unpause bool
+		play        bool
+		skip        bool
+		pause       bool
+		unpause     bool
+		molt        bool
+		desh        bool
+		deshell     bool
+		debrainworm bool
 	}
 	cmd := commands{}
 	for _, bl := range post.Backlinks {
@@ -482,12 +486,20 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			cmd.skip = true
 		case utils.PAUSE_ID:
 			cmd.pause = true
+		case utils.DESH_ID:
+			cmd.desh = true
+		case utils.MOLT_ID:
+			cmd.molt = true
 		}
 	}
 	for _, ex := range extras {
 		switch ex {
 		case utils.UNPAUSE_EX:
 			cmd.unpause = true
+		case utils.DEBRAINWORM_EX:
+			cmd.debrainworm = true
+		case utils.DESHELL_EX:
+			cmd.deshell = true
 		}
 
 	}
@@ -507,8 +519,19 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.Pause(post.ThreadID, c.Username)
 	}
 	if cmd.unpause {
-		clog.Dbug("unpause")
 		h.m.Unpause(post.ThreadID, c.Username)
+	}
+	if cmd.desh {
+		h.selfban(c.Username, &post.ID, "*deshs u*", time.Now().Add(5*time.Minute), ctx)
+	}
+	if cmd.molt {
+		h.selfban(c.Username, &post.ID, "*molts u*", time.Now().Add(5*time.Minute), ctx)
+	}
+	if cmd.deshell {
+		h.selfban(c.Username, &post.ID, "*deshells u*", time.Now().Add(5*time.Minute), ctx)
+	}
+	if cmd.debrainworm {
+		h.selfban(c.Username, &post.ID, "*debrainworms u*", time.Now().Add(5*time.Minute), ctx)
 	}
 }
 
@@ -596,6 +619,10 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "you seem like you're not logged in", http.StatusBadRequest)
+		return
+	}
 	ntid := r.PathValue("ntid")
 	tid, err := utils.AToID(ntid)
 	if err != nil {
@@ -603,7 +630,7 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	f, err := h.m.GetThreadWSHandler(uint32(tid))
+	f, err := h.m.GetThreadWSHandler(uint32(tid), c.Username)
 	if err != nil {
 		clog.Warn("%s", err)
 		http.Error(w, "error getting ws handler", http.StatusInternalServerError)

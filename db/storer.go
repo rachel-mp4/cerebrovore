@@ -87,9 +87,21 @@ type Storer interface {
 
 	// post methods
 	CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error)
+	GetPost(id uint32, ctx context.Context) (*types.Post, error)
 	GetMaxPostId(ctx context.Context) (uint32, error)
 	GetPostThreadID(postId uint32, ctx context.Context) (uint32, error)
 	DeletePost(id uint32, ctx context.Context) error
+
+	// ban methods
+	Ban(ban *types.Ban, ctx context.Context) error
+	SelfBan(username string, postid *uint32, reason string, til time.Time, ctx context.Context) error
+	ClearOldSelfBans(ctx context.Context) (int64, error)
+	Appeal(banid int, username string, response string, ctx context.Context) error
+	GetAppeals(limit int, before *int, ctx context.Context) (bans []types.Appeal, cursor *int, err error)
+	IsBanned(username string, ctx context.Context) (*types.Ban, *types.Post, error)
+	Unban(id int, ctx context.Context) error
+	Reject(id int, ctx context.Context) error
+	DeleteUsersPostsAndThreads(username string, ctx context.Context) error
 }
 
 type Backlink struct {

@@ -1,0 +1,42 @@
+{{define "content"}}
+  <h1 class="banned">
+    YOU ARE BANNED
+  </h1>
+  {{if .Ban.Reason}}
+    <div class="reason">
+      {{.Ban.Reason}}
+    </div>
+  {{end}}
+  <div>
+    remaining time: <span class="remaining-time">{{remainingTime .Ban.Until}}</span>
+  </div>
+  {{if .Post}}
+    <div>
+      offending post:
+    </div>
+    {{template "post" .Post}}
+  {{end}}
+  <h2>
+    appeal ban:
+  </h2>
+  {{if not .Ban.Response}}
+    <form hx-swap="outerHTML" hx-post="/appeal">
+      <div class="form-field">
+        <label for="response-field">your response to the allegations</label>
+        <input type="text" name="response-field" id="response-field"/>
+      </div>
+      <input type="hidden" name="id" value="{{.Ban.Id}}">
+      <div class="form-submit">
+        <input type="submit" value="respond"/>
+      </div>
+    </form>
+  {{else}}
+    {{template "appeal-submitted" .}}
+  {{end}}
+{{end}}
+
+{{define "appeal-submitted"}}
+  <div>
+    your appeal has been submitted
+  </div>
+{{end}}

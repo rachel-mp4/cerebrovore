@@ -1,5 +1,5 @@
 {{define "content"}}
-  <form action="/m" method="POST">
+  <form hx-swap="beforeend" hx-POST="/delete-post">
     <div class="form-field">
       <label for="postid">id</label>
       <input type="text" name="postid">
@@ -12,4 +12,71 @@
       <input type="submit" value="moderate"/>
     </div>
   </form>
+  {{if .Appeals}}
+    <h2>
+      ban appeals
+    </h2>
+    {{range .Appeals}}
+      <hr>
+      <div>
+        offending post:
+      </div>
+        {{template "post" .Post}}
+      <div>
+        reason: {{.Ban.Reason}}
+      </div>
+      <div>
+        internal comment: {{.Ban.Comment}}
+      </div>
+      <div>
+        response: {{.Ban.Response}}
+      </div>
+      <div>
+        remaining: {{remainingTime .Ban.Until}}
+      </div>
+      <form hx-swap="outerHTML" hx-post="/appeal-verdict">
+        <div class="form-field">
+          <label for="reject">reject appeal?</label>
+          <input type="checkbox" name="reject">
+        </div>
+        <input type="hidden" name="id" value="{{.Ban.Id}}">
+        <div class="form-submit">
+          <input type="submit" value="repeal ban"/>
+        </div>
+      </form>
+    {{end}}
+  {{end}}
+{{end}}
+
+{{define "rejected"}}
+  <div class="rejected">
+    APPEAL REJECTED; user remains banned
+  </div>
+{{end}}
+
+{{define "accepted"}}
+  <div class="accepted">
+    APPEAL ACCEPTED; user has been unbanned
+  </div>
+{{end}}
+
+{{define "errored"}}
+  <div class="errored">
+    ACTION ERRORED; {{.Message}}
+  </div>
+{{end}}
+
+
+{{define "post-deleted"}}
+  <div class="post-deleted">
+    POST DELETED, here is what it was for reference.
+    {{template "post" .Post}}
+  </div>
+{{end}}
+
+{{define "thread-deleted"}}
+  <div class="thread-deleted">
+    POST DELETED, here is what the op of it was for reference.
+    {{template "post" .Post}}
+  </div>
 {{end}}

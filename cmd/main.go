@@ -102,6 +102,12 @@ func main() {
 		clog.Okay("good luck!")
 		first = true
 	}
+	clog.Info("clearing old selfbans")
+	nrows, err := store.ClearOldSelfBans(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	clog.Info("cleared %d selfbans", nrows)
 	// we also need the max id in order to allocate post ids properly
 	// cross site. i'm not sure if this is exactly ideal, because it
 	// couples all the threads, but it seems cool + you have to make
@@ -134,6 +140,8 @@ func main() {
 		m.SystemMessage(`cerebrovore shutdown sequence initiated!
 you have 15 seconds to get your affairs in order
 good luck!`)
+		fmt.Println("")
+		clog.Okay("shutdown squence initiated... or ctrl-c again to force")
 		time.Sleep(15 * time.Second)
 		clog.Okay("my brain has been eaten, GOOD BYE")
 		clog.Close()

@@ -4,6 +4,11 @@ import (
 	"time"
 )
 
+func RemainingTime(t time.Time) string {
+	dur := t.Sub(time.Now())
+	return dur.Round(time.Second).String()
+}
+
 func FormatTime(t *time.Time) string {
 	if t == nil {
 		return ""

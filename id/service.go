@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/rachel-mp4/cerebrovore/clog"
 )
@@ -18,7 +19,7 @@ type ServiceProvider struct {
 }
 
 func NewServiceProvider(port int) *ServiceProvider {
-	return &ServiceProvider{port, http.DefaultClient}
+	return &ServiceProvider{port, &http.Client{Timeout: 10 * time.Second}}
 }
 
 type credentials struct {
@@ -54,11 +55,11 @@ func (s *ServiceProvider) CreateAccount(username string, password string, invite
 		return fmt.Errorf("%s: %w", err.Error(), ErrInternal)
 	}
 	defer resp.Body.Close()
+	data, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != 200 {
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("%s: %w", err.Error(), ErrInternal)
-		}
 		d := string(data)
 		switch d {
 		case "invite does not exist":
@@ -96,11 +97,11 @@ func (s *ServiceProvider) VerifyCredentials(username string, password string, ct
 		return fmt.Errorf("%s: %w", err.Error(), ErrInternal)
 	}
 	defer resp.Body.Close()
+	data, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
 	if resp.StatusCode != 200 {
-		data, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return fmt.Errorf("%s: %w", err.Error(), ErrInternal)
-		}
 		d := string(data)
 		switch d {
 		case "account does not exist":
@@ -144,9 +145,11 @@ func (s *ServiceProvider) generateCode(username string, ctx context.Context, end
 		return
 	}
 	defer resp.Body.Close()
+	data, err = io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
 	if resp.StatusCode != 200 {
-		var data []byte
-		data, err = io.ReadAll(resp.Body)
 		if err != nil {
 			err = fmt.Errorf("%s: %w", err.Error(), ErrInternal)
 			return
@@ -173,7 +176,7 @@ func (s *ServiceProvider) generateCode(username string, ctx context.Context, end
 		}
 	}
 	var rescreds credentials
-	err = json.NewDecoder(resp.Body).Decode(&rescreds)
+	err = json.Unmarshal(data, &rescreds)
 	if err != nil {
 		err = fmt.Errorf("%s: %w", "failed to parse json", ErrInternal)
 		return

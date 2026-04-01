@@ -23,7 +23,7 @@ type threadModel struct {
 	subs   map[*watcherConn]bool
 	subsmu sync.RWMutex
 
-	watchers   map[string]bool
+	watchers   map[string]bool // keys are usernames
 	bumplimit  bool
 	watchersmu sync.RWMutex
 
@@ -49,11 +49,11 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 }
 
 // GetWSHandler returns the wshandler for an lrc server, if it exists
-func (tm *threadModel) getWSHandler() (http.HandlerFunc, error) {
+func (tm *threadModel) getWSHandler(username string) (http.HandlerFunc, error) {
 	if tm.server == nil {
 		return nil, ErrServerDNE
 	}
-	return tm.server.WSHandler(), nil
+	return tm.server.WSHandlerExternal(username), nil
 }
 
 // recreateServer recreates & starts the server for a given threadModel, according
@@ -67,6 +67,7 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	}
 	opts := []lrcd.Option{
 		lrcd.WithIDAllocator(idAllocator),
+		lrcd.WithConsumerSetExternalId(),
 		lrcd.WithServerURIAndSecret(utils.IDToA(tm.id), os.Getenv("LRCD_SECRET")),
 	}
 	if tm.topic != nil {

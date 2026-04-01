@@ -62,8 +62,8 @@
           {#if item.lrcdata.init.nick}
             <span class="nick">{item.lrcdata.init.nick}</span>
           {/if}
-          {#if item.username !== undefined}
-            <span class="handle">@{item.username}</span>
+          {#if item.lrcdata.init.handle !== undefined}
+            <span class="handle">@{item.lrcdata.init.handle}</span>
           {/if}
         {/if}
         <button class="reply">{` #${b36encodenumber(item.id)}`}</button>

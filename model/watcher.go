@@ -35,7 +35,7 @@ type watcherConn struct {
 // alongside all threads that they are currently watching (so we can remove
 // them from all those threads after their final openConn disconnects)
 type userWatcherCtx struct {
-	threadsWatched map[uint32]bool
+	threadsWatched map[uint32]bool // keys are thread ids
 	twmu           sync.Mutex
 	openConns      map[*watcherConn]bool
 	ocmu           sync.RWMutex

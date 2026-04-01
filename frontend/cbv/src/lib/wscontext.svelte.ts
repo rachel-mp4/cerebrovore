@@ -126,6 +126,9 @@ export class WSContext {
         } else {
           throw new Error(`HTTP ${response.status}`)
         }
+        if (body.includes("#desh") || body.includes("#molt") || body.includes("#debrainworm") || body.includes("#deshell")) {
+          setTimeout(() => { window.location.reload() }, 50)
+        }
       }).catch(console.error)
       this.myMessage = undefined
       this.messageactive = false
@@ -595,6 +598,7 @@ export const initMessage = (ctx: WSContext) => {
       oneofKind: "init",
       init: {
         nick: ctx.nick,
+        ...(ctx.anon && { externalID: "" }),
         color: ctx.color,
       }
     }
