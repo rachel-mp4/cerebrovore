@@ -9,12 +9,14 @@
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
   interface Props {
     items: Array<Item>;
+    ai: boolean;
     mylocaltext?: string;
     mylocalimage?: string | undefined;
     onmute?: (id: number) => void;
     onunmute?: (id: number) => void;
   }
-  let { items, mylocaltext, mylocalimage, onmute, onunmute }: Props = $props();
+  let { items, ai, mylocaltext, mylocalimage, onmute, onunmute }: Props =
+    $props();
   const isActive = (item: Item): boolean => {
     if (isEnby(item)) {
       return true;
@@ -44,93 +46,96 @@
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
-  {#if item.lrcdata.muted === false}
-    <div
-      id={b36encodenumber(item.id)}
-      style:--accent={numToHex(item.lrcdata?.init?.color ?? 0)}
-      style:--accentl={hexToTransparent(
-        numToHex(item.lrcdata?.init?.color ?? 0),
-      )}
-      class="tx{isActive(item) ? ' active' : ''}{item.lrcdata.init
-        ? ''
-        : ' late'}{numIsDark(item.lrcdata?.init?.color ?? 0)
-        ? ' light'
-        : ' dark'}"
-    >
-      <div class="header">
-        {#if item.lrcdata.init}
-          {#if item.lrcdata.init.nick}
-            <span class="nick">{item.lrcdata.init.nick}</span>
+  {#if ai || item.lrcdata?.init?.nick !== "brAGENTICworm"}
+    {#if item.lrcdata.muted === false}
+      <div
+        id={b36encodenumber(item.id)}
+        style:--accent={numToHex(item.lrcdata?.init?.color ?? 0)}
+        style:--accentl={hexToTransparent(
+          numToHex(item.lrcdata?.init?.color ?? 0),
+        )}
+        class="tx{isActive(item) ? ' active' : ''}{item.lrcdata.init
+          ? ''
+          : ' late'}{numIsDark(item.lrcdata?.init?.color ?? 0)
+          ? ' light'
+          : ' dark'}"
+      >
+        <div class="header">
+          {#if item.lrcdata.init}
+            {#if item.lrcdata.init.nick}
+              <span class="nick">{item.lrcdata.init.nick}</span>
+            {/if}
+            {#if item.lrcdata.init.handle !== undefined}
+              <span class="handle">@{item.lrcdata.init.handle}</span>
+            {/if}
           {/if}
-          {#if item.lrcdata.init.handle !== undefined}
-            <span class="handle">@{item.lrcdata.init.handle}</span>
+          <button class="reply">{` #${b36encodenumber(item.id)}`}</button>
+          {#if item.lrcdata.mine !== true}
+            <button
+              class="mute clickable"
+              onclick={() => {
+                item.lrcdata.muted = true;
+                onmute?.(item.id);
+              }}
+            >
+              mute
+            </button>
           {/if}
-        {/if}
-        <button class="reply">{` #${b36encodenumber(item.id)}`}</button>
-        {#if item.lrcdata.mine !== true}
-          <button
-            class="mute clickable"
-            onclick={() => {
-              item.lrcdata.muted = true;
-              onmute?.(item.id);
-            }}
-          >
-            mute
-          </button>
-        {/if}
-        {#if item.pubAt !== undefined}
-          <time class="time" datetime={new Date(item.pubAt).toISOString()}
-            >posted {smartAbsoluteTimestamp(item.pubAt)}</time
-          >
-        {/if}
-      </div>
-      <div class="body">
-        {#if isEnby(item)}
-          <EnbyTransmission enby={item} />
-        {:else if isMessage(item)}
-          <MessageTransmission
-            message={item}
-            mylocaltext={item.lrcdata.mine && !item.lrcdata.pub
-              ? mylocaltext
-              : undefined}
-          />
-        {:else if isImage(item)}
-          {#if item.lrcdata.pub?.contentAddress}
-            <ImageTransmission
-              src={item.lrcdata.pub.contentAddress}
-              alt={item.lrcdata.pub.alt}
-            />
-          {:else if item.lrcdata.mine && !item.lrcdata.pub}
-            <ImageTransmission
-              src={mylocalimage ?? ""}
-              alt={undefined}
-              gifoverride={true}
-            />
-            <div>THIS IS A PREVIEW THAT ONLY YOU CAN SEE</div>
-          {:else}
-            i don't have image yet
+          {#if item.pubAt !== undefined}
+            <time class="time" datetime={new Date(item.pubAt).toISOString()}
+              >posted {smartAbsoluteTimestamp(item.pubAt)}</time
+            >
           {/if}
-        {/if}
-      </div>
-      {#if item.replies !== null}
-        <div class="footer">
-          {#each item.replies as reply}
-            <a href="/p/{b36encodenumber(reply)}">#{b36encodenumber(reply)}</a>
-            {" "}
-          {/each}
         </div>
-      {/if}
-    </div>
-  {:else}
-    muted
-    <button
-      class="unmute"
-      onclick={() => {
-        item.lrcdata.muted = false;
-        onunmute?.(item.id);
-      }}
-    >
-      unmute
-    </button>
+        <div class="body">
+          {#if isEnby(item)}
+            <EnbyTransmission enby={item} />
+          {:else if isMessage(item)}
+            <MessageTransmission
+              message={item}
+              mylocaltext={item.lrcdata.mine && !item.lrcdata.pub
+                ? mylocaltext
+                : undefined}
+            />
+          {:else if isImage(item)}
+            {#if item.lrcdata.pub?.contentAddress}
+              <ImageTransmission
+                src={item.lrcdata.pub.contentAddress}
+                alt={item.lrcdata.pub.alt}
+              />
+            {:else if item.lrcdata.mine && !item.lrcdata.pub}
+              <ImageTransmission
+                src={mylocalimage ?? ""}
+                alt={undefined}
+                gifoverride={true}
+              />
+              <div>THIS IS A PREVIEW THAT ONLY YOU CAN SEE</div>
+            {:else}
+              i don't have image yet
+            {/if}
+          {/if}
+        </div>
+        {#if item.replies !== null}
+          <div class="footer">
+            {#each item.replies as reply}
+              <a href="/p/{b36encodenumber(reply)}">#{b36encodenumber(reply)}</a
+              >
+              {" "}
+            {/each}
+          </div>
+        {/if}
+      </div>
+    {:else}
+      muted
+      <button
+        class="unmute"
+        onclick={() => {
+          item.lrcdata.muted = false;
+          onunmute?.(item.id);
+        }}
+      >
+        unmute
+      </button>
+    {/if}
   {/if}
 {/each}

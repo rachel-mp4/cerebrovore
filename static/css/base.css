@@ -439,3 +439,9 @@ form {
   line-height: 1;
 
 }
+
+.ai {
+  position: fixed;
+  right:0;
+  bottom:0;
+}

@@ -17,6 +17,8 @@ export class WSContext {
   color: number = $state(Math.floor(Math.random() * 16777216))
   systemMessage: string | undefined = $state()
   replyLimit: boolean = false
+  ai = $state(true)
+  showhideai = $state(false)
 
   nick: string = "wanderer"
   anon: boolean = false
@@ -252,6 +254,7 @@ export class WSContext {
   }
 
   mute = (id: number) => {
+    this.showhideai = true
     muteMessage(id, this)
   }
 
