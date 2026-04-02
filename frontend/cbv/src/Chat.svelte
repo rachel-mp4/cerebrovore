@@ -23,7 +23,6 @@
 {#if ctx.connected}
   <Receiver
     items={ctx.items}
-    ai={ctx.ai}
     mylocaltext={ctx.curMsg}
     mylocalimage={ctx.curImageBlobURL}
     onmute={ctx.mute}

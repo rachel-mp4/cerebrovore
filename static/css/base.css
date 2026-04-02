@@ -410,7 +410,7 @@ form {
 }
 
 .catalog-thumb:hover {
-  transform: translateY(0.5rem)
+  transform: translateY(0.5rem);
 }
 
 :is(.catalog, .thread-tail) .topic {
@@ -431,17 +431,18 @@ form {
 }
 
 ::selection {
+  background: var(--primary);
+}
+
+.tx ::selection {
   background: var(--accent);
+}
+
+.tx.active ::selection {
+  background: var(--gbg);
 }
 
 .banned {
   font-size: 8rem;
   line-height: 1;
-
-}
-
-.ai {
-  position: fixed;
-  right:0;
-  bottom:0;
 }

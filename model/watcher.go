@@ -189,7 +189,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 		defer tm.subsmu.RUnlock()
 		for w := range tm.subs {
 			select {
-			case w.ch <- socketEvent{BumpLimit: &tm.full}:
+			case w.ch <- socketEvent{BumpLimit: &tm.bumplimit}:
 			default:
 			}
 		}

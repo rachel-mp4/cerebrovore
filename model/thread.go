@@ -67,9 +67,6 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	}
 	opts := []lrcd.Option{
 		lrcd.WithIDAllocator(idAllocator),
-		lrcd.WithYapper(func(id uint32) string {
-			return fmt.Sprintf("#%s\n", utils.IDToA(id))
-		}),
 		lrcd.WithConsumerSetExternalId(),
 		lrcd.WithServerURIAndSecret(utils.IDToA(tm.id), os.Getenv("LRCD_SECRET")),
 	}

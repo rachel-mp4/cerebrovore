@@ -24,13 +24,6 @@
     }
   });
 
-  $effect(() => {
-    if (ctx) {
-      ctx.ai = ai;
-    }
-  });
-  let ai = $state(true);
-
   let message = $state("");
   const addReply = (str: string) => {
     message = message + `${str}\n`;
@@ -185,13 +178,6 @@
     />
     <input type="checkbox" name="anon-box" id="anon-box" bind:checked={anon} />
     <label for="anon-box">anon</label>
-    {#if ctx.showhideai}
-      <div class="ai">
-        <div></div>
-        <input type="checkbox" id="ai-box" bind:checked={ai} />
-        <label for="ai-box">disable ai :ccc</label>
-      </div>
-    {/if}
   </div>
   <div class="autogrowwrapper">
     <textarea

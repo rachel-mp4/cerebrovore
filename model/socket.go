@@ -16,7 +16,7 @@ type socketEvent struct {
 	ID            *uint32 `json:"id,omitempty"`
 	Username      *string `json:"username,omitempty"`
 	Remaining     *string `json:"remaining,omitempty"`
-	BumpLimit     *bool   `json:"new,omitempty"`
+	BumpLimit     *bool   `json:"bumpLimit,omitempty"`
 	ReplyLimit    *bool   `json:"replyLimit,omitempty"`
 }
 

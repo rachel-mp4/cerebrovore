@@ -444,13 +444,13 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		}
 		h.m.AddBacklinks(post.ThreadID, batch)
 	}
+	if post.Anon {
+		h.m.NotifyReply(post.ThreadID, post.ID, nil, replyCount)
+	} else {
+		h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, replyCount)
+	}
 	if replyCount < utils.BUMP_LIMIT {
 		h.m.NotifyWatchers(post.ThreadID)
-		if post.Anon {
-			h.m.NotifyReply(post.ThreadID, post.ID, nil, replyCount)
-		} else {
-			h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, replyCount)
-		}
 		changed, err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
 		if err != nil {
 			clog.Warn("%s", err)

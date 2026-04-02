@@ -134,6 +134,7 @@ func main() {
 		// the program hangs + doesn't respond to SIGINT / SIGTERM
 		go func() {
 			<-sig
+			fmt.Println("")
 			os.Exit(1)
 		}()
 
