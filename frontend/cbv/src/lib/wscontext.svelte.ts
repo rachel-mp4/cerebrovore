@@ -560,12 +560,9 @@ export const connectTo = (url: string, ctx: WSContext) => {
     }
   }
   ctx.ws = ws
-  const ts = new WebSocket(`${url}/ts`)
-  ts.onopen = () => {
-    console.log("ghello gworld")
-  }
-  ts.onmessage = (event) => {
-    const tse = JSON.parse(event.data)
+  document.addEventListener('cbv:thread', (e) => {
+    const ev = e as CustomEvent
+    const tse = ev.detail
     if (tse.remaining !== undefined) {
       const ls = document.getElementById("left-sidebar")
       if (ls !== null) {
@@ -589,7 +586,7 @@ export const connectTo = (url: string, ctx: WSContext) => {
       ctx.replyLimit = true
       ctx.systemMessage = "reply limit reached; thread archived. you can continue messaging, but everything will be lost to history"
     }
-  }
+  })
 }
 
 export const initMessage = (ctx: WSContext) => {

@@ -4,7 +4,6 @@ import { getVolume, getWatcherVolume, onVolumeChange, onVolumeWatcherChange } fr
 export class WatcherContext {
   watchthreads: Array<cbv.WatchThread> = $state([])
   newthreads: Array<cbv.WatchThread> = $state([])
-  ws: WebSocket
 
   volume: number
   watcherping: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
@@ -22,11 +21,9 @@ export class WatcherContext {
       this.watchervolume = e.detail.volume
       this.watcherping.volume = this.volume * this.watchervolume
     })
-    const ws = new WebSocket("/ts")
-    ws.onopen = () => console.log("i'm watching (4) you")
-    ws.onmessage = (event) => {
-      console.log(event)
-      const twe = JSON.parse(event.data)
+    document.addEventListener("cbv:watcher", (e) => {
+      const ev = e as CustomEvent
+      const twe = ev.detail
       // don't show that there's a reply if we're currently looking at this thread!
       if (document.getElementById(b36encodenumber(twe.id))) {
         return
@@ -60,10 +57,7 @@ export class WatcherContext {
         }
         this.watchthreads = [...this.watchthreads, newwt]
       }
-    }
-    ws.onerror = (error) => console.error(error)
-    ws.onclose = () => console.log("see ya!")
-    this.ws = ws
+    })
   }
 
   rmIdx(idx: number) {

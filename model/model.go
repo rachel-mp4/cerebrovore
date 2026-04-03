@@ -1,14 +1,18 @@
 package model
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
-
-	"github.com/rachel-mp4/cerebrovore/clog"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/gorilla/websocket"
+	"github.com/jackc/pgx/v5"
+
+	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
 	lrcpb "github.com/rachel-mp4/lrcproto/gen/go"
@@ -137,7 +141,7 @@ func (m *Model) ReplyLimit(threadID uint32) {
 		defer tm.subsmu.RUnlock()
 		for w := range tm.subs {
 			select {
-			case w.ch <- socketEvent{ReplyLimit: &tm.full}:
+			case w.ch <- socketMessage{"thread", socketEvent{ReplyLimit: &tm.full}}:
 			default:
 			}
 		}
@@ -163,11 +167,13 @@ func (m *Model) BanUser(name string) {
 	}
 	m.tmapmu.RLock()
 	for _, tm := range m.tmap {
-		tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
-		if tm.server != nil {
-			go tm.server.KickExternalId(name)
-		}
-		tm.mu.Unlock()
+		go func() {
+			tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
+			if tm.server != nil {
+				tm.server.KickExternalId(name)
+			}
+			tm.mu.Unlock()
+		}()
 	}
 	m.tmapmu.RUnlock()
 }
@@ -210,4 +216,242 @@ func cleaner(m *Model) {
 			m.tmapmu.Unlock()
 		}
 	}
+}
+
+type Option = func(options *options) error
+
+type options = struct {
+	thread            *uint32
+	threadsocket      bool
+	wormwatch         bool
+	watchedthreads    bool
+	getwatchedthreads func(string, context.Context) ([]uint32, error)
+	newthreads        bool
+}
+
+func WithThreadSocket(id uint32) Option {
+	return func(options *options) error {
+		if options.thread != nil && id != *options.thread {
+			return errors.New("can only watch one thread")
+		}
+		options.thread = &id
+		options.threadsocket = true
+		return nil
+	}
+}
+
+func WithWatchedThreads(getwatchedthreads func(string, context.Context) ([]uint32, error), andNewThreads bool) Option {
+	return func(options *options) error {
+		options.getwatchedthreads = getwatchedthreads
+		options.watchedthreads = true
+		options.newthreads = andNewThreads
+		return nil
+	}
+}
+
+func WithWormwatch(id uint32) Option {
+	return func(options *options) error {
+		if options.thread != nil && id != *options.thread {
+			return errors.New("can only watch one thread")
+		}
+		options.thread = &id
+		options.wormwatch = true
+		return nil
+	}
+}
+
+func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc, error) {
+	myoptions := options{}
+	for _, opt := range opts {
+		err := opt(&myoptions)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return func(w http.ResponseWriter, r *http.Request) {
+		upgrader := &websocket.Upgrader{
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+		conn, err := upgrader.Upgrade(w, r, nil)
+		if err != nil {
+			return
+		}
+		client := &clientConn{}
+		client.conn = conn
+		client.ch = make(chan any, 10)
+		client.ctx, client.cancel = context.WithCancel(context.Background())
+		var tm *threadModel
+		var ok bool
+
+		if myoptions.thread != nil {
+			m.tmapmu.RLock()
+			tm, ok = m.tmap[*myoptions.thread]
+			m.tmapmu.RUnlock()
+		}
+
+		if ok && !tm.full && myoptions.threadsocket {
+			go func() {
+				tm.subsmu.Lock()
+				tm.subs[client] = true
+				tm.subsmu.Unlock()
+			}()
+			defer func() {
+				tm.subsmu.Lock()
+				delete(tm.subs, client)
+				tm.subsmu.Unlock()
+			}()
+		}
+
+		if ok && !tm.full && myoptions.wormwatch {
+			go func() {
+				tm.wormwatchersmu.Lock()
+				defer tm.wormwatchersmu.Unlock()
+				tm.wormwatchers[client] = true
+				wwd := tm.wormwatchdata
+				wwd.watchers[username] = wwd.watchers[username] + 1
+				tnowms := time.Now().UnixMilli()
+				client.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeTimeS, Timestamp: &tnowms}}
+				if wwd.queue != nil {
+					client.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeQueue, Entries: wwd.queue}}
+				}
+				if wwd.start != nil {
+					if wwd.pausedAt == nil {
+						tstartms := wwd.start.UnixMilli()
+						client.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeStart, Timestamp: &tstartms, Index: &wwd.index}}
+					} else {
+						tpausems := wwd.pausedAt.Milliseconds()
+						client.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}}
+					}
+				}
+			}()
+			defer func() {
+				tm.wormwatchersmu.Lock()
+				defer tm.wormwatchersmu.Unlock()
+				delete(tm.wormwatchers, client)
+				wwd := tm.wormwatchdata
+				count := wwd.watchers[username] - 1
+				if count <= 0 {
+					delete(wwd.watchers, username)
+					// should recheck skip / pause condition here if i want to be really cool
+					// but that's a pain since locks
+				} else {
+					wwd.watchers[username] = count
+				}
+			}()
+		}
+
+		if myoptions.watchedthreads {
+			go func() {
+				m.watchersmu.Lock()
+				uwctx, ok := m.watchers[username]
+				if ok {
+					uwctx.ocmu.Lock()
+					uwctx.openConns[client] = true
+					uwctx.ocmu.Unlock()
+					uwctx.cleanupmu.Lock()
+					if uwctx.cleanupTimer != nil {
+						uwctx.cleanupTimer.Stop()
+						uwctx.cleanupTimer = nil
+					}
+					m.watchers[username] = uwctx
+					uwctx.cleanupmu.Unlock()
+				} else {
+					uwctx = &userWatcherCtx{
+						threadsWatched: make(map[uint32]bool),
+						openConns:      make(map[*clientConn]bool, 1),
+					}
+					uwctx.openConns[client] = true
+					m.watchers[username] = uwctx
+				}
+				m.watchersmu.Unlock()
+				if !ok {
+					// i don't think that we need watchersmu anymore for this
+					// second half, because since we still have our reference to
+					// uwctx and since we are an open conn that can't terminate
+					// yet, the reference in the m.watchers map can't be deleted
+					// by some other conn connecting and disconnecting
+					// edited apr 2 2026: this is still true as long as this
+					// doesn't take more than 10 seconds and user doesn't
+					// immediately disconnect
+					threadIDs, err := myoptions.getwatchedthreads(username, r.Context())
+					if err != nil {
+						if !errors.Is(err, pgx.ErrNoRows) {
+							clog.Warn("db err: %s", err.Error())
+							threadIDs = nil
+						}
+					}
+					for _, tid := range threadIDs {
+						m.tmapmu.RLock()
+						tm, ok := m.tmap[tid]
+						m.tmapmu.RUnlock()
+						if !ok {
+							continue
+						}
+						tm.watchersmu.Lock()
+						if !tm.bumplimit {
+							tm.watchers[username] = true
+							uwctx.twmu.Lock()
+							uwctx.threadsWatched[tid] = true
+							uwctx.twmu.Unlock()
+						}
+						tm.watchersmu.Unlock()
+					}
+				}
+			}()
+
+			// get the watch context
+			// remove client from open conns
+			// check remaining
+			// if its zero, then we need to queue a cleanup
+			// then we get locks to make sure the cleanup happens
+			// then we cleanup for each thread i watch
+			defer func() {
+				m.watchersmu.RLock()
+				uwctx := m.watchers[username]
+				m.watchersmu.RUnlock()
+				uwctx.ocmu.Lock()
+				delete(uwctx.openConns, client)
+				remaining := len(uwctx.openConns)
+				uwctx.ocmu.Unlock()
+				if remaining == 0 {
+					uwctx.cleanupmu.Lock()
+					if uwctx.cleanupTimer != nil {
+						panic("i think that this is a weird case! cleanup watch context")
+					}
+					uwctx.cleanupTimer = time.AfterFunc(10*time.Second, func() {
+						// probably i'm being a bit wow shiny toy apropos mutex
+						// not necessary and introduce a lot of unnecessary overhead, but
+						// anyway, it needs to go this order of nesting since that's
+						// how the uwctx initialize goes, to prevent deadlock
+						m.watchersmu.Lock()
+						defer m.watchersmu.Unlock()
+						uwctx.ocmu.RLock()
+						defer uwctx.ocmu.RUnlock()
+						uwctx.cleanupmu.Lock()
+						defer uwctx.cleanupmu.Unlock()
+
+						if len(uwctx.openConns) == 0 {
+							delete(m.watchers, username)
+						}
+						for tid := range uwctx.threadsWatched {
+							m.tmapmu.RLock()
+							tm, ok := m.tmap[tid]
+							m.tmapmu.RUnlock()
+							if !ok {
+								continue
+							}
+							tm.watchersmu.Lock()
+							delete(tm.watchers, username)
+							tm.watchersmu.Unlock()
+						}
+					})
+					uwctx.cleanupmu.Unlock()
+				}
+			}()
+		}
+		go client.readloop()
+		client.watch()
+	}, nil
 }

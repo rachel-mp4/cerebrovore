@@ -20,7 +20,7 @@ type threadModel struct {
 	full   bool
 	mu     sync.Mutex
 
-	subs   map[*watcherConn]bool
+	subs   map[*clientConn]bool
 	subsmu sync.RWMutex
 
 	watchers   map[string]bool // keys are usernames
@@ -28,7 +28,7 @@ type threadModel struct {
 	watchersmu sync.RWMutex
 
 	wormwatchdata  *wormwatchdata
-	wormwatchers   map[*watcherConn]bool
+	wormwatchers   map[*clientConn]bool
 	wormwatchersmu sync.Mutex
 }
 
@@ -38,9 +38,9 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
 		id:           id,
 		topic:        topic,
-		subs:         make(map[*watcherConn]bool),
+		subs:         make(map[*clientConn]bool),
 		watchers:     make(map[string]bool),
-		wormwatchers: make(map[*watcherConn]bool),
+		wormwatchers: make(map[*clientConn]bool),
 		wormwatchdata: &wormwatchdata{
 			index:    0,
 			watchers: make(map[string]int),

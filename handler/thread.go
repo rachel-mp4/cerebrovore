@@ -28,6 +28,7 @@ import (
 
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
+	"github.com/rachel-mp4/cerebrovore/model"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
 	"github.com/rachel-mp4/lrcd"
@@ -639,50 +640,37 @@ func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request)
 	f(w, r)
 }
 
-func (h *Handler) getThreadWW(c *Client, w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getJSONWebsockets(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	ntid := r.PathValue("ntid")
-	tid, err := utils.AToID(ntid)
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "invalid thread id", http.StatusBadRequest)
-		return
+	opts := make([]model.Option, 0)
+	ntid := r.URL.Query().Get("thread")
+	if ntid != "" {
+		tid, err := utils.AToID(ntid)
+		if err == nil {
+			opts = append(opts, model.WithThreadSocket(tid))
+		}
 	}
-	f, err := h.m.GetThreadWWHandler(uint32(tid), c.Username)
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error getting ws handler", http.StatusInternalServerError)
-		return
+	watcher := r.URL.Query().Get("watcher")
+	if watcher != "" {
+		opts = append(opts, model.WithWatchedThreads(h.db.GetWatchedThreads, watcher == "and-new-threads"))
 	}
-	f(w, r)
-}
-
-func (h *Handler) getThreadSocket(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil {
-		http.Error(w, "not authorized", http.StatusUnauthorized)
-		return
-	}
-	ntid := r.PathValue("ntid")
-	tid, err := utils.AToID(ntid)
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "invalid thread id", http.StatusBadRequest)
-		return
-	}
-	f := h.m.GetThreadSocket(tid)
-	f(w, r)
-}
-
-func (h *Handler) getWatcherHandler(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil {
-		http.Error(w, "not authorized", http.StatusUnauthorized)
-		return
+	ntid = r.URL.Query().Get("wormwatch")
+	if ntid != "" {
+		tid, err := utils.AToID(ntid)
+		if err == nil {
+			opts = append(opts, model.WithWormwatch(tid))
+		}
 	}
 
-	f := h.m.GetWatcherHandler(c.Username, h.db.GetWatchedThreads)
+	f, err := h.m.GetWebSockets(c.Username, opts...)
+	if err != nil {
+		clog.Warn("%s", err)
+		http.Error(w, "internal error", http.StatusInternalServerError)
+		return
+	}
 	f(w, r)
 }
 

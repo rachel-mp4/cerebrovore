@@ -2,15 +2,16 @@ package model
 
 import (
 	"context"
-	"errors"
-	"net/http"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/jackc/pgx/v5"
-	"github.com/rachel-mp4/cerebrovore/clog"
 )
+
+type watchMessage struct {
+	Type string     `json:"type"`
+	Data watchEvent `json:"data"`
+}
 
 // watchEvent represents a bump happening in a thread that a user
 // watches; it gets sent on threadsocket to anyone connected
@@ -21,10 +22,10 @@ type watchEvent struct {
 	New       *bool   `json:"new,omitempty"`
 }
 
-// watcherConn represents an open thread watcher connection, this is
+// clientConn represents an open thread watcher connection, this is
 // created for basically every tab that you have open of the site,
 // since ATM like all the templates involve the list of threads
-type watcherConn struct {
+type clientConn struct {
 	conn   *websocket.Conn
 	ch     chan any
 	ctx    context.Context
@@ -37,8 +38,12 @@ type watcherConn struct {
 type userWatcherCtx struct {
 	threadsWatched map[uint32]bool // keys are thread ids
 	twmu           sync.Mutex
-	openConns      map[*watcherConn]bool
-	ocmu           sync.RWMutex
+
+	openConns map[*clientConn]bool
+	ocmu      sync.RWMutex
+
+	cleanupTimer *time.Timer
+	cleanupmu    sync.Mutex
 }
 
 func (m *Model) Watch(username string, threadID uint32) (bumplimit bool) {
@@ -101,14 +106,13 @@ func (m *Model) NotifyNewThread(threadID uint32) {
 		uwctx.ocmu.RLock()
 		for w := range uwctx.openConns {
 			select {
-			case w.ch <- watchEvent{Topic: tm.topic, ID: threadID, BumpLimit: nil, New: &knew}:
+			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, ID: threadID, BumpLimit: nil, New: &knew}}:
 			default:
 			}
 		}
 		uwctx.ocmu.RUnlock()
 	}
 	m.watchersmu.RUnlock()
-
 }
 
 // NotifyWatchers notifies all online watchers of a thread that a
@@ -136,7 +140,7 @@ func (m *Model) NotifyWatchers(forID uint32) {
 		watcherctx.ocmu.RLock()
 		for w := range watcherctx.openConns {
 			select {
-			case w.ch <- watchEvent{tm.topic, forID, nil, nil}:
+			case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, forID, nil, nil}}:
 			default:
 			}
 		}
@@ -174,7 +178,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 			watcherctx.ocmu.RLock()
 			for w := range watcherctx.openConns {
 				select {
-				case w.ch <- watchEvent{tm.topic, threadID, &bl, nil}:
+				case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, threadID, &bl, nil}}:
 				default:
 				}
 			}
@@ -189,7 +193,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 		defer tm.subsmu.RUnlock()
 		for w := range tm.subs {
 			select {
-			case w.ch <- socketEvent{BumpLimit: &tm.bumplimit}:
+			case w.ch <- socketMessage{"thread", socketEvent{BumpLimit: &tm.bumplimit}}:
 			default:
 			}
 		}
@@ -205,97 +209,9 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 // and is less bad than the other race where a watched thread would never send
 // watch notifications (either thing is solved by ending all connections from a
 // user or cycling watch after their userWatcherCtx stabilizes)
-func (m *Model) GetWatcherHandler(username string, getWatchedThreads func(string, context.Context) ([]uint32, error)) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		upgrader := &websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		}
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		watchr := &watcherConn{}
-		ch := make(chan any, 10)
-		watchr.ch = ch
-		watchr.conn = conn
-		watchr.ctx, watchr.cancel = context.WithCancel(r.Context())
-		m.watchersmu.Lock()
-		uwctx, ok := m.watchers[username]
-		if ok {
-			uwctx.ocmu.Lock()
-			uwctx.openConns[watchr] = true
-			uwctx.ocmu.Unlock()
-		} else {
-			uwctx = &userWatcherCtx{
-				threadsWatched: make(map[uint32]bool),
-				openConns:      make(map[*watcherConn]bool, 1),
-			}
-			uwctx.openConns[watchr] = true
-			m.watchers[username] = uwctx
-		}
-		m.watchersmu.Unlock()
-		if !ok {
-			// i don't think that we need watchersmu anymore for this
-			// second half, because since we still have our reference to
-			// uwctx and since we are an open conn that can't terminate
-			// yet, the reference in the m.watchers map can't be deleted
-			// by some other conn connecting and disconnecting
-			threadIDs, err := getWatchedThreads(username, r.Context())
-			if err != nil {
-				if !errors.Is(err, pgx.ErrNoRows) {
-					clog.Warn("db err: %s", err.Error())
-					threadIDs = nil
-				}
-			}
-			for _, tid := range threadIDs {
-				m.tmapmu.RLock()
-				tm, ok := m.tmap[tid]
-				m.tmapmu.RUnlock()
-				if !ok {
-					continue
-				}
-				tm.watchersmu.Lock()
-				if !tm.bumplimit {
-					tm.watchers[username] = true
-					uwctx.twmu.Lock()
-					uwctx.threadsWatched[tid] = true
-					uwctx.twmu.Unlock()
-				}
-				tm.watchersmu.Unlock()
-			}
-		}
-
-		go watchr.readloop()
-		watchr.watch()
-		m.watchersmu.Lock()
-		uwctx = m.watchers[username]
-		if len(uwctx.openConns) == 1 {
-			delete(m.watchers, username)
-			for tid := range uwctx.threadsWatched {
-				m.tmapmu.RLock()
-				tm, ok := m.tmap[tid]
-				m.tmapmu.RUnlock()
-				if !ok {
-					continue
-				}
-				tm.watchersmu.Lock()
-				delete(tm.watchers, username)
-				tm.watchersmu.Unlock()
-			}
-			m.watchersmu.Unlock()
-		} else {
-			m.watchersmu.Unlock()
-			uwctx.ocmu.Lock()
-			delete(uwctx.openConns, watchr)
-			uwctx.ocmu.Unlock()
-		}
-	}
-}
 
 // watch writes events to a watcher's threadsocket
-func (w *watcherConn) watch() {
+func (w *clientConn) watch() {
 	defer w.cancel()
 	ticker := time.NewTicker(15 * time.Second)
 	defer ticker.Stop()
@@ -317,7 +233,7 @@ func (w *watcherConn) watch() {
 	}
 }
 
-func (w *watcherConn) readloop() {
+func (w *clientConn) readloop() {
 	defer w.cancel()
 	w.conn.SetReadLimit(512)
 	w.conn.SetReadDeadline(time.Now().Add(60 * time.Second))

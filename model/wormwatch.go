@@ -3,11 +3,8 @@ package model
 import (
 	"context"
 	"math"
-	"net/http"
 	"time"
 
-	"github.com/gorilla/websocket"
-	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/utils"
 )
 
@@ -40,6 +37,11 @@ type wormwatchEvent struct {
 	Timestamp *int64                 `json:"timestamp,omitempty"`
 }
 
+type wormwatchMessage struct {
+	Type string         `json:"type"`
+	Data wormwatchEvent `json:"data"`
+}
+
 const (
 	TypeTimeS = "timeS"
 	TypeClear = "clear"
@@ -47,73 +49,6 @@ const (
 	TypeQueue = "queue"
 	TypePause = "pause"
 )
-
-func (m *Model) GetThreadWWHandler(threadID uint32, username string) (http.HandlerFunc, error) {
-	clog.Dbug("acquiring ww lock")
-	m.tmapmu.RLock()
-	defer m.tmapmu.RUnlock()
-	tm, ok := m.tmap[threadID]
-	if !ok {
-		return nil, ErrThreadDNE
-	}
-	if tm.full {
-		return nil, ErrThreadFull
-	}
-	clog.Dbug("ww lock dequired")
-	return func(w http.ResponseWriter, r *http.Request) {
-		upgrader := &websocket.Upgrader{
-			CheckOrigin: func(r *http.Request) bool {
-				return true
-			},
-		}
-		conn, err := upgrader.Upgrade(w, r, nil)
-		if err != nil {
-			return
-		}
-		ctx, cancel := context.WithCancel(context.Background())
-		watcher := &watcherConn{
-			ch:     make(chan any, 10),
-			conn:   conn,
-			ctx:    ctx,
-			cancel: cancel,
-		}
-		tm.wormwatchersmu.Lock()
-		tm.wormwatchers[watcher] = true
-		wwd := tm.wormwatchdata
-		wwd.watchers[username] = wwd.watchers[username] + 1
-		tnowms := time.Now().UnixMilli()
-		watcher.ch <- wormwatchEvent{Type: TypeTimeS, Timestamp: &tnowms}
-		if wwd.queue != nil {
-			watcher.ch <- wormwatchEvent{Type: TypeQueue, Entries: wwd.queue}
-		}
-		if wwd.start != nil {
-			if wwd.pausedAt == nil {
-				tstartms := wwd.start.UnixMilli()
-				watcher.ch <- wormwatchEvent{Type: TypeStart, Timestamp: &tstartms, Index: &wwd.index}
-			} else {
-				tpausems := wwd.pausedAt.Milliseconds()
-				watcher.ch <- wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}
-			}
-		}
-		tm.wormwatchersmu.Unlock()
-
-		go watcher.readloop()
-		watcher.watch()
-
-		tm.wormwatchersmu.Lock()
-		delete(tm.wormwatchers, watcher)
-		count := wwd.watchers[username] - 1
-		if count <= 0 {
-			delete(tm.wormwatchdata.watchers, username)
-			// should recheck skip / pause condition here if i want to be really cool
-			// but that's a pain since locks
-
-		} else {
-			tm.wormwatchdata.watchers[username] = count
-		}
-		tm.wormwatchersmu.Unlock()
-	}, nil
-}
 
 func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) {
 	if len(pis) == 0 {
@@ -146,10 +81,10 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 	}
 	for w := range tm.wormwatchers {
 		select {
-		case w.ch <- wormwatchEvent{Type: TypeQueue, Entries: entries}:
+		case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeQueue, Entries: entries}}:
 			if initial {
 				select {
-				case w.ch <- wormwatchEvent{Type: TypeStart, Index: &clen, Timestamp: &tstartms}:
+				case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeStart, Index: &clen, Timestamp: &tstartms}}:
 				default:
 				}
 			}
@@ -192,7 +127,7 @@ func (tm *threadModel) pauseVideo() {
 
 	for w := range tm.wormwatchers {
 		select {
-		case w.ch <- wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}:
+		case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypePause, Timestamp: &tpausems, Index: &wwd.index}}:
 		default:
 		}
 	}
@@ -212,7 +147,7 @@ func (tm *threadModel) nv() {
 	if idx >= len(wwd.queue) {
 		for w := range tm.wormwatchers {
 			select {
-			case w.ch <- wormwatchEvent{Type: TypeClear}:
+			case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeClear}}:
 			default:
 			}
 		}
@@ -232,7 +167,7 @@ func (tm *threadModel) nv() {
 	wwd.pausedAt = nil
 	for w := range tm.wormwatchers {
 		select {
-		case w.ch <- wormwatchEvent{Type: TypeStart, Index: &idx, Timestamp: &tstartms}:
+		case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeStart, Index: &idx, Timestamp: &tstartms}}:
 		default:
 		}
 	}
@@ -370,7 +305,7 @@ func (tm *threadModel) unpauseHOLDINGLOCK() {
 
 	for w := range tm.wormwatchers {
 		select {
-		case w.ch <- wormwatchEvent{Type: TypeStart, Index: &index, Timestamp: &tstartms}:
+		case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeStart, Index: &index, Timestamp: &tstartms}}:
 		default:
 		}
 	}

@@ -1,7 +1,6 @@
 import type * as cbv from "./types"
 export class WormWatchContext extends EventTarget {
   wwqueue: Array<cbv.WormWatchEntry> = $state([])
-  ws: WebSocket
   // if the server's timestamp is much higher than my timestamp,
   // i need to add to my timestamp in the future so that way i
   // can get my times to work out nicely. to get the amount to
@@ -9,17 +8,16 @@ export class WormWatchContext extends EventTarget {
   // bigger number. i will have a medium-big number "offset" that
   // i can now add to my Date.now() values in order to accurately
   // compare them with the server times
-  offset: number
+  offset: number = 0
   playingIndex: number | undefined = $state()
   start: number | undefined = $state()
   pause: number | undefined = $state()
 
   constructor(url: string) {
     super()
-    const ws = new WebSocket(url)
-    ws.onopen = () => console.log("worm watch!")
-    ws.onmessage = (event) => {
-      const wwe = JSON.parse(event.data)
+    document.addEventListener("cbv:wormwatch", (e) => {
+      const ev = e as CustomEvent
+      const wwe = ev.detail
       console.log(wwe)
       switch (wwe.type) {
         case "timeS": {
@@ -61,11 +59,7 @@ export class WormWatchContext extends EventTarget {
           break
         }
       }
-    }
-    ws.onerror = (error) => console.error(error)
-    ws.onclose = () => console.log("see ya!")
-    this.ws = ws
-    this.offset = 0
+    })
   }
 
   getTimeToStart(): number | undefined {
