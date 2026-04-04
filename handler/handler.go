@@ -39,14 +39,16 @@ type Handler struct {
 }
 
 type CompiledAssets struct {
-	ChatPath    string
-	ChatCss     []string
-	BeepPath    string
-	BeepCss     []string
-	WatcherPath string
-	WatcherCss  []string
-	WormPath    string
-	WormCss     []string
+	ChatPath     string
+	ChatCss      []string
+	BeepPath     string
+	BeepCss      []string
+	WatcherPath  string
+	WatcherCss   []string
+	WormPath     string
+	WormCss      []string
+	SettingsPath string
+	SettingsCss  []string
 }
 
 func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider, reqcode bool) Handler {
@@ -66,7 +68,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /account", h.account)
 	mux.HandleFunc("POST /account", h.postAccount)
 	mux.HandleFunc("POST /appeal", h.postAppeal)
-	mux.HandleFunc("GET /beep", h.beep)
+	mux.HandleFunc("GET /beep", h.AM(h.beep))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
 	mux.HandleFunc("GET /t", h.AM(h.threads))
@@ -199,12 +201,14 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		Crack      string
 		Accent     string
 		ReplyCount *int
+		Websockets bool
 	}
 	err := loginT.ExecuteTemplate(w, "base", loginresp{
 		"login",
 		h.crack,
 		"var(--primary)",
 		nil,
+		false,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -220,6 +224,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 		ReplyCount   *int
 		Invite       string
 		RequiresCode bool
+		Websockets   bool
 	}
 	invite := r.URL.Query().Get("invite")
 	err := accountT.ExecuteTemplate(w, "base", loginresp{
@@ -229,6 +234,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 		nil,
 		invite,
 		h.reqcode,
+		false,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -326,7 +332,11 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
-func (h *Handler) beep(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) beep(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "this is really serious.... you are not authz...", http.StatusUnauthorized)
+		return
+	}
 	type beepresp struct {
 		baseresp
 	}

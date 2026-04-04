@@ -39,7 +39,7 @@ type userWatcherCtx struct {
 	threadsWatched map[uint32]bool // keys are thread ids
 	twmu           sync.Mutex
 
-	openConns map[*clientConn]bool
+	openConns map[*clientConn]bool // values are if they want new threads
 	ocmu      sync.RWMutex
 
 	cleanupTimer *time.Timer
@@ -104,7 +104,10 @@ func (m *Model) NotifyNewThread(threadID uint32) {
 	m.watchersmu.RLock()
 	for _, uwctx := range m.watchers {
 		uwctx.ocmu.RLock()
-		for w := range uwctx.openConns {
+		for w, ok := range uwctx.openConns {
+			if !ok {
+				continue
+			}
 			select {
 			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, ID: threadID, BumpLimit: nil, New: &knew}}:
 			default:

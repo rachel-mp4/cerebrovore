@@ -434,15 +434,11 @@ form {
   background: var(--primary);
 }
 
-.tx ::selection {
-  background: var(--accent);
-}
-
-.tx.active ::selection {
-  background: var(--gbg);
-}
-
 .banned {
   font-size: 8rem;
   line-height: 1;
+}
+
+#settings-pane {
+  accent-color: var(--primary);
 }

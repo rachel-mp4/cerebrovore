@@ -26,4 +26,13 @@
       if you wanna invite someone or a community and don't have enough mana right now, let a mod know and we'll try to get one to you asap
     </p>
   {{end}}
+  <div id="settings-pane"></div>
+  {{if .CompiledAssets}}
+    <script type="module" src="/{{.CompiledAssets.SettingsPath}}"></script>
+    {{range .CompiledAssets.SettingsCss}}
+      <link rel="stylesheet" href="/{{.}}">
+    {{end}}
+  {{else}}
+    <script type="module" src="http://localhost:5173/src/settings.ts"></script>
+  {{end}}
 {{end}}

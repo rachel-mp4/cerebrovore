@@ -420,7 +420,6 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 // like informing lrc clients of parsed backlinks, and sending events to watchers
 func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
 	if len(backlinks) != 0 {
-		clog.Dbug("sending backlinks")
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
 		for _, bl := range backlinks {
 			if bl.From == post.ID {
@@ -608,6 +607,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 			h.crack,
 			&t.ReplyCount,
 			utils.ColorToAp(t.OP.Color),
+			true,
 		},
 		Thread:   t,
 		Watched:  watched,

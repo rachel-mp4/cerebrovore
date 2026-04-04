@@ -28,7 +28,7 @@ type threadModel struct {
 	watchersmu sync.RWMutex
 
 	wormwatchdata  *wormwatchdata
-	wormwatchers   map[*clientConn]bool
+	wormwatchers   map[*clientConn]bool // values mean nothing
 	wormwatchersmu sync.Mutex
 }
 

@@ -84,23 +84,18 @@ func (m *Model) DeleteThread(threadID uint32) error {
 
 // GetThreadWSHandler gets the ws handler for a thread's lrc server
 func (m *Model) GetThreadWSHandler(threadID uint32, username string) (http.HandlerFunc, error) {
-	clog.Dbug("acquiring tmapmulock wsh")
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.RUnlock()
-	clog.Dbug("tmapmulock acquired")
 	if !ok {
 		return nil, ErrThreadDNE
 	}
-	clog.Dbug("acquiring lock")
 	tm.mu.Lock()
-	clog.Dbug("lock acquired")
 	if tm.full {
 		tm.mu.Unlock()
 		return nil, ErrThreadFull
 	}
 	if tm.server == nil {
-		clog.Dbug("recreating server")
 		err := tm.recreateServer(m.getIDAllocator())
 		if err != nil {
 			tm.mu.Unlock()
@@ -113,7 +108,6 @@ func (m *Model) GetThreadWSHandler(threadID uint32, username string) (http.Handl
 		return nil, fmt.Errorf("getwshandler: %w", err)
 	}
 	tm.mu.Unlock()
-	clog.Dbug("returning handler")
 	return handler, nil
 }
 
@@ -166,6 +160,7 @@ func (m *Model) BanUser(name string) {
 		uwctx.ocmu.RUnlock()
 	}
 	m.tmapmu.RLock()
+	defer m.tmapmu.RUnlock()
 	for _, tm := range m.tmap {
 		go func() {
 			tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
@@ -175,7 +170,6 @@ func (m *Model) BanUser(name string) {
 			tm.mu.Unlock()
 		}()
 	}
-	m.tmapmu.RUnlock()
 }
 
 // getIDAllocator produces an IDAllocator function that returns an
@@ -348,7 +342,8 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				uwctx, ok := m.watchers[username]
 				if ok {
 					uwctx.ocmu.Lock()
-					uwctx.openConns[client] = true
+					// use value of openConns to say if i want new thread notifications
+					uwctx.openConns[client] = myoptions.newthreads
 					uwctx.ocmu.Unlock()
 					uwctx.cleanupmu.Lock()
 					if uwctx.cleanupTimer != nil {
@@ -362,7 +357,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 						threadsWatched: make(map[uint32]bool),
 						openConns:      make(map[*clientConn]bool, 1),
 					}
-					uwctx.openConns[client] = true
+					uwctx.openConns[client] = myoptions.newthreads
 					m.watchers[username] = uwctx
 				}
 				m.watchersmu.Unlock()

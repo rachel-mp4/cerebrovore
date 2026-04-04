@@ -55,14 +55,16 @@ func main() {
 			panic(err)
 		}
 		ca = &handler.CompiledAssets{
-			ChatPath:    ms.Chat.File,
-			ChatCss:     ms.Chat.CSS,
-			BeepPath:    ms.Beep.File,
-			BeepCss:     ms.Beep.CSS,
-			WatcherPath: ms.Watcher.File,
-			WatcherCss:  ms.Watcher.CSS,
-			WormPath:    ms.Worm.File,
-			WormCss:     ms.Worm.CSS,
+			ChatPath:     ms.Chat.File,
+			ChatCss:      ms.Chat.CSS,
+			BeepPath:     ms.Beep.File,
+			BeepCss:      ms.Beep.CSS,
+			WatcherPath:  ms.Watcher.File,
+			WatcherCss:   ms.Watcher.CSS,
+			WormPath:     ms.Worm.File,
+			WormCss:      ms.Worm.CSS,
+			SettingsPath: ms.Settings.File,
+			SettingsCss:  ms.Settings.CSS,
 		}
 	}
 	var store db.Storer
@@ -171,4 +173,8 @@ type Manifest struct {
 		File string   `json:"file"`
 		CSS  []string `json:"css,omitempty"`
 	} `json:"src/worm.ts"`
+	Settings struct {
+		File string   `json:"file"`
+		CSS  []string `json:"css,omitempty"`
+	} `json:"src/settings.ts"`
 }

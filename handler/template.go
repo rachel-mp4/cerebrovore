@@ -140,6 +140,7 @@ type baseresp struct {
 	Crack          string
 	ReplyCount     *int
 	Accent         string
+	Websockets     bool
 }
 
 func (h *Handler) makebase(title string, ctx context.Context) (*baseresp, error) {
@@ -151,6 +152,7 @@ func (h *Handler) makebase(title string, ctx context.Context) (*baseresp, error)
 		h.crack,
 		nil,
 		"var(--primary)",
+		true,
 	}, err
 }
 

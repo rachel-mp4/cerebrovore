@@ -3,6 +3,7 @@
   import { WSContext } from "../wscontext.svelte";
   import { numToHex } from "../colors";
   import diff from "fast-diff";
+  import { onMount } from "svelte";
   interface Props {
     ctx: WSContext;
   }
@@ -11,7 +12,6 @@
   let anon = $state(ctx.anon);
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
-  let image: HTMLImageElement | undefined = $state();
   $effect(() => {
     if (ctx) {
       ctx.setNick(nick);
@@ -26,7 +26,14 @@
 
   let message = $state("");
   const addReply = (str: string) => {
-    message = message + `${str}\n`;
+    const das = message !== "";
+    const enl = message.endsWith("\n");
+    // if it IS empty or if it ends with a new line, add a new line, otherwise a space
+    message = message + `${str}${!das || enl ? "\n" : " "}`;
+    // don't send our first reply
+    if (das) {
+      diffAndSend();
+    }
   };
   document.addEventListener("click", (e: MouseEvent) => {
     const t = e.target as HTMLElement;
@@ -37,7 +44,7 @@
     if (!reply) {
       return;
     }
-    const text = reply.textContent;
+    const text = reply.textContent?.trim();
     if (!text) {
       return;
     }
@@ -152,6 +159,9 @@
       }
     }
   };
+  onMount(() => {
+    inputEl.focus();
+  });
 </script>
 
 {#if ctx.systemMessage}

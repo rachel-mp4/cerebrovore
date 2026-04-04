@@ -10,6 +10,49 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.0.0",
+			Timestamp: "2026-04-03",
+			Notes: []types.Note{
+				{
+					Type: "release",
+					Name: "we are now in beta",
+				},
+				{
+					Type: "feature",
+					Name: "invite codes",
+				},
+				{
+					Type: "feature",
+					Name: "bans",
+				},
+				{
+					Type: "feature",
+					Name: "ban appeals",
+				},
+				{
+					Type:        "feature",
+					Name:        "self bans",
+					Description: "#desh, #molt, #deshell, #debrainworm",
+				},
+				{
+					Type: "feature",
+					Name: "setting to disable notifications for new threads",
+				},
+				{
+					Type: "feature",
+					Name: "removed ai agent",
+				},
+				{
+					Type: "upgrade",
+					Name: "cut down on extra websockets",
+				},
+				{
+					Type: "upgrade",
+					Name: "refresh bumped threads on refocus",
+				},
+			},
+		},
+		{
 			Release:   "β.-0.4",
 			Timestamp: "2026-03-24",
 			Notes: []types.Note{

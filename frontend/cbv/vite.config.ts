@@ -13,6 +13,7 @@ export default defineConfig({
         beep: 'src/beep.ts',
         watcher: 'src/watcher.ts',
         worm: 'src/worm.ts',
+        settings: 'src/settings.ts'
       }
     }
   },

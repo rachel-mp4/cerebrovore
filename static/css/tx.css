@@ -111,3 +111,25 @@
 :is(a[href="/p/big"], a[href="/p/small"]):hover {
   opacity: 0.5;
 }
+
+.tx.dark {
+  --bg: var(--gfg)
+}
+
+.tx ::selection {
+  background: var(--accent);
+}
+
+.tx:not(.active) ::selection {
+  color: var(--bg)
+}
+
+.tx.active.light ::selection {
+  background: var(--gbg);
+  color: var(--accent);
+}
+
+.tx.active.dark ::selection {
+  background: var(--gfg);
+  color: var(--accent);
+}
