@@ -1,40 +1,41 @@
 @media (min-width: 36rem) {
-#eats-ur-brain .tx:nth-last-of-type(1) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(2) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(3) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(4) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(5) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(6) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(7) {font-size:2.000000rem;}
-#eats-ur-brain .tx:nth-last-of-type(8) {font-size:1.997114rem;}
-#eats-ur-brain .tx:nth-last-of-type(9) {font-size:1.989345rem;}
-#eats-ur-brain .tx:nth-last-of-type(10) {font-size:1.980402rem;}
-#eats-ur-brain .tx:nth-last-of-type(11) {font-size:1.970010rem;}
-#eats-ur-brain .tx:nth-last-of-type(12) {font-size:1.957804rem;}
-#eats-ur-brain .tx:nth-last-of-type(13) {font-size:1.943297rem;}
-#eats-ur-brain .tx:nth-last-of-type(14) {font-size:1.925826rem;}
-#eats-ur-brain .tx:nth-last-of-type(15) {font-size:1.904481rem;}
-#eats-ur-brain .tx:nth-last-of-type(16) {font-size:1.877998rem;}
-#eats-ur-brain .tx:nth-last-of-type(17) {font-size:1.844637rem;}
-#eats-ur-brain .tx:nth-last-of-type(18) {font-size:1.802076rem;}
-#eats-ur-brain .tx:nth-last-of-type(19) {font-size:1.747500rem;}
-#eats-ur-brain .tx:nth-last-of-type(20) {font-size:1.678326rem;}
-#eats-ur-brain .tx:nth-last-of-type(21) {font-size:1.594223rem;}
-#eats-ur-brain .tx:nth-last-of-type(22) {font-size:1.500000rem;}
-#eats-ur-brain .tx:nth-last-of-type(23) {font-size:1.405777rem;}
-#eats-ur-brain .tx:nth-last-of-type(24) {font-size:1.321674rem;}
-#eats-ur-brain .tx:nth-last-of-type(25) {font-size:1.252500rem;}
-#eats-ur-brain .tx:nth-last-of-type(26) {font-size:1.197924rem;}
-#eats-ur-brain .tx:nth-last-of-type(27) {font-size:1.155363rem;}
-#eats-ur-brain .tx:nth-last-of-type(28) {font-size:1.122002rem;}
-#eats-ur-brain .tx:nth-last-of-type(29) {font-size:1.095519rem;}
-#eats-ur-brain .tx:nth-last-of-type(30) {font-size:1.074174rem;}
-#eats-ur-brain .tx:nth-last-of-type(31) {font-size:1.056703rem;}
-#eats-ur-brain .tx:nth-last-of-type(32) {font-size:1.042196rem;}
-#eats-ur-brain .tx:nth-last-of-type(33) {font-size:1.029990rem;}
-#eats-ur-brain .tx:nth-last-of-type(34) {font-size:1.019598rem;}
-#eats-ur-brain .tx:nth-last-of-type(35) {font-size:1.010655rem;}
-#eats-ur-brain .tx:nth-last-of-type(36) {font-size:1.002886rem;}
+#eats-ur-brain .tx {font-size: var(--fs-min)}
+#eats-ur-brain .tx:nth-last-of-type(1) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(2) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(3) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(4) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(5) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(6) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(7) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 1.000000));}
+#eats-ur-brain .tx:nth-last-of-type(8) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.997114));}
+#eats-ur-brain .tx:nth-last-of-type(9) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.989345));}
+#eats-ur-brain .tx:nth-last-of-type(10) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.980402));}
+#eats-ur-brain .tx:nth-last-of-type(11) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.970010));}
+#eats-ur-brain .tx:nth-last-of-type(12) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.957804));}
+#eats-ur-brain .tx:nth-last-of-type(13) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.943297));}
+#eats-ur-brain .tx:nth-last-of-type(14) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.925826));}
+#eats-ur-brain .tx:nth-last-of-type(15) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.904481));}
+#eats-ur-brain .tx:nth-last-of-type(16) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.877998));}
+#eats-ur-brain .tx:nth-last-of-type(17) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.844637));}
+#eats-ur-brain .tx:nth-last-of-type(18) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.802076));}
+#eats-ur-brain .tx:nth-last-of-type(19) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.747500));}
+#eats-ur-brain .tx:nth-last-of-type(20) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.678326));}
+#eats-ur-brain .tx:nth-last-of-type(21) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.594223));}
+#eats-ur-brain .tx:nth-last-of-type(22) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.500000));}
+#eats-ur-brain .tx:nth-last-of-type(23) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.405777));}
+#eats-ur-brain .tx:nth-last-of-type(24) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.321674));}
+#eats-ur-brain .tx:nth-last-of-type(25) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.252500));}
+#eats-ur-brain .tx:nth-last-of-type(26) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.197924));}
+#eats-ur-brain .tx:nth-last-of-type(27) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.155363));}
+#eats-ur-brain .tx:nth-last-of-type(28) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.122002));}
+#eats-ur-brain .tx:nth-last-of-type(29) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.095519));}
+#eats-ur-brain .tx:nth-last-of-type(30) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.074174));}
+#eats-ur-brain .tx:nth-last-of-type(31) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.056703));}
+#eats-ur-brain .tx:nth-last-of-type(32) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.042196));}
+#eats-ur-brain .tx:nth-last-of-type(33) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.029990));}
+#eats-ur-brain .tx:nth-last-of-type(34) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.019598));}
+#eats-ur-brain .tx:nth-last-of-type(35) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.010655));}
+#eats-ur-brain .tx:nth-last-of-type(36) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * 0.002886));}
 }
 .thread-tail:hover > div:nth-of-type(1) {transition-delay: .000s; transition-duration: .07s}
 .thread-tail:hover > div:nth-of-type(1) .time {transition-delay: .000s; transition-duration: .07s}

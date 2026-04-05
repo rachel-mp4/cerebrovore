@@ -4,7 +4,7 @@
     {{- if .Nick -}}<span class="nick">{{- .Nick -}}</span>{{- end -}}
     {{- if not .Anon -}}<span class="handle">@{{- .Username -}}</span>{{- end -}}
     <button class="reply"> #{{- idtoa .ID -}}</button>
-    <time class="time" timestamp="{{formatTime .PostedAt}}"></time>
+    <time class="time" datetime="{{formatTime .PostedAt}}"></time>
   </div>
   <div class="body">
     {{- if .ImageContent -}}

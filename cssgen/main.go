@@ -7,10 +7,10 @@ import (
 
 // generates css styles that you don't wanna do by hand: "go run ./cssgen > ./static/css/postsizes.go"
 func main() {
-	fmt.Println("@media (min-width: 36rem) {")
+	fmt.Println("@media (min-width: 36rem) {\n#eats-ur-brain .tx {font-size: var(--fs-min)}")
 	i := 1
 	var v = generateVal(i)
-	for v > 1 {
+	for v > 0 {
 		fmt.Println(generateCss(i, v))
 		i++
 		v = generateVal(i)
@@ -28,11 +28,12 @@ func generateVal(i int) float64 {
 	ataned := math.Atan(scale)
 	rescaled := ataned / -2.6
 	reoffset := rescaled + 1.5
-	return math.Max(math.Min(2, reoffset), 1)
+	clamped := math.Max(math.Min(2, reoffset), 1)
+	return clamped - 1
 }
 
 func generateCss(i int, f float64) string {
-	return fmt.Sprintf("#eats-ur-brain .tx:nth-last-of-type(%d) {font-size:%frem;}", i, f)
+	return fmt.Sprintf("#eats-ur-brain .tx:nth-last-of-type(%d) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * %f));}", i, f)
 }
 
 func generateDelays(i int) string {
