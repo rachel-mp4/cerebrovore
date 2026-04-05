@@ -1,12 +1,25 @@
 package utils
 
 import (
+	"strings"
 	"time"
 )
 
 func RemainingTime(t time.Time) string {
 	dur := t.Sub(time.Now())
 	return dur.Round(time.Second).String()
+}
+
+func TimeSince(t *time.Time) string {
+	if t == nil {
+		return ""
+	}
+	dur := time.Now().Sub(*t)
+	res := strings.TrimSuffix(dur.Round(time.Minute).String(), "0s")
+	if res == "" {
+		return "0m"
+	}
+	return res
 }
 
 func FormatTime(t *time.Time) string {

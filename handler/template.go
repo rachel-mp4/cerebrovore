@@ -170,6 +170,7 @@ func newTemplate(files ...string) *template.Template {
 				"maxBumps":         utils.MaxBumps,
 				"formatTime":       utils.FormatTime,
 				"remainingTime":    utils.RemainingTime,
+				"timeSince":        utils.TimeSince,
 				"ftime":            utils.FTime,
 				"topicOrIdtoa":     types.TopicOrIdtoa,
 				"percentRemaining": utils.PercentRemaining,

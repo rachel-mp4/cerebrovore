@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 
@@ -36,6 +37,8 @@ type Handler struct {
 
 	// reqcode is true if the current id provider requires invite codes for account registration
 	reqcode bool
+
+	commit string
 }
 
 type CompiledAssets struct {
@@ -105,6 +108,11 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	t := time.Now()
 	h.live = &t
 	h.reqcode = reqcode
+	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+	if err != nil {
+		panic(err)
+	}
+	h.commit = strings.TrimSpace(string(out))
 
 	return h
 }
@@ -158,6 +166,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		baseresp
 		Version string
 		Time    *time.Time
+		Commit  string
 	}
 	base, err := h.makebase("brainworm", r.Context())
 	if err != nil {
@@ -167,6 +176,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		*base,
 		h.notes[0].Release,
 		h.live,
+		h.commit,
 	})
 	if err != nil {
 		clog.Warn("%s", err)

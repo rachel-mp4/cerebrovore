@@ -19,5 +19,7 @@
   <p>
     <a href="/patch-notes">view patch notes</a>
   </p>
-  <p><a href="https://github.com/rachel-mp4/cerebrovore">cerebrovore</a> {{.Version}} <span>LIVE SINCE <time class="time" timestamp="{{formatTime .Time}}">{{formatTime .Time}}</time></span></p>
+  <p>
+    this site runs <a href="https://github.com/rachel-mp4/cerebrovore/commit/{{.Commit}}">cerebrovore#{{.Commit}}</a> release {{.Version}}. <span>it was last restarted <time class="time" timestamp="{{formatTime .Time}}">{{timeSince .Time}}</time> ago</span>
+  </p>
 {{end}}

@@ -21,6 +21,10 @@ func getNotes() []types.Patch {
 					Type: "fix",
 					Name: "correct maxlength in new thread topic field in form",
 				},
+				{
+					Type: "upgrade",
+					Name: "add details to site footer",
+				},
 			},
 		},
 		{
