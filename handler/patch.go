@@ -17,6 +17,10 @@ func getNotes() []types.Patch {
 					Type: "feature",
 					Name: "setting for min and max font size in thread",
 				},
+				{
+					Type: "fix",
+					Name: "correct maxlength in new thread topic field in form",
+				},
 			},
 		},
 		{
