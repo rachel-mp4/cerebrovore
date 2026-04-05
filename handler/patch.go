@@ -10,6 +10,16 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.0.1",
+			Timestamp: "2026-04-05",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "setting for min and max font size in thread",
+				},
+			},
+		},
+		{
 			Release:   "β.0.0",
 			Timestamp: "2026-04-03",
 			Notes: []types.Note{
