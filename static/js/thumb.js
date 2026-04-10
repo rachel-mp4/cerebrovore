@@ -6,21 +6,21 @@ document.addEventListener("click", (e) => {
   const isThumb = iw.classList.contains("thumb")
   if (isThumb) {
     const imgs = iw.querySelectorAll("img")
-    const src = iw.getAttribute("data-full")
+    const src = iw.dataset.full
+    iw.classList.remove("thumb")
     if (src) {
       imgs.forEach((img) => {
         img.src = src
       })
-      iw.classList.remove("thumb")
     }
   } else {
     const imgs = iw.querySelectorAll("img")
-    const src = iw.getAttribute("data-thumb")
+    const src = iw.dataset.thumb
+    iw.classList.add("thumb")
     if (src) {
       imgs.forEach((img) => {
         img.src = src
       })
-      iw.classList.add("thumb")
     }
   }
 })

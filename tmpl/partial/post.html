@@ -2,7 +2,7 @@
 <div class="tx {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}; --accentl: {{colorToA .Color}}80">
   <div class="header">
     {{- if .Nick -}}<span class="nick">{{- .Nick -}}</span>{{- end -}}
-    {{- if not .Anon -}}<span class="handle">@{{- .Username -}}</span>{{- end -}}
+    {{- if not .Anon -}}<span class="handle"><a href="/profile/{{- .Username -}}">@{{- .Username -}}</a></span>{{- end -}}
     <button class="reply"> #{{- idtoa .ID -}}</button>
     <time class="time" datetime="{{formatTime .PostedAt}}"></time>
   </div>

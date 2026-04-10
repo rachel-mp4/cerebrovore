@@ -12,7 +12,6 @@ import (
 
 	"github.com/disintegration/imaging"
 
-	"image"
 	_ "image/gif"
 	_ "image/jpeg"
 	_ "image/png"
@@ -149,7 +148,9 @@ func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	thumb := r.URL.Query().Get("thumb")
 	ext := ""
-	if thumb != "" {
+	if thumb == "jpg" {
+		ext = ".jpg"
+	} else if thumb != "" {
 		ext = ".png"
 	}
 	dir := filepath.Join("uploads", cid[:3], fmt.Sprintf("%s%s", cid[3:], ext))
@@ -216,19 +217,44 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 // should look like "uploads/74d/670818d4421f572b6.jpeg.png". this way i can
 // easily find the thumbnail when user requests it by just appending .png to
 // the content id
+// this DOES work for gifs, but i just ignore the gif thumbnails and only
+// serve the full size gifs
 func genThumbnail(cid string) error {
+	if strings.HasSuffix(cid, ".gif") {
+		return nil
+	}
 	dir := filepath.Join("uploads", cid[:3], cid[3:])
 	file, err := os.Open(dir)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	img, _, err := image.Decode(file)
+	img, err := imaging.Decode(file, imaging.AutoOrientation(true))
 	if err != nil {
 		return err
 	}
-	thumb := imaging.Fit(img, 200, 200, imaging.NearestNeighbor)
+	thumb := imaging.Fit(img, 192, 192, imaging.NearestNeighbor)
 	thumbpath := filepath.Join("uploads", cid[:3], fmt.Sprintf("%s.png", cid[3:]))
+	err = imaging.Save(thumb, thumbpath)
+	return nil
+}
+
+func genPFPThumb(cid string) error {
+	if strings.HasSuffix(cid, ".gif") {
+		return nil
+	}
+	dir := filepath.Join("uploads", cid[:3], cid[3:])
+	file, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	img, err := imaging.Decode(file, imaging.AutoOrientation(true))
+	if err != nil {
+		return err
+	}
+	thumb := imaging.Fit(img, 384, 384, imaging.Lanczos)
+	thumbpath := filepath.Join("uploads", cid[:3], fmt.Sprintf("%s.jpg", cid[3:]))
 	err = imaging.Save(thumb, thumbpath)
 	return nil
 }
@@ -608,6 +634,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 			&t.ReplyCount,
 			utils.ColorToAp(t.OP.Color),
 			true,
+			c.Username,
 		},
 		Thread:   t,
 		Watched:  watched,
@@ -741,7 +768,7 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		BumpCursor   *time.Time
 		ThreadThumbs []types.Thread
 	}
-	base, err := h.makebase("catalog", r.Context())
+	base, err := h.makebase("catalog", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
@@ -802,7 +829,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		BumpCursor   *time.Time
 		ThreadThumbs []types.Thread
 	}
-	base, err := h.makebase("threads", r.Context())
+	base, err := h.makebase("threads", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}

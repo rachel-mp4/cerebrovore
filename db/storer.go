@@ -102,6 +102,15 @@ type Storer interface {
 	Unban(id int, ctx context.Context) error
 	Reject(id int, ctx context.Context) error
 	DeleteUsersPostsAndThreads(username string, ctx context.Context) error
+
+	// profile methods
+	InitializeProfile(username string, ctx context.Context) error
+	DeleteProfile(username string, ctx context.Context) error
+	UpdateProfile(profile *types.ProfileHead, ctx context.Context) error
+	UpdateProfilePicture(profile *types.ProfileHead, ctx context.Context) error
+	UpdateProfileContents(username string, profile *types.ProfileExtras, ctx context.Context) error
+	GetProfile(username string, ctx context.Context) (*types.ProfileHead, error)
+	GetFullProfile(username string, ctx context.Context) (*types.Profile, error)
 }
 
 type Backlink struct {

@@ -60,7 +60,12 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /", h.AM(h.home))
 	mux.HandleFunc("GET /catalog", h.AM(h.catalog))
 	mux.HandleFunc("GET /patch-notes", h.AM(h.patchnotes))
-	mux.HandleFunc("GET /me", h.AM(h.me))
+	mux.HandleFunc("GET /settings", h.AM(h.me))
+	mux.HandleFunc("GET /profile/{username}", h.AM(h.profile))
+	mux.HandleFunc("POST /profile", h.AM(h.postProfile))
+	mux.HandleFunc("GET /profile", h.AM(h.editProfile))
+	mux.HandleFunc("POST /avatar", h.AM(h.postAvatar))
+	mux.HandleFunc("POST /profile-contents", h.AM(h.postContents))
 	mux.HandleFunc("GET /m", h.AM(h.moderate))
 	mux.HandleFunc("POST /delete-post", h.AM(h.postDeletePost))
 	mux.HandleFunc("POST /ban-user", h.AM(h.postBanUser))
@@ -167,8 +172,9 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		Version string
 		Time    *time.Time
 		Commit  string
+		Link    string
 	}
-	base, err := h.makebase("brainworm", r.Context())
+	base, err := h.makebase("brainworm", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("getbumps %s", err)
 	}
@@ -177,6 +183,7 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		h.notes[0].Release,
 		h.live,
 		h.commit,
+		os.Getenv("DISCORD_LINK"),
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -192,7 +199,7 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	type ntresp struct {
 		baseresp
 	}
-	base, err := h.makebase("new thread", r.Context())
+	base, err := h.makebase("new thread", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
@@ -212,6 +219,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		Accent     string
 		ReplyCount *int
 		Websockets bool
+		Link       string
 	}
 	err := loginT.ExecuteTemplate(w, "base", loginresp{
 		"login",
@@ -219,6 +227,7 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		"var(--primary)",
 		nil,
 		false,
+		os.Getenv("DISCORD_LINK"),
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -235,6 +244,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 		Invite       string
 		RequiresCode bool
 		Websockets   bool
+		Link         string
 	}
 	invite := r.URL.Query().Get("invite")
 	err := accountT.ExecuteTemplate(w, "base", loginresp{
@@ -245,6 +255,7 @@ func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 		invite,
 		h.reqcode,
 		false,
+		os.Getenv("DISCORD_LINK"),
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -299,6 +310,7 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.db.CreateSession(id, username, r.Context())
+	h.db.InitializeProfile(username, r.Context())
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -339,6 +351,7 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	h.db.CreateSession(myid, username, r.Context())
+	h.db.InitializeProfile(username, r.Context())
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }
 
@@ -350,7 +363,7 @@ func (h *Handler) beep(c *Client, w http.ResponseWriter, r *http.Request) {
 	type beepresp struct {
 		baseresp
 	}
-	base, err := h.makebase("beep", r.Context())
+	base, err := h.makebase("beep", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
@@ -376,7 +389,7 @@ func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
 		Username     string
 		RequiresCode bool
 	}
-	base, err := h.makebase("me", r.Context())
+	base, err := h.makebase("me", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}

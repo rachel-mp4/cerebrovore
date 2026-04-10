@@ -22,6 +22,8 @@ var patchT *template.Template
 var codeT *template.Template
 var codeerrT *template.Template
 var banT *template.Template
+var profileT *template.Template
+var editprofileT *template.Template
 
 func init() {
 	homeT = newTemplate(
@@ -95,6 +97,23 @@ func init() {
 		"./tmpl/thread.html",
 		"./tmpl/partial/post.html",
 	)
+	profileT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/profile.html",
+		"./tmpl/partial/post.html",
+	)
+	editprofileT = newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/editprofile.html",
+	)
 	newthreadT = newTemplate(
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
@@ -141,9 +160,10 @@ type baseresp struct {
 	ReplyCount     *int
 	Accent         string
 	Websockets     bool
+	Username       string
 }
 
-func (h *Handler) makebase(title string, ctx context.Context) (*baseresp, error) {
+func (h *Handler) makebase(title string, username string, ctx context.Context) (*baseresp, error) {
 	tt, err := h.db.GetBumps(ctx)
 	return &baseresp{
 		h.ca,
@@ -153,6 +173,7 @@ func (h *Handler) makebase(title string, ctx context.Context) (*baseresp, error)
 		nil,
 		"var(--primary)",
 		true,
+		username,
 	}, err
 }
 
@@ -163,6 +184,7 @@ func newTemplate(files ...string) *template.Template {
 				"idtoa":            utils.IDToA,
 				"intto36a":         utils.IntTo36A,
 				"renderImageBody":  utils.RenderImageBody,
+				"renderAvatarPFP":  utils.RenderAvatarPFP,
 				"renderTextBody":   utils.RenderTextBody,
 				"colorIsDark":      utils.ColorIsDark,
 				"colorToA":         utils.ColorToAp,
@@ -174,6 +196,14 @@ func newTemplate(files ...string) *template.Template {
 				"ftime":            utils.FTime,
 				"topicOrIdtoa":     types.TopicOrIdtoa,
 				"percentRemaining": utils.PercentRemaining,
+				"boolPtrIsTrue":    boolPtrIsTrue,
 			}).ParseFiles(files...),
 	)
+}
+
+func boolPtrIsTrue(ptr *bool) bool {
+	if ptr == nil {
+		return false
+	}
+	return *ptr
 }

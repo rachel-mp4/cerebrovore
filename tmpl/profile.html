@@ -1,0 +1,73 @@
+{{define "content"}}
+  <div class="profile-head">
+    {{if .Profile.ProfileHead.Avatar}}{{renderAvatarPFP .Profile.ProfileHead.Avatar .Profile.ProfileHead.DisplayName .Profile.ProfileHead.IsPixelArt}}{{end}}
+    <div class="profile-names">
+      {{if .Profile.ProfileHead.DisplayName}}<h1>{{.Profile.ProfileHead.DisplayName}}</h1><h2>@{{.Profile.ProfileHead.Username}}</h2>{{else}}<h1>@{{.Profile.Username}}</h1>{{end}}
+      {{if .Profile.ProfileHead.Status}}<h3>{{.Profile.ProfileHead.Status}}</h3>{{end}}
+      {{if .Profile.LastSeenLocation}}
+        <div>
+          last seen in <a href="/t/{{idtoa .Profile.LastSeenLocation}}">{{if .Profile.LastSeenTopic}}{{.Profile.LastSeenTopic}}{{else}}thread #{{idtoa .Profile.LastSeenLocation}}{{end}}</a> {{timeSince .Profile.LastSeenTime}} ago
+        </div>
+      {{end}}
+    </div>
+  </div>
+  <div class="contents">
+    {{if .Profile.ProfileHead.Bio}}<p class="bio">{{.Profile.ProfileHead.Bio}}</p>{{end}}
+    {{if .Profile.Friends}}
+      {{with .Profile.FriendsHeader}}<h3>{{.}}</h3>{{end}}
+      <div class="friends">
+        {{range .Profile.Friends}}
+          {{if .}}
+            <div class="profile-friend" style="--accent:{{colorToA .ProfileHead.Color}}; --accentl:{{colorToA .ProfileHead.Color}}80">
+              {{if .ProfileHead.Avatar}}
+                {{renderAvatarPFP .ProfileHead.Avatar .ProfileHead.DisplayName .ProfileHead.IsPixelArt}}
+              {{end}}
+              <a href="/profile/{{.Username}}">{{with .Comment}}{{.}}{{else with .ProfileHead.DisplayName}}{{.}}{{else}}{{.Username}}{{end}}</a>
+            </div>
+          {{end}}
+        {{end}}
+      </div>
+    {{end}}
+    {{if .Profile.Posts}}
+      {{with .Profile.PostsHeader}}<h3>{{.}}</h3>{{end}}
+      <div class="posts">
+        {{range .Profile.Posts}}
+          {{if .}}
+            <div class="profile-post">
+              {{if .JustBody}}
+                <div class="body">
+                  {{- if .Post.ImageContent -}}
+                    {{- renderImageBody .Post.ImageContent.CID .Post.ImageContent.Alt -}}
+                  {{- end -}}
+                  {{- if .Post.TextContent -}}
+                    <div>
+                      {{- renderTextBody .Post.TextContent.Body -}}
+                    </div>
+                  {{- end -}}
+                </div>
+              {{else}}
+                {{template "post" .Post}}
+              {{end}}
+              {{if .Comment}}{{.Comment}}{{end}}
+            </div>
+          {{end}}
+        {{end}}
+      </div>
+    {{end}}
+    {{if .Profile.Links}}
+      {{with .Profile.LinksHeader}}<h3>{{.}}</h3>{{end}}
+      <ul class="links">
+        {{range .Profile.Links}}
+          {{if .}}
+            <li class="profile-link">
+              <a href="{{.Link}}" rel="noopener noreferrer">{{if .Comment}}{{.Comment}}{{else}}{{.Link}}{{end}}</a>
+            </li>
+          {{end}}
+        {{end}}
+      </ul>
+    {{end}}
+  </div>
+  {{with .Profile.AtIdentifier}}<iframe src="https://88x31.store/embed/liked-by?did={{.}}&hover-scale=1.1&hover-rotate=3&initial-size=2&cache=600&margin=10" style="width:100%; height: 500px;"></iframe>{{end}}
+  {{if eq .Username .Profile.Username}}<div><a href="/profile">edit profile</a></div>{{end}}
+  <script src="/js/thumb.js"></script>
+{{end}}

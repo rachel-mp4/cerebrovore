@@ -27,7 +27,6 @@ const tft = (then) => {
   }
 }
 times.forEach((time) => {
-  console.log("try")
   const ts = time.getAttribute("datetime")
   time.innerText = `posted ${tft(Date.parse(ts))}`
 })

@@ -1,0 +1,134 @@
+{{define "content"}}
+  <h1>
+    these three forms are separate. only update one at a time!
+  </h1>
+  <p>
+    (when you click on save, it saves ALL the values that are highlighted purple—and ALL other UNSAVED CHANGES to this page are lost!)
+  </p>
+  <h2>
+    edit profile head
+  </h2>
+  <form action="/profile" method="POST">
+    <div class="form-field">
+      <label for="display-name">display name</label>
+      <input type="text" name="display-name" maxlength="32" {{if .Profile.DisplayName}}value="{{.Profile.DisplayName}}"{{end}}>
+    </div>
+    <div class="form-field">
+      <label for="color">color</label>
+      <input type="color" name="color" {{if .Profile.Color}}value="{{colorToA .Profile.Color}}"{{end}}>
+    </div>
+    <div class="form-field">
+      <label for="status">status</label>
+      <input type="text" name="status" {{if .Profile.Status}}value="{{.Profile.Status}}"{{end}} maxlength="144">
+    </div>
+    <div class="form-field">
+      <label for="bio">bio</label>
+      <textarea name="bio" maxlength="1000">{{if .Profile.Bio}}{{.Profile.Bio}}{{end}}</textarea>
+    </div>
+    <div class="form-field">
+      <label for="mono">bio should be monospaced? (perhaps if you have ascii art in it)</label>
+      <input type="checkbox" name="mono" {{if boolPtrIsTrue .Profile.BioIsMono}}checked="yes"{{end}}>
+    </div>
+    <div class="form-field">
+      <label for="at-identifier" style="max-width: 40rem"><a href="https://atproto.com/guides/identity#identifiers">at-identifier</a> (either handle or DID, but i convert your handle to DID and save it accordingly (to fetch your 88x31 button collection from <a href="https://88x31.store">88x31.store</a>, if you'd like))</label>
+      <input type="text" name="at-identifier" {{with .Profile.AtIdentifier}}value="{{.}}"{{end}}>
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="save profile head"/>
+    </div>
+  </form>
+  <hr>
+  <h2 style="margin-top: 2rem">
+    edit profile avatar
+  </h2>
+  <form action="/avatar" method="POST" enctype="multipart/form-data">
+    <div class="form-field">
+      <label for="avatar">avatar</label>
+      <input type="file" name="avatar" accept="image/png, image/jpeg, image/gif, image/webp"> 
+    </div>
+    <div class="form-field">
+      <label for="pixel">is pixel art?</label>
+      <input type="checkbox" name="pixel" {{if boolPtrIsTrue .Profile.IsPixelArt}}checked="yes"{{end}}>
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="save profile avatar"/>
+    </div>
+  </form>
+  <hr>
+  <h2 style="margin-top: 2rem">
+    edit profile contents
+  </h2>
+  <p>
+    (only adds as many fields to your profile as are filled in)
+  </p>
+  <p>
+    ((sorry that this form is so messy! and that all the forms are a bit messy... wannna add features and im too perfectionist so if i worry about the aesthetics i will not add features....))
+  </p>
+  <form action="/profile-contents" method="POST">
+    <h3>featured accounts</h3>
+    <div class="form-field">
+      <label for="f-header">account subheader text</label>
+      <input type="text" name="f-header" {{with .Profile.FriendsHeader}}value="{{.}}"{{end}}>
+    </div>
+    {{range $index, $el := .Profile.Friends}}
+      <div class="content-tuple">
+        <div class="form-field">
+          <label for="username">username</label>
+          <input type="text" name="username" {{if $el}}value="{{$el.Username}}"{{end}}>
+        </div>
+        <div class="form-field">
+          <label for="f-comment">comment</label>
+          <input type="text" name="f-comment" {{if and $el $el.Comment}}value="{{$el.Comment}}"{{end}}>
+        </div>
+      </div>
+    {{end}}
+    <h3>featured posts</h3>
+    <div class="form-field">
+      <label for="p-header">post subheader text</label>
+      <input type="text" name="p-header" {{with .Profile.PostsHeader}}value="{{.}}"{{end}}>
+    </div>
+    {{range $index, $el := .Profile.Posts}}
+      <div class="content-tuple">
+        <div class="form-field">
+          <label for="post">post id</label>
+      <input type="text" name="post" {{if $el}}value="{{idtoa $el.PostId}}"{{end}}>
+        </div>
+        <div class="form-field">
+          <label for="body">just include post body</label>
+          <input type="hidden" name="body" value="skip">
+          <input type="checkbox" name="body" {{if and $el $el.JustBody}}checked{{end}}>
+        </div>
+        <div class="form-field">
+          <label for="p-comment">comment</label>
+          <input type="text" name="p-comment" {{if and $el $el.Comment}}value="{{$el.Comment}}"{{end}}>
+        </div>
+      </div>
+    {{end}}
+    <p>
+      (((SORRY! ONLY A BIT MORE!)))
+    </p>
+    <p>
+      ((((i'm just trying to avoid as much javascript as possible, i hope you'll maybe understand. wanna access the latent unactualized potentials of the past in order to create something new for the future or maybe i just have brain damage))))
+    </p>
+    <h3>featured links</h3>
+    <div class="form-field">
+      <label for="l-header">link subheader text</label>
+      <input type="text" name="l-header" {{with .Profile.LinksHeader}}value="{{.}}"{{end}}>
+    </div>
+    {{range $index, $el := .Profile.Links}}
+      <div class="content-tuple">
+        <div class="form-field">
+          <label for="link">link</label>
+          <input type="text" name="link" {{if $el}}value="{{$el.Link}}"{{end}}>
+        </div>
+        <div class="form-field">
+          <label for="l-comment">comment</label>
+          <input type="text" name="l-comment" {{if and $el $el.Comment}}value="{{$el.Comment}}"{{end}}>
+        </div>
+      </div>
+    {{end}}
+    <div class="form-submit">
+      <input type="submit" value="save profile contents"/>
+    </div>
+  </form>
+{{end}}

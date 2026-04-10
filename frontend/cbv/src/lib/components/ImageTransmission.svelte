@@ -9,7 +9,7 @@
 </script>
 
 {#if isgif}
-  <div class="image-wrapper">
+  <div class="image-wrapper thumb">
     <img class="bg-img" {src} {alt} /><img class="fg-img" {src} {alt} />
   </div>
 {:else}

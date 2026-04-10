@@ -9,6 +9,8 @@ const REPLY_LIMIT = 1296
 const THREADS_PER_INDEX_PAGE = 20
 const THREADS_PER_CATALOG_PAGE = 100
 
+var PURPLE = AToColorf("#452faa")
+
 func MaxReplies(replyCount int) bool {
 	return replyCount >= REPLY_LIMIT
 }

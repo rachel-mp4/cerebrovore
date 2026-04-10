@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
-	"strings"
 )
 
 type Provider interface {
@@ -41,11 +40,15 @@ var (
 )
 
 var stripper = regexp.MustCompile(`\s`)
+var usernameRE = regexp.MustCompile(`^[0-9a-z]+$`)
 
 func prevalidate(username string) error {
 	stripped := stripper.ReplaceAllString(username, "")
-	if stripped != username || strings.Contains(username, ",") {
-		return fmt.Errorf("username contains illegal characters: %w", ErrBadData)
+	if stripped != username || !usernameRE.Match([]byte(username)) {
+		return fmt.Errorf("username should only contain a-z or 0-9: %w", ErrBadData)
+	}
+	if len(stripped) > 36 {
+		return fmt.Errorf("username must be at most 36 characters: %w", ErrBadData)
 	}
 	return nil
 }

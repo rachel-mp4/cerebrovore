@@ -224,14 +224,17 @@ func ExpandUrls(s string) string {
 }
 
 // for some reason i felt like this was stupid a few days ago...
+// btw the reason why images are duplicated is because we have one
+// with z-index negative something thats full opacity and the other
+// with z-index positive thats like half opacity, the result is that
+// it looks normal, but this way we can wedge vfx between the two that
+// only half obscure it. maybe there's a better way with svg filter
+// and blend modes, but this is dead simple at the cost of more verbose
+// html
 func RenderImageBody(cid string, alt *string) template.HTML {
 	var out strings.Builder
 	isgif := strings.HasSuffix(cid, ".gif")
-	out.WriteString(`<div class="image-wrapper`)
-	if !isgif {
-		out.WriteString(` thumb`)
-	}
-	out.WriteString(`"`)
+	out.WriteString(`<div class="image-wrapper thumb"`)
 	if !isgif {
 		out.WriteString(` data-thumb="/blob?cid=`)
 		out.WriteString(html.EscapeString(cid))

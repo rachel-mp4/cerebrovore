@@ -247,7 +247,7 @@ func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error
 		AND reply_count + 1 < $1
 		ORDER BY bumped_at DESC
 		LIMIT 5
-		`, utils.BUMP_LIMIT)
+		`, utils.REPLY_LIMIT)
 	if err != nil {
 		if err == pgx.ErrNoRows {
 			return nil, nil

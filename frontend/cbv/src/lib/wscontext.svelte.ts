@@ -318,7 +318,6 @@ export class WSContext {
           : item
       })
     } else {
-      console.log("push message init")
       this.pushItem({
         type: 'message',
         id: id,
@@ -341,7 +340,6 @@ export class WSContext {
           : item
       })
     } else {
-      console.log("push media init")
       this.pushItem({
         type: 'image',
         id: id,
@@ -363,7 +361,6 @@ export class WSContext {
           : item
       })
     } else {
-      console.log("push mute init")
       this.pushItem({
         type: 'enby',
         id: id,
@@ -384,7 +381,6 @@ export class WSContext {
           : item
       })
     } else {
-      console.log("push message pub")
       this.pushItem({
         type: "message",
         id: id,
@@ -414,7 +410,6 @@ export class WSContext {
           : item
       })
     } else {
-      console.log("push media pub")
       this.pushItem({
         type: "image",
         id: id,
@@ -438,7 +433,6 @@ export class WSContext {
       })
     } else {
 
-      console.log("push message insert")
       this.pushItem({
         type: "message",
         id: id,
@@ -462,7 +456,6 @@ export class WSContext {
       })
     } else {
 
-      console.log("push message delete")
       this.pushItem({
         type: "message",
         id: id,
@@ -486,7 +479,6 @@ export class WSContext {
       color = item?.lrcdata.init?.color
     }
     this.log = [...this.log.filter(li => li.time > Date.now() - 3000), { id: id, color: color, binary: bstring, time: time, type: type, key: Math.random() }]
-    console.log(this.log.length)
   }
 }
 
@@ -531,7 +523,6 @@ export const connectTo = (url: string, ctx: WSContext) => {
     if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
       const shouldScroll = parseEvent(event, ctx)
       if (shouldScroll !== 0) {
-        console.log("scrolling there")
         setTimeout(() => {
           el.scrollTo(0, el.scrollHeight)
         }, 0)
@@ -549,14 +540,33 @@ export const connectTo = (url: string, ctx: WSContext) => {
   ws.onclose = (e) => {
     console.log(e)
     if (ws === ctx.ws) {
-      ctx.connected = false
+      if (ctx.connected === true) {
+        const timeout = setTimeout(() => {
+          window.location.reload()
+        }, 10000)
+        ctx.systemMessage = "DISCONNECTED! refreshing in 10 seconds, click to cancel"
+        document.addEventListener("click", () => {
+          ctx.systemMessage = "refresh aborted!"
+          clearTimeout(timeout)
+        })
+      }
     }
   };
   ws.onerror = (event) => {
     console.log("errored:", event)
     console.log("readyState:", ws.readyState)
     if (ws === ctx.ws) {
-      ctx.connected = false
+      if (ctx.connected === true) {
+        const timeout = setTimeout(() => {
+          window.location.reload()
+        }, 10000)
+        ctx.systemMessage = "DISCONNECTED! refreshing in 10 seconds, click to cancel"
+        document.addEventListener("click", () => {
+          ctx.systemMessage = "refresh aborted!"
+          clearTimeout(timeout)
+        })
+
+      }
     }
   }
   ctx.ws = ws

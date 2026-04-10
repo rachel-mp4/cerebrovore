@@ -22,4 +22,11 @@
       <input type="submit" value="create account"/>
     </div>
   </form>
+  {{if .Link}}
+    <div>
+      <a href="{{.Link}}">
+        maybe join the discord server? {{if .RequiresCode}} we'll give you an invite code if you need one! {{end}}
+      </a>
+    </div>
+  {{end}}
 {{end}}

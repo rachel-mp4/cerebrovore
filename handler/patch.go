@@ -10,6 +10,38 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.1.0",
+			Timestamp: "2026-04-10",
+			Notes: []types.Note{
+				{
+					Type: "release",
+					Name: "beta 1.0 is out!",
+				},
+				{
+					Type: "feature",
+					Name: "profiles!",
+				},
+				{
+					Type:        "downgrade :c",
+					Name:        "remove a bit of freedom in usernames! sorry!",
+					Description: "i had to coerce some pre-existing usernames to fit the new validation pattern. i'm doing this because profiles => usernames should be url safe, and perhaps at some point in the future, you might be able to have a profile page which is a subdomain. but that would actually require even more validation.... so this is the middleground for now, that makes nobody happy :)",
+				},
+				{
+					Type:        "fix",
+					Name:        "auto reload after disconnect",
+					Description: "click anywhere to cancel! should be self-explanatory",
+				},
+				{
+					Type: "upgrade",
+					Name: "improve consistency around click to view fullsize image",
+				},
+				{
+					Type: "meta",
+					Name: "add invites to dev / community discord server",
+				},
+			},
+		},
+		{
 			Release:   "β.0.1",
 			Timestamp: "2026-04-05",
 			Notes: []types.Note{
@@ -297,7 +329,7 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		baseresp
 		Patches []types.Patch
 	}
-	base, err := h.makebase("patch notes", r.Context())
+	base, err := h.makebase("patch notes", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}

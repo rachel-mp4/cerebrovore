@@ -1,9 +1,6 @@
 {{define "left-sidebar"}}
   <div class="sidebar-group">
     <div>
-      <a href="/me">me</a>
-    </div>
-    <div>
       <a href="/">go home</a>
     </div>
     <div>
@@ -11,6 +8,12 @@
     </div>
     <div>
       <a href="/catalog">view catalog</a>
+    </div>
+    <div>
+      <a href="/profile/{{.Username}}">view my profile</a>
+    </div>
+    <div>
+      <a href="/settings">view my settings</a>
     </div>
     <div>
       <a href="/new">start a new thread</a>

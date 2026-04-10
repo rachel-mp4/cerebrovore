@@ -21,7 +21,7 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 		baseresp
 		Appeals []types.Appeal
 	}
-	base, err := h.makebase("moderation", r.Context())
+	base, err := h.makebase("moderation", c.Username, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}

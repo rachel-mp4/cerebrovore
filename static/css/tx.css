@@ -22,9 +22,6 @@
   position: relative;
   display: inline-block;
   float: left;
-}
-
-.image-wrapper[data-thumb] > img {
   cursor: pointer;
 }
 
