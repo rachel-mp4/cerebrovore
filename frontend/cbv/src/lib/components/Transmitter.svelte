@@ -188,6 +188,7 @@
     />
     <input type="checkbox" name="anon-box" id="anon-box" bind:checked={anon} />
     <label for="anon-box">anon</label>
+    {#if ctx.rttping}<span>{ctx.rttping}</span>{/if}
   </div>
   <div class="autogrowwrapper">
     <textarea

@@ -17,6 +17,9 @@ export class WSContext {
   color: number = $state(Math.floor(Math.random() * 16777216))
   systemMessage: string | undefined = $state()
   replyLimit: boolean = false
+  rttping: number = $state(0)
+  rttpingstart: number | undefined
+  pinginterval: number | undefined
 
   nick: string = "wanderer"
   anon: boolean = false
@@ -285,6 +288,10 @@ export class WSContext {
 
   setConncount = (cc: number) => {
     this.conncount = cc
+  }
+
+  pingServer = () => {
+    pingServer(this)
   }
 
   pushItem = (item: cbv.Item) => {
@@ -570,6 +577,10 @@ export const connectTo = (url: string, ctx: WSContext) => {
     }
   }
   ctx.ws = ws
+  ctx.pinginterval = setInterval(() => {
+    ctx.rttpingstart = Date.now()
+    ctx.pingServer()
+  }, 5000)
   document.addEventListener('cbv:thread', (e) => {
     const ev = e as CustomEvent
     const tse = ev.detail
@@ -777,6 +788,17 @@ export const setColor = (color: number, ctx: WSContext) => {
   ctx.ws?.send(byteArray)
 }
 
+export const pingServer = (ctx: WSContext) => {
+  const evt: lrc.Event = {
+    msg: {
+      oneofKind: "ping",
+      ping: lrc.Ping,
+    }
+  }
+  const byteArray = lrc.Event.toBinary(evt)
+  ctx.ws?.send(byteArray)
+}
+
 function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
   const byteArray = new Uint8Array(binary.data);
   const event = lrc.Event.fromBinary(byteArray)
@@ -786,6 +808,11 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
     }
 
     case "pong": {
+      if (ctx.rttpingstart === undefined) {
+        return 0
+      }
+      ctx.rttping = Date.now() - ctx.rttpingstart
+      ctx.rttpingstart = undefined
       return 0
     }
 
