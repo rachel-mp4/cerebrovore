@@ -10,6 +10,16 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.1.1",
+			Timestamp: "2026-04-11",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "setting to display ping in threads",
+				},
+			},
+		},
+		{
 			Release:   "β.1.0",
 			Timestamp: "2026-04-10",
 			Notes: []types.Note{

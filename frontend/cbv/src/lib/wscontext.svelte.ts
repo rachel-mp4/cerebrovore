@@ -20,6 +20,7 @@ export class WSContext {
   rttping: number = $state(0)
   rttpingstart: number | undefined
   pinginterval: number | undefined
+  shouldCalcPing: boolean
 
   nick: string = "wanderer"
   anon: boolean = false
@@ -63,6 +64,7 @@ export class WSContext {
       this.focusping.volume = this.volume * this.focuspingvolume
     })
     this.anon = localStorage.getItem("anon") !== null
+    this.shouldCalcPing = localStorage.getItem("displayPing") !== null
   }
 
   connect(url: string) {
@@ -577,10 +579,12 @@ export const connectTo = (url: string, ctx: WSContext) => {
     }
   }
   ctx.ws = ws
-  ctx.pinginterval = setInterval(() => {
-    ctx.rttpingstart = Date.now()
-    ctx.pingServer()
-  }, 5000)
+  if (ctx.shouldCalcPing) {
+    ctx.pinginterval = setInterval(() => {
+      ctx.rttpingstart = Date.now()
+      ctx.pingServer()
+    }, 3000)
+  }
   document.addEventListener('cbv:thread', (e) => {
     const ev = e as CustomEvent
     const tse = ev.detail

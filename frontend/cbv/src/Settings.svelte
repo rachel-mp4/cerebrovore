@@ -2,11 +2,20 @@
   import VolumeSettings from "./lib/components/VolumeSettings.svelte";
   const ntv = localStorage.getItem("new-threads");
   let wantsNewThreads = $state(ntv !== "");
+  const dp = localStorage.getItem("displayPing");
+  let displayPing = $state(dp !== null);
   // effect is ok for this because we use checkbox, however prefer onchange
   // for the range because we don't want to commit all the intermediate to
   // localStorage
   $effect(() => {
     localStorage.setItem("new-threads", wantsNewThreads ? "yes" : "");
+  });
+  $effect(() => {
+    if (displayPing) {
+      localStorage.setItem("displayPing", "yes");
+    } else {
+      localStorage.removeItem("displayPing");
+    }
   });
   const fsminval = localStorage.getItem("fs-min");
   let initfsmin = 1;
@@ -105,3 +114,9 @@
 >
 <h2>volume</h2>
 <VolumeSettings />
+<h2>thread features</h2>
+<input type="checkbox" bind:checked={displayPing} id="display-ping" />
+<label for="display-ping"
+  >display your ping while in thread if you're interested or maybe for debugging
+  (requires refresh)</label
+>
