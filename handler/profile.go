@@ -99,6 +99,11 @@ func (h *Handler) postProfile(c *Client, w http.ResponseWriter, r *http.Request)
 			// good enough, it's a did, we don't care
 			p.AtIdentifier = &atid
 		} else {
+			if !strings.Contains(atid, ".") || strings.ContainsAny(atid, "/:@") || net.ParseIP(atid) != nil {
+				clog.Warn("@%s is being a little too clever - SSRF attempt (atproto ID)", c.Username)
+				http.Error(w, "clever, huh?", http.StatusBadRequest)
+				return
+			}
 			records, err := net.DefaultResolver.LookupTXT(r.Context(), fmt.Sprintf("_atproto.%s", atid))
 			if err != nil {
 				records = nil
