@@ -101,7 +101,7 @@ func (m *MockStore) Appeal(id int, username string, response string, ctx context
 	return nil
 }
 
-func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (bans []types.Appeal, cursor *int, err error) {
+func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (actions []types.Action, cursor *int, err error) {
 	q := `
 	SELECT 
 		b.id, 
@@ -140,7 +140,7 @@ func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (bans []
 		return
 	}
 	defer rows.Close()
-	bans = make([]types.Appeal, 0)
+	actions = make([]types.Action, 0)
 	i := 0
 	for rows.Next() {
 		i = i + 1
@@ -159,7 +159,7 @@ func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (bans []
 			return
 		}
 		cursor = &b.Id
-		a := types.Appeal{Ban: b}
+		a := types.Action{Ban: &b, IsMod: true}
 		if b.PostId != nil {
 			p := types.Post{
 				ID:       *b.PostId,
@@ -174,9 +174,9 @@ func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (bans []
 			if cid != nil {
 				p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
 			}
-			a.Post = p
+			a.Post = &p
 		}
-		bans = append(bans, a)
+		actions = append(actions, a)
 	}
 	if i != limit+1 {
 		cursor = nil
@@ -184,7 +184,52 @@ func (s *Store) GetAppeals(limit int, before *int, ctx context.Context) (bans []
 	return
 }
 
-func (m *MockStore) GetAppeals(limit int, before *int, ctx context.Context) (appeals []types.Appeal, cursor *int, err error) {
+func (m *MockStore) GetAppeals(limit int, before *int, ctx context.Context) (actions []types.Action, cursor *int, err error) {
+	return
+}
+
+func (s *Store) EZBan(username string, ctx context.Context) (self bool, mod bool, err error) {
+	self = true
+	mod = true
+	row := s.pool.QueryRow(ctx, `
+		SELECT
+			moderator
+		FROM bans
+		WHERE username = $1
+		AND username = moderator
+		AND repealed IS NOT TRUE
+		AND now() < until
+		`, username)
+	var moderator string
+	err = row.Scan(&moderator)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return
+		}
+		err = nil
+		self = false
+	}
+	row = s.pool.QueryRow(ctx, `
+		SELECT
+			moderator
+		FROM bans
+		WHERE username = $1
+		AND username <> moderator
+		AND repealed IS NOT TRUE
+		AND now() < until
+		`, username)
+	err = row.Scan(&moderator)
+	if err != nil {
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return
+		}
+		err = nil
+		mod = false
+	}
+	return
+}
+
+func (m *MockStore) EZBan(username string, ctx context.Context) (self bool, mod bool, err error) {
 	return
 }
 
@@ -283,5 +328,192 @@ func (s *Store) DeleteUsersPostsAndThreads(username string, ctx context.Context)
 }
 
 func (m *MockStore) DeleteUsersPostsAndThreads(username string, ctx context.Context) error {
+	return nil
+}
+
+func (s *Store) MakeModerator(username string, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `INSERT INTO moderators (username) VALUES ($1)`, username)
+	return err
+}
+func (m *MockStore) MakeModerator(username string, ctx context.Context) error {
+	return nil
+}
+func (m *MockStore) IsModerator(username string, ctx context.Context) (bool, error) {
+	return false, nil
+}
+
+func (s *Store) IsModerator(username string, ctx context.Context) (bool, error) {
+	row := s.pool.QueryRow(ctx, `SELECT username FROM moderators WHERE username = $1`, username)
+	var name string
+	err := row.Scan(&name)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (s *Store) RemoveModerator(username string, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `DELETE FROM moderators WHERE username = $1`, username)
+	return err
+}
+
+func (m *MockStore) RemoveModerator(username string, ctx context.Context) error {
+	return nil
+}
+
+func (s *Store) GetModerators(ctx context.Context) ([]string, error) {
+	rows, err := s.pool.Query(ctx, `SELECT username
+		FROM moderators
+		`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	mods := make([]string, 0)
+	for rows.Next() {
+		var username string
+		err = rows.Scan(&username)
+		if err != nil {
+			return nil, err
+		}
+		mods = append(mods, username)
+	}
+	return mods, nil
+}
+
+func (m *MockStore) GetModerators(ctx context.Context) ([]string, error) {
+	return nil, nil
+}
+
+func (s *Store) Report(report *types.Report, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `INSERT INTO reports (
+		reporter,
+		reported,
+		post_id,
+		for_profile,
+		reason)
+		VALUES ($1, $2, $3, $4, $5)
+		`,
+		report.Reporter,
+		report.Reported,
+		report.PostId,
+		report.ForProfile,
+		report.Reason)
+	return err
+}
+
+func (m *MockStore) Report(report *types.Report, ctx context.Context) error {
+	return nil
+}
+
+func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports []types.Report, cursor *int, err error) {
+	q := `
+	SELECT
+		r.id,
+		r.reporter,
+		r.reported,
+		r.post_id,
+		r.for_profile,
+		r.reason,
+		p.anon,
+		p.nick,
+		p.color,
+		p.posted_at,
+		p.deleted,
+		t.body,
+		i.cid,
+		i.alt
+	FROM reports r
+	LEFT JOIN posts p ON r.post_id = p.id
+	LEFT JOIN text_posts t ON p.id = t.post_id
+	LEFT JOIN image_posts i ON p.id = i.post_id
+	WHERE reviewed_by IS NULL
+	%s
+	ORDER BY id ASC
+	LIMIT $1
+	`
+	var rows pgx.Rows
+	if after != nil {
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND r.id < $2"), limit+1, *after)
+	} else {
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+	}
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	i := 0
+	for rows.Next() {
+		i = i + 1
+		if i == limit+1 {
+			break
+		}
+		var r types.Report
+		var anon *bool
+		var nick *string
+		var color *uint32
+		var postedat *time.Time
+		var deleted *bool
+		var body *string
+		var cid *string
+		var alt *string
+		err = rows.Scan(&r.Id, &r.Reporter, &r.Reported, &r.PostId, &r.ForProfile, &r.Reason, &anon, &nick, &color, &postedat, &deleted, &body, &cid, &alt)
+		if err != nil {
+			return
+		}
+		cursor = &r.Id
+		if r.PostId != nil {
+			p := types.Post{
+				Nick:        nick,
+				Color:       color,
+				ViewerIsMod: true,
+			}
+			if anon != nil {
+				p.Anon = *anon
+			}
+			if postedat != nil {
+				p.PostedAt = *postedat
+			}
+			if deleted != nil {
+				p.Deleted = *deleted
+			}
+			if body != nil {
+				p.TextContent = &types.TextContent{Body: *body}
+			}
+			if cid != nil {
+				p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
+			}
+			r.Post = &p
+		}
+		reports = append(reports, r)
+	}
+	if i != limit+1 {
+		cursor = nil
+	}
+	return
+}
+
+func (m *MockStore) GetReports(limit int, after *int, ctx context.Context) ([]types.Report, *int, error) {
+	return nil, nil, nil
+}
+
+func (s *Store) ReviewReport(id int, reviewer string, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `UPDATE reports SET reviewed_by = $1 WHERE id = $2`, reviewer, id)
+	return err
+}
+
+func (m *MockStore) ReviewReport(id int, reviewer string, ctx context.Context) error {
+	return nil
+}
+
+func (s *Store) ReviewAllReportsBy(reporter string, reviewer string, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `UPDATE reports SET reviewed_by = $1 WHERE reviewed_by IS NULL AND reporter = $2`, reviewer, reporter)
+	return err
+}
+
+func (m *MockStore) ReviewAllReportsBy(username string, reviewer string, ctx context.Context) error {
 	return nil
 }

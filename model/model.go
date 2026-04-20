@@ -197,18 +197,16 @@ func cleaner(m *Model) {
 	ticker := time.NewTicker(10 * time.Minute)
 	defer ticker.Stop()
 	for {
-		select {
-		case <-ticker.C:
-			m.tmapmu.Lock()
-			for id, tm := range m.tmap {
-				tm.kawaiiDestroyServer()
-				if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 && len(tm.subs) == 0 {
-					clog.Dbug("thread model killed: %d", id)
-					delete(m.tmap, id)
-				}
+		<-ticker.C
+		m.tmapmu.Lock()
+		for id, tm := range m.tmap {
+			tm.kawaiiDestroyServer()
+			if tm.full && tm.server == nil && len(tm.wormwatchers) == 0 && len(tm.subs) == 0 {
+				clog.Dbug("thread model killed: %d", id)
+				delete(m.tmap, id)
 			}
-			m.tmapmu.Unlock()
 		}
+		m.tmapmu.Unlock()
 	}
 }
 

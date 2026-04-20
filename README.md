@@ -78,3 +78,26 @@ it, but this is of course not ideal
 - left sidebar left side count posts in thread etc (maybe create ls equiv)
 - render usernames for non-anonymous posts
 
+
+### code style guide
+
+i'm a bit crazy idk it's probs typical in go, a lot of abbreviations. here are
+some common variable names:
+
+- id uint32 - a post/thread id
+- pid uint32 - a post id
+- tid uint32 - a thread id
+- nid string - a base 36 (niftimal) post/thread id
+- npid string - a base 36 (niftimal) post id
+- ntid string - a base 36 (niftimal) thread id
+- idtoa - convert id to alphanumeric (base 36)
+- atoid - convert alphanumeric (base 36) to id
+- cid string - content id, a hash of a file used as its location
+- tmap - thread map
+- wwd - wormwatchdata
+
+etc... you're smart you'll probably get it all, the main weird thing is that we
+use n to denote if an id is in base 36. i think in some places i use p at the
+end of a function to say it accepts a pointer, in another place i use it to
+mean we panic if it fails. f at the end of a function means we force (ignore
+error)

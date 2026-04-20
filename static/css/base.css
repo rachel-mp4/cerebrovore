@@ -324,10 +324,6 @@ form {
   flex-grow: 1;
 }
 
-.form-submit {
-  margin-top: 1rem;
-}
-
 .form-submit > input {
   background-color: var(--fg);
   color: var(--bg);
@@ -482,4 +478,40 @@ form:has(.form-submit:hover) {
 
 iframe {
   border: none;
+}
+
+#report-modal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  z-index: 999 !important;
+  inset: 0;
+  backdrop-filter: brightness(50%);
+}
+
+#report-modal-content {
+  max-width: 30rem;
+  max-height: 10rem;
+  background: var(--gbg);
+  padding: 1rem;
+}
+
+.reporting {
+  outline: .25rem dashed #ff0000 !important;
+  background: #00ffff !important;
+  color: #000000 !important;
+}
+
+.reported.image-wrapper {
+  filter: blur(2rem);
+}
+
+.reported.image-wrapper.thumb {
+  filter: blur(.5rem);
+}
+
+.confirm-cancel {
+  display: flex; 
+  justify-content: space-between;
 }

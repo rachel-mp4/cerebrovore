@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gorilla/sessions"
+
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/db"
 	"github.com/rachel-mp4/cerebrovore/id"
@@ -66,10 +67,15 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /profile", h.AM(h.editProfile))
 	mux.HandleFunc("POST /avatar", h.AM(h.postAvatar))
 	mux.HandleFunc("POST /profile-contents", h.AM(h.postContents))
-	mux.HandleFunc("GET /m", h.AM(h.moderate))
-	mux.HandleFunc("POST /delete-post", h.AM(h.postDeletePost))
-	mux.HandleFunc("POST /ban-user", h.AM(h.postBanUser))
+	mux.HandleFunc("GET /moderate", h.AM(h.moderate))
+	mux.HandleFunc("GET /administrate", h.AM(h.administrate))
+	mux.HandleFunc("POST /add-moderator", h.AM(h.addModerator))
+	mux.HandleFunc("POST /take-action", h.AM(h.takeAction))
+	mux.HandleFunc("GET /cancel-action", h.AM(h.cancelAction))
+	mux.HandleFunc("GET /inspect-post", h.AM(h.inspectPost))
 	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
+	mux.HandleFunc("POST /report", h.AM(h.postReport))
+	mux.HandleFunc("GET /reports", h.AM(h.getReports))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /login", h.postLogin)
@@ -128,16 +134,10 @@ func (h *Handler) gencode(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	code, err := h.idp.GenerateCode(c.Username, r.Context())
 	if err != nil {
-		type codeerrResp struct {
-			Reason string
-		}
-		codeerrT.ExecuteTemplate(w, "codeerr", codeerrResp{err.Error()})
+		codeerrT.exec(w, codeerrresp{err.Error()})
 		return
 	}
-	type codeResp struct {
-		Code string
-	}
-	codeT.ExecuteTemplate(w, "code", codeResp{code})
+	codeT.exec(w, coderesp{code})
 }
 
 func (h *Handler) genpubliccode(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -146,16 +146,10 @@ func (h *Handler) genpubliccode(c *Client, w http.ResponseWriter, r *http.Reques
 	}
 	code, err := h.idp.GeneratePublicCode(c.Username, r.Context())
 	if err != nil {
-		type codeerrResp struct {
-			Reason string
-		}
-		codeerrT.ExecuteTemplate(w, "codeerr", codeerrResp{err.Error()})
+		codeerrT.exec(w, codeerrresp{err.Error()})
 		return
 	}
-	type codeResp struct {
-		Code string
-	}
-	codeT.ExecuteTemplate(w, "code", codeResp{code})
+	codeT.exec(w, coderesp{code})
 }
 
 func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -167,28 +161,17 @@ func (h *Handler) home(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
-	type homeresp struct {
-		baseresp
-		Version string
-		Time    *time.Time
-		Commit  string
-		Link    string
-	}
-	base, err := h.makebase("brainworm", c.Username, r.Context())
+	base, err := h.makebase("brainworm", c, r.Context())
 	if err != nil {
 		clog.Warn("getbumps %s", err)
 	}
-	err = homeT.ExecuteTemplate(w, "base", homeresp{
-		*base,
+	homeT.exec(w, homeresp{
+		base,
 		h.notes[0].Release,
 		h.live,
 		h.commit,
 		os.Getenv("DISCORD_LINK"),
 	})
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -196,15 +179,12 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	type ntresp struct {
-		baseresp
-	}
-	base, err := h.makebase("new thread", c.Username, r.Context())
+	base, err := h.makebase("new thread", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
-	err = newthreadT.ExecuteTemplate(w, "base", ntresp{
-		*base,
+	newthreadT.exec(w, newthreadresp{
+		base,
 	})
 	if err != nil {
 		clog.Warn("%s", err)
@@ -213,54 +193,22 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
-	type loginresp struct {
-		Title      string
-		Crack      string
-		Accent     string
-		ReplyCount *int
-		Websockets bool
-		Link       string
-	}
-	err := loginT.ExecuteTemplate(w, "base", loginresp{
-		"login",
-		h.crack,
-		"var(--primary)",
-		nil,
-		false,
+	loginT.exec(w, loginresp{
+		h.makejustbase("login", false),
 		os.Getenv("DISCORD_LINK"),
 	})
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handler) account(w http.ResponseWriter, r *http.Request) {
 	type loginresp struct {
-		Title        string
-		Crack        string
-		Accent       string
-		ReplyCount   *int
-		Invite       string
-		RequiresCode bool
-		Websockets   bool
-		Link         string
 	}
 	invite := r.URL.Query().Get("invite")
-	err := accountT.ExecuteTemplate(w, "base", loginresp{
-		"create account",
-		h.crack,
-		"var(--primary)",
-		nil,
+	accountT.exec(w, accountresp{
+		h.makejustbase("create account", false),
 		invite,
 		h.reqcode,
-		false,
 		os.Getenv("DISCORD_LINK"),
 	})
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
@@ -288,7 +236,7 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			clog.Warn(err.Error())
+			clog.Warn("%s", err.Error())
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -297,7 +245,7 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "session")
 	session.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 7,
+		MaxAge:   86400 * 180,
 		HttpOnly: true,
 	}
 	session.Values = map[any]any{}
@@ -330,7 +278,7 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusBadRequest)
 				return
 			}
-			clog.Warn(err.Error())
+			clog.Warn("%s", err.Error())
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
@@ -338,7 +286,7 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "session")
 	session.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 7,
+		MaxAge:   86400 * 180,
 		HttpOnly: true,
 	}
 	session.Values = map[any]any{}
@@ -360,15 +308,12 @@ func (h *Handler) beep(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "this is really serious.... you are not authz...", http.StatusUnauthorized)
 		return
 	}
-	type beepresp struct {
-		baseresp
-	}
-	base, err := h.makebase("beep", c.Username, r.Context())
+	base, err := h.makebase("beep", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
-	beepT.ExecuteTemplate(w, "base", beepresp{
-		*base,
+	beepT.exec(w, beepresp{
+		base,
 	})
 }
 
@@ -381,20 +326,16 @@ func (h *Handler) Serve() http.Handler {
 type Client struct {
 	ID       string
 	Username string
+	IsMod    bool
 }
 
 func (h *Handler) me(c *Client, w http.ResponseWriter, r *http.Request) {
-	type meresp struct {
-		baseresp
-		Username     string
-		RequiresCode bool
-	}
-	base, err := h.makebase("me", c.Username, r.Context())
+	base, err := h.makebase("me", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
-	meT.ExecuteTemplate(w, "base", meresp{
-		*base,
+	meT.exec(w, meresp{
+		base,
 		c.Username,
 		h.reqcode,
 	})
@@ -420,11 +361,22 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 		}
 		// check that they haven't been logged out
 		whynotcheck, err := h.db.RetrieveSession(id, r.Context())
+
 		if err != nil || username != whynotcheck {
 			s.Options.MaxAge = -1
 			s.Save(r, w)
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
+		}
+		isadmin := os.Getenv("ADMIN_USERNAME") == username
+		ismod, err := h.db.IsModerator(username, r.Context())
+		if err != nil {
+			clog.Info("%s", err)
+			http.Error(w, "error getting if moderator", http.StatusInternalServerError)
+			return
+		}
+		if isadmin {
+			ismod = true
 		}
 		ban, post, err := h.db.IsBanned(username, r.Context())
 		if err != nil {
@@ -432,22 +384,11 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			http.Error(w, "error getting ban state", http.StatusInternalServerError)
 			return
 		}
-		if ban != nil {
-			type banresp struct {
-				Title      string
-				Crack      string
-				Accent     string
-				ReplyCount *int
-				Ban        types.Ban
-				Post       *types.Post
-			}
-			err := banT.ExecuteTemplate(w, "base", banresp{"ban", h.crack, "var(--primary)", nil, *ban, post})
-			if err != nil {
-				clog.Info("%s", err)
-			}
+		if ban != nil && !ismod {
+			banT.exec(w, banresp{h.makejustbase("ban", false), false, *ban, post})
 			return
 		}
-		c := &Client{ID: id, Username: username}
+		c := &Client{ID: id, Username: username, IsMod: ismod}
 		f(c, w, r)
 	}
 }

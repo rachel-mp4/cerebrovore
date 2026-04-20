@@ -5,3 +5,4 @@ uploads
 migrate
 cerebrovore.log
 /cerebrovore
+.DS_Store

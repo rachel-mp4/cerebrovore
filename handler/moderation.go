@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"os"
 	"strconv"
@@ -12,35 +13,86 @@ import (
 	"github.com/rachel-mp4/cerebrovore/utils"
 )
 
-func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+func (h *Handler) inspectPost(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
 		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
 		return
 	}
-	type moderateresp struct {
-		baseresp
-		Appeals []types.Appeal
-	}
-	base, err := h.makebase("moderation", c.Username, r.Context())
+	nid := r.FormValue("postid")
+	id, err := utils.AToID(nid)
 	if err != nil {
-		clog.Warn("bumps %s", err)
+		moderateT.error(w, err.Error())
+		return
 	}
+	post, err := h.db.GetPost(id, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	moderateT.inspect(w, post)
+}
+
+func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
+		return
+	}
+	base, _ := h.makebase("moderation", c, r.Context())
 	appeals, _, err := h.db.GetAppeals(10, nil, r.Context())
 	if err != nil {
 		clog.Dbug("%s", err)
+		return
 	}
-	err = moderateT.ExecuteTemplate(w, "base", moderateresp{
-		*base,
-		appeals,
-	})
+	reports, cursor, err := h.db.GetReports(10, nil, r.Context())
 	if err != nil {
-		clog.Warn("moderation: %s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
+		clog.Dbug("%s", err)
+		return
 	}
+	moderateT.exec(w, moderateresp{
+		base,
+		appeals,
+		reports,
+		cursor,
+	})
+}
+
+func (h *Handler) administrate(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	mods, err := h.db.GetModerators(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	base, err := h.makebase("administrate", c, r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	adminT.exec(w, adminresp{
+		base,
+		mods,
+	})
+}
+
+func (h *Handler) addModerator(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+		http.Redirect(w, r, "/", http.StatusFound)
+		return
+	}
+	username := r.FormValue("username")
+	err := h.db.MakeModerator(username, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	adminT.plusmodsuccess(w, username)
 }
 
 func (h *Handler) postAppealVerdict(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+	if c == nil || !c.IsMod {
 		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
 		return
 	}
@@ -52,81 +104,205 @@ func (h *Handler) postAppealVerdict(c *Client, w http.ResponseWriter, r *http.Re
 		Message string
 	}
 	if err != nil {
-		moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
+		moderateT.error(w, err.Error())
 		return
 	}
 	if reject != "" {
 		err := h.db.Reject(banid, r.Context())
 		if err != nil {
-			moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
+			moderateT.error(w, err.Error())
 			return
 		}
-		moderateT.ExecuteTemplate(w, "rejected", nil)
+		moderateT.reject(w)
 		return
 	}
 	err = h.db.Unban(banid, r.Context())
 	if err != nil {
-		moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
+		moderateT.error(w, err.Error())
 		return
 	}
-	moderateT.ExecuteTemplate(w, "accepted", nil)
+	moderateT.accept(w)
 }
 
-func (h *Handler) postDeletePost(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+func (h *Handler) cancelAction(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to not moderate wait-", http.StatusUnauthorized)
+		return
+	}
+	moderateT.canceled(w)
+}
+
+func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
 		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
 		return
 	}
-	type errorresp struct {
-		Message string
-	}
 	err := r.ParseForm()
 	if err != nil {
-		moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
+		moderateT.error(w, err.Error())
 		return
 	}
 	nid := r.FormValue("postid")
-	id, err := utils.AToID(nid)
-	if err != nil {
-		clog.Warn("moderation: invalid id %s", nid)
-		moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
+	username := r.FormValue("username")
+	reason := r.FormValue("reason")
+	comment := r.FormValue("comment")
+	until := r.FormValue("until")
+	confirm := r.FormValue("confirm")
+
+	var action types.Action
+	var actioning string
+	var actioned string
+	if nid == "" && username == "" {
+		// no id and no username = no info to work with
+		moderateT.error(w, "must fill one field")
+		return
+	} else if nid == "" && username != "" {
+		// no id and username = just ban them
+		actioning = "just performing a ban!"
+		actioned = "just performed a ban!"
+
+		ban := composeBan(username, reason, comment, until)
+		action.Ban = &ban
+	} else if nid != "" && username != "" {
+		// id and username = delete and ban them if the post with that id is really that user's
+		actioning = "deleting a %s AND banning"
+		actioned = "deleted a %s AND banned"
+
+		id, err := utils.AToID(nid)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		post, err := h.db.GetPost(id, r.Context())
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		action.Post = post
+		if username != post.Username {
+			moderateT.error(w, fmt.Sprintf("username: %s does not match post username: %s", username, post.Username))
+			return
+		}
+		ban := composeBan(username, reason, comment, until)
+		ban.PostId = &id
+		action.Ban = &ban
+		if post.ID == post.ThreadID {
+			actioning = fmt.Sprintf(actioning, "THREAD")
+			actioned = fmt.Sprintf(actioned, "THREAD")
+		} else {
+			actioning = fmt.Sprintf(actioning, "post")
+			actioned = fmt.Sprintf(actioned, "post")
+		}
+	} else if reason != "" || comment != "" || until != "" {
+		// id and no username but ban info = delete and ban because the mod is probably lazy, however this is a bit worrisome so it should be loud
+		actioning = "deleting a %s AND banning WITHOUT CONFIRMING username"
+		actioned = "deleted a %s AND banned WITHOUT CONFIRMING username"
+
+		id, err := utils.AToID(nid)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		post, err := h.db.GetPost(id, r.Context())
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		action.Post = post
+		ban := composeBan(post.Username, reason, comment, until)
+		ban.PostId = &id
+		action.Ban = &ban
+		if post.ID == post.ThreadID {
+			actioning = fmt.Sprintf(actioning, "THREAD")
+			actioned = fmt.Sprintf(actioned, "THREAD")
+		} else {
+			actioning = fmt.Sprintf(actioning, "post")
+			actioned = fmt.Sprintf(actioned, "post")
+		}
+	} else if nid != "" && username == "" && reason == "" && comment == "" && until == "" {
+		// this should be the last case, in which only the id was filled in
+		actioning = "just deleting a %s"
+		actioned = "just deleted a %s"
+
+		id, err := utils.AToID(nid)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		post, err := h.db.GetPost(id, r.Context())
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		action.Post = post
+		if post.ID == post.ThreadID {
+			actioning = fmt.Sprintf(actioning, "THREAD")
+			actioned = fmt.Sprintf(actioned, "THREAD")
+		} else {
+			actioning = fmt.Sprintf(actioning, "post")
+			actioned = fmt.Sprintf(actioned, "post")
+		}
+	} else {
+		// i think i exhausted all cases but i am stupid maybe
+		clog.Fail("YOU ARE STUPID")
+		panic("YOU ARE STUPID")
+	}
+
+	if confirm != "" {
+		if action.Post != nil {
+			if action.Post.ThreadID == action.Post.ID {
+				err := h.db.DeleteThread(action.Post.ThreadID, r.Context())
+				if err != nil {
+					moderateT.error(w, err.Error())
+					return
+				}
+				err = h.m.DeleteThread(action.Post.ThreadID)
+				if err != nil {
+					moderateT.error(w, err.Error())
+					return
+				}
+			}
+			err = h.db.DeletePost(action.Post.ID, r.Context())
+			if err != nil {
+				moderateT.error(w, err.Error())
+				return
+			}
+		}
+		if action.Ban != nil {
+			err = h.db.Ban(action.Ban, r.Context())
+			if err != nil {
+				moderateT.error(w, err.Error())
+				return
+			}
+			go h.postBanCleanup(action.Ban.Username)
+		}
+		moderateT.confirmed(w, &action, actioned)
 		return
 	}
-	thread := r.FormValue("thread")
-	isThread := thread != ""
-	if isThread {
-		err = h.db.DeleteThread(id, r.Context())
-		if err != nil {
-			moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
-			return
-		}
-		post, err := h.db.GetPost(id, r.Context())
-		type resp struct {
-			Post *types.Post
-		}
-		if err != nil {
-			moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
-			return
-		}
+	moderateT.confirm(w, &action, actioning, nid, username, reason, comment, until)
+}
 
-		moderateT.ExecuteTemplate(w, "thread-deleted", resp{Post: post})
-	} else {
-		err = h.db.DeletePost(id, r.Context())
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		post, err := h.db.GetPost(id, r.Context())
-		type resp struct {
-			Post *types.Post
-		}
-		if err != nil {
-			moderateT.ExecuteTemplate(w, "errored", errorresp{Message: err.Error()})
-			return
-		}
-
-		moderateT.ExecuteTemplate(w, "post-deleted", resp{Post: post})
+func composeBan(username, reason, comment, until string) types.Ban {
+	b := types.Ban{
+		Username: username,
 	}
+	if reason != "" {
+		b.Reason = &reason
+	}
+	if comment != "" {
+		b.Comment = &comment
+	}
+	if until == "" {
+		b.Until = time.Now().Add(1 * time.Hour)
+	} else {
+		untild, err := time.ParseDuration(until)
+		if err != nil {
+			b.Until = time.Now().Add(1 * time.Hour)
+		} else {
+			b.Until = time.Now().Add(untild)
+		}
+	}
+	return b
 }
 
 func (h *Handler) selfban(username string, postid *uint32, reason string, til time.Time, ctx context.Context) error {
@@ -135,49 +311,6 @@ func (h *Handler) selfban(username string, postid *uint32, reason string, til ti
 		go h.postBanCleanup(username)
 	}
 	return err
-}
-
-func (h *Handler) postBanUser(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
-		http.Error(w, "not authorized to ban", http.StatusUnauthorized)
-		return
-	}
-	r.ParseForm()
-	b := types.Ban{}
-	b.Username = r.Form.Get("username")
-	reason := r.Form.Get("reason")
-	if reason != "" {
-		b.Reason = &reason
-	}
-	comment := r.Form.Get("comment")
-	if comment != "" {
-		b.Comment = &comment
-	}
-	duration := r.Form.Get("duration")
-	if duration == "" {
-		dur := time.Hour * 24 * 365 * 10
-		b.Until = time.Now().Add(dur)
-	} else {
-		dur, err := strconv.ParseInt(duration, 10, 64)
-		if err != nil {
-			dur = 24 * 365 * 10
-		}
-		b.Until = time.Now().Add(time.Duration(dur) * time.Hour)
-	}
-	postId := r.Form.Get("post-id")
-	if postId != "" {
-		id, err := utils.AToID(postId)
-		if err == nil {
-			b.PostId = &id
-		}
-	}
-	err := h.db.Ban(&b, r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	w.Write(nil)
-	go h.postBanCleanup(b.Username)
 }
 
 func (h *Handler) postBanCleanup(username string) {
@@ -214,5 +347,86 @@ func (h *Handler) postAppeal(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "error posting appeal", http.StatusInternalServerError)
 		return
 	}
-	banT.ExecuteTemplate(w, "appeal-submitted", nil)
+	banT.appeal(w)
+}
+
+func (h *Handler) getReports(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to view reports", http.StatusUnauthorized)
+		return
+	}
+	l := r.FormValue("limit")
+	limit, err := strconv.Atoi(l)
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	a := r.FormValue("after")
+	var after *int
+	if a != "" {
+		af, err := strconv.Atoi(a)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		after = &af
+	}
+
+	reports, cursor, err := h.db.GetReports(limit, after, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	moderateT.reports(w, reports, cursor)
+}
+
+func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized to report", http.StatusUnauthorized)
+		return
+	}
+	report := types.Report{Reporter: c.Username}
+	postid := r.FormValue("postid")
+	var post *types.Post
+	if postid != "" {
+		id, err := utils.AToID(postid)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		report.PostId = &id
+		post, err = h.db.GetPost(id, r.Context())
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		if post != nil {
+			report.Reported = post.Username
+		}
+	}
+	profile := r.FormValue("profile")
+	report.ForProfile = profile != ""
+	username := r.FormValue("username")
+	if username != "" {
+		if report.Reported == "" {
+			report.Reported = username
+		} else if report.Reported != username {
+			clog.Info("provided username %s does not match the one we have on file %s, ignoring provided username", username, report.Reported)
+		}
+	}
+	if report.Reported == "" {
+		moderateT.error(w, "post does not exist yet, yell at devs to improve lrcd (or add this yourself!)")
+		return
+	}
+	reason := r.FormValue("reason")
+	if reason != "" {
+		report.Reason = &reason
+	}
+	err := h.db.Report(&report, r.Context())
+	if err != nil {
+		clog.Warn("%s", err)
+		moderateT.error(w, "error saving report")
+		return
+	}
+	moderateT.report(w)
 }

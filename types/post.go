@@ -20,6 +20,7 @@ type Post struct {
 	ImageContent *ImageContent
 	Backlinks    []uint32
 	Deleted      bool
+	ViewerIsMod  bool
 }
 
 func (p *Post) String() string {
@@ -47,7 +48,7 @@ func (p *Post) String() string {
 }
 
 func blprint(blbl []uint32) string {
-	if blbl == nil || len(blbl) == 0 {
+	if len(blbl) == 0 {
 		return ""
 	}
 	f := strings.Repeat("%d (%s), ", len(blbl))

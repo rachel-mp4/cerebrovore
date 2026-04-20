@@ -4,15 +4,20 @@
     <div class="profile-names">
       {{if .Profile.ProfileHead.DisplayName}}<h1>{{.Profile.ProfileHead.DisplayName}}</h1><h2>@{{.Profile.ProfileHead.Username}}</h2>{{else}}<h1>@{{.Profile.Username}}</h1>{{end}}
       {{if .Profile.ProfileHead.Status}}<h3>{{.Profile.ProfileHead.Status}}</h3>{{end}}
-      {{if .Profile.LastSeenLocation}}
+      {{if .Profile.ProfileHead.SelfBanned}}
         <div>
-          last seen in <a href="/t/{{idtoa .Profile.LastSeenLocation}}">{{if .Profile.LastSeenTopic}}{{.Profile.LastSeenTopic}}{{else}}thread #{{idtoa .Profile.LastSeenLocation}}{{end}}</a> {{timeSince .Profile.LastSeenTime}} ago
+          {{with .Profile.ProfileHead.DisplayName}}{{.}}{{else}}@{{.Profile.Username}}{{end}} is debrainworming
         </div>
       {{end}}
     </div>
   </div>
   <div class="contents">
     {{if .Profile.ProfileHead.Bio}}<p class="bio">{{.Profile.ProfileHead.Bio}}</p>{{end}}
+    {{if .Profile.LastSeenLocation}}
+      <div>
+        <em>last seen in <a href="/t/{{idtoa .Profile.LastSeenLocation}}">{{if .Profile.LastSeenTopic}}{{.Profile.LastSeenTopic}}{{else}}thread #{{idtoa .Profile.LastSeenLocation}}{{end}}</a> {{timeSince .Profile.LastSeenTime}} ago</em>
+      </div>
+    {{end}}
     {{if .Profile.Friends}}
       {{with .Profile.FriendsHeader}}<h3>{{.}}</h3>{{end}}
       <div class="friends">

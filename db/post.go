@@ -118,10 +118,13 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 	row := s.pool.QueryRow(ctx, `
 	SELECT 
+		p.thread_id,
 		p.username,
+		p.anon,
 		p.nick,
 		p.color,
 		p.posted_at,
+		p.deleted,
 		t.body,
 		i.cid,
 		i.alt
@@ -134,7 +137,7 @@ func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 	var body *string
 	var cid *string
 	var alt *string
-	err := row.Scan(&p.Username, &p.Nick, &p.Color, &p.PostedAt, &body, &cid, &alt)
+	err := row.Scan(&p.ThreadID, &p.Username, &p.Anon, &p.Nick, &p.Color, &p.PostedAt, &p.Deleted, &body, &cid, &alt)
 	if err != nil {
 		return nil, err
 	}
@@ -144,6 +147,7 @@ func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 	if cid != nil {
 		p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
 	}
+	p.ID = id
 	return &p, nil
 }
 

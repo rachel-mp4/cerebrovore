@@ -117,6 +117,15 @@ func Info(msg string, args ...any) {
 	writeLog("INFO", formatted)
 }
 
+func Tmpl(err error) {
+	if err == nil {
+		return
+	}
+	formatted := fmt.Sprintf("tmpl error: %s", err.Error())
+	fmt.Printf("[T] %s\n", formatted)
+	writeLog("TMPL", formatted)
+}
+
 // use this for meta messages, just for you!
 func Dbug(msg string, args ...any) {
 	if !Dev {

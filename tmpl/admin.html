@@ -1,0 +1,24 @@
+{{define "mod"}}
+  <li><a href="/profile/{{.}}">{{.}}</a></li> 
+{{end}}
+
+{{define "content"}}
+  <h2>
+    new moderator
+  </h2>
+  <form hx-target="#moderators" hx-swap="beforeend" hx-POST="/add-moderator">
+    <div class="form-field">
+      <label for="username">username</label>
+      <input type="text" name="username">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="add moderator"/>
+    </div>
+  </form>
+  <ol id="moderators">
+  {{range .Moderators}}
+    {{template "mod" .}}
+  {{end}}
+  </ol>
+{{end}}
+

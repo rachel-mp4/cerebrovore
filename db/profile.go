@@ -146,14 +146,19 @@ func (s *Store) GetProfile(username string, ctx context.Context) (*types.Profile
 		is_pixel,
 		color,
 		status,
-		bio
+		bio,
+		deleted
 		FROM profiles WHERE username = $1`, username)
 	var p types.ProfileHead
-	err := row.Scan(&p.DisplayName, &p.Avatar, &p.IsPixelArt, &p.Color, &p.Status, &p.Bio)
+	err := row.Scan(&p.DisplayName, &p.Avatar, &p.IsPixelArt, &p.Color, &p.Status, &p.Bio, &p.Deleted)
 	if err != nil {
 		return nil, err
 	}
 	p.Username = username
+	p.SelfBanned, p.Banned, err = s.EZBan(username, ctx)
+	if err != nil {
+		return nil, err
+	}
 	return &p, nil
 }
 
@@ -171,6 +176,7 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 		p.bio,
 		p.is_mono,
 		p.at_identifier,
+		p.deleted,
 		p.friends_header,
 		p.posts_header,
 		p.links_header,
@@ -196,12 +202,12 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 		FROM profiles p
 		LEFT JOIN LATERAL (
 			SELECT 
-				array_agg(pf.friend) AS friends, 
-				array_agg(pf.comment) AS comments,
-				array_agg(pro.display_name) AS names,
-				array_agg(pro.color) AS colors,
-				array_agg(pro.avatar) AS avatars,
-				array_agg(pro.is_pixel) AS pixels
+				array_agg(pf.friend ORDER BY pf.id) AS friends, 
+				array_agg(pf.comment ORDER BY pf.id) AS comments,
+				array_agg(pro.display_name ORDER BY pf.id) AS names,
+				array_agg(pro.color ORDER BY pf.id) AS colors,
+				array_agg(pro.avatar ORDER BY pf.id) AS avatars,
+				array_agg(pro.is_pixel ORDER BY pf.id) AS pixels
 			FROM (
 				SELECT *
 				FROM profile_friends
@@ -213,17 +219,17 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 		) pf ON true
 		LEFT JOIN LATERAL (
 			SELECT 
-				array_agg(pp.post_id) AS ids, 
-				array_agg(pp.comment) AS comments, 
-				array_agg(pp.just_body) AS bools,
-				array_agg(ps.username) AS usernames,
-				array_agg(ps.nick) AS nicks,
-				array_agg(ps.color) AS colors,
-				array_agg(ps.anon) AS anons,
-				array_agg(ps.posted_at) AS dates,
-				array_agg(t.body) AS bodys,
-				array_agg(i.cid) AS cids,
-				array_agg(i.alt) AS alts
+				array_agg(pp.post_id ORDER BY pp.id) AS ids, 
+				array_agg(pp.comment ORDER BY pp.id) AS comments, 
+				array_agg(pp.just_body ORDER by pp.id) AS bools,
+				array_agg(ps.username ORDER BY pp.id) AS usernames,
+				array_agg(ps.nick ORDER BY pp.id) AS nicks,
+				array_agg(ps.color ORDER BY pp.id) AS colors,
+				array_agg(ps.anon ORDER BY pp.id) AS anons,
+				array_agg(ps.posted_at ORDER BY pp.id) AS dates,
+				array_agg(t.body ORDER BY pp.id) AS bodys,
+				array_agg(i.cid ORDER BY pp.id) AS cids,
+				array_agg(i.alt ORDER BY pp.id) AS alts
 			FROM (
 				SELECT *
 				FROM profile_posts
@@ -237,8 +243,8 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 		) pp ON true
 		LEFT JOIN LATERAL (
 			SELECT 
-				array_agg(pl.link) AS links, 
-				array_agg(pl.comment) AS comments
+				array_agg(pl.link ORDER BY pl.id) AS links, 
+				array_agg(pl.comment ORDER BY pl.id) AS comments
 			FROM (
 				SELECT *
 				FROM profile_links
@@ -260,6 +266,7 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 		&p.ProfileHead.Bio,
 		&p.ProfileHead.BioIsMono,
 		&p.ProfileHead.AtIdentifier,
+		&p.ProfileHead.Deleted,
 		&p.FriendsHeader,
 		&p.PostsHeader,
 		&p.LinksHeader,
@@ -342,13 +349,28 @@ func (s *Store) GetFullProfile(username string, ctx context.Context) (*types.Pro
 	}
 
 	p.Username = username
-	row = s.pool.QueryRow(ctx, `SELECT p.thread_id, t.topic, p.posted_at FROM posts p LEFT JOIN threads t ON p.thread_id = t.id WHERE username = $1 AND anon = false ORDER BY p.id DESC`, username)
+	row = s.pool.QueryRow(ctx, `SELECT 
+			p.thread_id, 
+			t.topic, 
+			p.posted_at 
+		FROM posts p 
+		LEFT JOIN threads t ON p.thread_id = t.id 
+		WHERE p.username = $1 
+		AND p.anon = FALSE 
+		AND t.deleted = FALSE 
+		AND p.deleted = FALSE 
+		ORDER BY p.id DESC`,
+		username)
 	err = row.Scan(&p.LastSeenLocation, &p.LastSeenTopic, &p.LastSeenTime)
 	if err != nil {
 		log.Println(err)
 	}
 	if p.LastSeenTopic != nil && *p.LastSeenTopic == "" {
 		p.LastSeenTopic = nil
+	}
+	p.SelfBanned, p.Banned, err = s.EZBan(username, ctx)
+	if err != nil {
+		return nil, err
 	}
 	return &p, nil
 }

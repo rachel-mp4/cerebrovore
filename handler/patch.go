@@ -335,21 +335,12 @@ func (h *Handler) patchnotes(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	type patchresp struct {
-		baseresp
-		Patches []types.Patch
-	}
-	base, err := h.makebase("patch notes", c.Username, r.Context())
+	base, err := h.makebase("patch notes", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
-	err = patchT.ExecuteTemplate(w, "base", patchresp{
-		*base,
+	patchT.exec(w, patchresp{
+		base,
 		h.notes,
 	})
-	if err != nil {
-		clog.Warn("patch notes: %s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
-	}
-
 }

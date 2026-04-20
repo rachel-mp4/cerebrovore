@@ -25,3 +25,5 @@ require (
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/protobuf v1.36.6 // indirect
 )
+
+replace github.com/rachel-mp4/lrcd v0.2.10 => ../lrcd

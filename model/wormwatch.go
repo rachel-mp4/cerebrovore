@@ -121,7 +121,7 @@ func (tm *threadModel) handleQueue() {
 func (tm *threadModel) pauseVideo() {
 	wwd := tm.wormwatchdata
 	tm.wormwatchersmu.Lock()
-	tpause := time.Now().Sub(*wwd.start)
+	tpause := time.Since(*wwd.start)
 	tpausems := tpause.Milliseconds()
 	wwd.pausedAt = &tpause
 

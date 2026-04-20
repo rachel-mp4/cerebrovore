@@ -1,51 +1,105 @@
 {{define "content"}}
-  <form hx-swap="beforeend" hx-POST="/delete-post">
-    <div class="form-field">
-      <label for="postid">id</label>
-      <input type="text" name="postid">
-    </div>
-    <div class="form-field">
-      <label for="thread">is thread?</label>
-      <input type="checkbox" name="thread">
-    </div>
-    <div class="form-submit">
-      <input type="submit" value="moderate"/>
-    </div>
-  </form>
+  <div>
+    <h2>inspect post</h2>
+    <form hx-target="#inspected-post" hx-GET="/inspect-post">
+      <div class="form-field">
+        <label for="postid">id</label>
+        <input type="text" name="postid">
+      </div>
+      <div class="form-submit">
+        <input type="submit" value="inspect"/>
+      </div>
+    </form>
+    <div id="inspected-post"></div>
+  </div>
+  <div>
+    <h2>moderation action</h2>
+    <p>
+      if you just enter a post/thread id, then it will be deleted it, and if you enter a username,
+      then you'll ban them with reference to all the filled in fields
+    </p>
+    {{template "emptyactionform" .}}
+    <div id="moderation-history"></div>
+  </div>
+  <h2>reports</h2>
+  {{template "reports" .}}
   {{if .Appeals}}
     <h2>
       ban appeals
     </h2>
     {{range .Appeals}}
       <hr>
-      <div>
-        offending post:
-      </div>
-        {{template "post" .Post}}
-      <div>
-        reason: {{.Ban.Reason}}
-      </div>
-      <div>
-        internal comment: {{.Ban.Comment}}
-      </div>
-      <div>
-        response: {{.Ban.Response}}
-      </div>
-      <div>
-        remaining: {{remainingTime .Ban.Until}}
-      </div>
-      <form hx-swap="outerHTML" hx-post="/appeal-verdict">
-        <div class="form-field">
-          <label for="reject">reject appeal?</label>
-          <input type="checkbox" name="reject">
-        </div>
-        <input type="hidden" name="id" value="{{.Ban.Id}}">
-        <div class="form-submit">
-          <input type="submit" value="repeal ban"/>
-        </div>
-      </form>
+      {{template "appeal" .}}
     {{end}}
   {{end}}
+  <script src="/js/links.js"></script>
+{{end}}
+
+{{define "confirm"}}
+  <form id="moderation-form" hx-swap="outerHTML" hx-POST="/take-action">
+    {{template "pending-action" .}}
+    <input type="hidden" name="postid" value="{{.Id}}">
+    <input type="hidden" name="username" value="{{.Username}}">
+    <input type="hidden" name="reason" value="{{.Reason}}">
+    <input type="hidden" name="comment" value="{{.Comment}}">
+    <input type="hidden" name="until" value="{{.Until}}">
+    <input type="hidden" name="confirm" value="moderation confirmed">
+    <div class="confirm-cancel">
+      <div class="form-submit">
+        <input type="submit" value="confirm moderation action"/>
+      </div>
+      <div class="form-submit">
+        <button hx-target="#moderation-form" hx-swap="outerHTML" hx-GET="/cancel-action">cancel</button>
+      </div>
+    </div>
+  </form>
+{{end}}
+
+{{define "confirmed"}}
+  {{template "emptyactionform" .}}
+  {{template "oob-action" .}}
+{{end}}
+
+{{define "emptyactionform"}}
+  <form hx-swap="outerHTML" hx-POST="/take-action">
+    <div class="form-field">
+      <label for="postid">id</label>
+      <input type="text" name="postid">
+    </div>
+    <div class="form-field">
+      <label for="username">username</label>
+      <input type="text" name="username">
+    </div>
+    <div class="form-field">
+      <label for="reason">reason (displayed to user)</label>
+      <input type="text" name="reason">
+    </div>
+    <div class="form-field">
+      <label for="comment">comment (only shown to moderators)</label>
+      <input type="text" name="comment">
+    </div>
+    <div class="form-field">
+      <label for="until">duration for ban (default 1 hour) (8760 hours in a year)</label>
+      <input type="text" name="until">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="moderate"/>
+    </div>
+  </form>
+{{end}}
+
+{{define "appeal"}}
+  {{template "ban" .}}
+  <form hx-swap="outerHTML" hx-post="/appeal-verdict">
+    <div class="form-field">
+      <label for="reject">reject appeal?</label>
+      <input type="checkbox" name="reject">
+    </div>
+    <input type="hidden" name="id" value="{{.Ban.Id}}">
+    <div class="form-submit">
+      <input type="submit" value="repeal ban"/>
+    </div>
+  </form>
 {{end}}
 
 {{define "rejected"}}
@@ -66,17 +120,81 @@
   </div>
 {{end}}
 
+{{define "oob-action"}}
+  <div id="moderation-history" hx-swap-oob="beforeend">
+    <div class="moderation-action">
+      {{template "action" .}}
+    </div>
+  </div>
+{{end}}
 
-{{define "post-deleted"}}
-  <div class="post-deleted">
-    POST DELETED, here is what it was for reference.
+{{define "pending-action"}}
+  <div class="pending-action">
+    {{template "action" .}}
+  </div>
+{{end}}
+
+{{define "action"}}
+  <h3>{{.Type}}</h3>
+  {{if not .Action.Ban}}
+    {{if .Action.Post}}
+      {{template "post" .Post}}
+    {{end}}
+  {{end}}
+  {{if .Action.Ban}}
+    {{template "ban" .}}
+  {{end}}
+{{end}}
+
+{{define "check-post"}}
+  <div class="check-post">
+    here is the post you want to look at!
     {{template "post" .Post}}
   </div>
 {{end}}
 
-{{define "thread-deleted"}}
-  <div class="thread-deleted">
-    POST DELETED, here is what the op of it was for reference.
-    {{template "post" .Post}}
+{{define "reports"}}
+  {{range .Reports}}
+    {{template "report" .}}
+  {{end}}
+  {{if .Cursor}}
+    <form hx-get="/reports" hx-swap="outerHTML">
+      <input type="hidden" name="after" value="{{.Cursor}}">
+      <input type="hidden" name="limit" value="20">
+      <div class="form-submit">
+        <input type="submit" value="get more reports"/>
+      </div>
+    </form>
+  {{end}}
+{{end}}
+
+{{define "report"}}
+  <hr>
+  <a href="/profile/{{.Reporter}}">@{{.Reporter}}</a> reported <a href="/profile/{{.Reported}}">@{{.Reported}}</a> for {{if .ForProfile}}their profile{{else if .PostId}} post <a href="/p/{{idtoa .PostId}}">#{{idtoa .PostId}}</a>{{else}}just a suspiscion{{end}}
+  {{with .Post}}
+    <div>the post:</div>
+    {{template "post" .}}
+  {{end}}
+  {{if .Reason}}
+    <blockquote>
+      {{.Reason}}
+    </blockquote>
+  {{end}}
+  <form hx-target="outerHTML" hx-swap="delete" hx-post="/report">
+    <input type="hidden" name="id" value="{{.Id}}">
+    <div class="form-submit">
+      <input type="submit" value="report reviewed"/>
+    </div>
+  </form>
+{{end}}
+
+{{define "report-submitted"}}
+  <div>thank you for your report!</div>
+  <div><em>repeatedly filing false reports may result in ban!!!</em></div>
+{{end}}
+
+{{define "reviewed"}}
+  <div>
+  reviewed
   </div>
 {{end}}

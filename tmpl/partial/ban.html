@@ -1,0 +1,30 @@
+<!--.Ban, .Post, .IsMod-->
+{{define "ban"}}
+  <div class="ban">
+    {{with .Ban.Reason}}
+      <div class="reason">
+        reason: <span>{{.}}</span>
+      </div>
+    {{end}}
+    {{if .IsMod}}
+      {{with .Ban.Comment}}
+        <div class="comment">
+          internal comment: <span>{{.}}</span>
+        </div>
+      {{end}}
+    {{end}}
+    {{with .Ban.Response}}
+      <div class="response">
+        response: <span>{{.}}</span>
+      </div>
+    {{end}}
+    <div class="remaining-time">
+      remaining time: <span>{{remainingTime .Ban.Until}}</span>
+    </div>
+    {{if .Post}}
+      <div class="post">
+        offending post: {{template "post" .Post}}
+      </div>
+    {{end}}
+  </div>
+{{end}}

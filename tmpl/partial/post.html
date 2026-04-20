@@ -1,26 +1,27 @@
 {{define "post"}}
-<div class="tx {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}; --accentl: {{colorToA .Color}}80">
-  <div class="header">
-    {{- if .Nick -}}<span class="nick">{{- .Nick -}}</span>{{- end -}}
-    {{- if not .Anon -}}<span class="handle"><a href="/profile/{{- .Username -}}">@{{- .Username -}}</a></span>{{- end -}}
-    <button class="reply"> #{{- idtoa .ID -}}</button>
-    <time class="time" datetime="{{formatTime .PostedAt}}"></time>
+  <div class="tx {{colorIsDark .Color}}" id="{{idtoa .ID}}" style="--accent: {{colorToA .Color}}; --accentl: {{colorToA .Color}}80">
+    <div class="header">
+      {{- if .Nick -}}<span class="nick">{{- .Nick -}}</span>{{- end -}}
+      {{- if or .ViewerIsMod (not .Anon) -}}<span class="handle"><a href="/profile/{{- .Username -}}">@{{- .Username -}}</a></span>{{- end -}} {{if and .ViewerIsMod .Anon}}<span>as anon</span>{{end}} {{if and .ViewerIsMod .Deleted}}<span>deleted</span> {{end}}
+      <button class="reply"> #{{- idtoa .ID -}}</button>
+      <button class="report clickable"> report</button>
+      <time class="time" datetime="{{formatTime .PostedAt}}"></time>
+    </div>
+    <div class="body">
+      {{- if .ImageContent -}}
+      {{- renderImageBody .ImageContent.CID .ImageContent.Alt -}}
+      {{- end -}}
+      {{- if .TextContent -}}
+        <div>
+          {{- renderTextBody .TextContent.Body -}}
+        </div>
+      {{- end -}}
+    </div>
+    <div class="footer">
+      {{- range $i, $v := .Backlinks -}}
+      {{- if $i }} {{ end -}}
+      <a href="/p/{{idtoa .}}">#{{idtoa .}}</a>
+      {{- end -}}
+    </div>
   </div>
-  <div class="body">
-    {{- if .ImageContent -}}
-    {{- renderImageBody .ImageContent.CID .ImageContent.Alt -}}
-    {{- end -}}
-    {{- if .TextContent -}}
-      <div>
-        {{- renderTextBody .TextContent.Body -}}
-      </div>
-    {{- end -}}
-  </div>
-  <div class="footer">
-    {{- range $i, $v := .Backlinks -}}
-    {{- if $i }} {{ end -}}
-    <a href="/p/{{idtoa .}}">#{{idtoa .}}</a>
-    {{- end -}}
-  </div>
-</div>
 {{end}}

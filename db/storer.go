@@ -97,8 +97,10 @@ type Storer interface {
 	SelfBan(username string, postid *uint32, reason string, til time.Time, ctx context.Context) error
 	ClearOldSelfBans(ctx context.Context) (int64, error)
 	Appeal(banid int, username string, response string, ctx context.Context) error
-	GetAppeals(limit int, before *int, ctx context.Context) (bans []types.Appeal, cursor *int, err error)
+	GetAppeals(limit int, before *int, ctx context.Context) (actions []types.Action, cursor *int, err error)
 	IsBanned(username string, ctx context.Context) (*types.Ban, *types.Post, error)
+	// EZBan easily gets if a user is self banned or mod banned
+	EZBan(username string, ctx context.Context) (self bool, mod bool, err error)
 	Unban(id int, ctx context.Context) error
 	Reject(id int, ctx context.Context) error
 	DeleteUsersPostsAndThreads(username string, ctx context.Context) error
@@ -111,6 +113,18 @@ type Storer interface {
 	UpdateProfileContents(username string, profile *types.ProfileExtras, ctx context.Context) error
 	GetProfile(username string, ctx context.Context) (*types.ProfileHead, error)
 	GetFullProfile(username string, ctx context.Context) (*types.Profile, error)
+
+	// report methods
+	Report(report *types.Report, ctx context.Context) error
+	GetReports(limit int, after *int, ctx context.Context) (reports []types.Report, cursor *int, err error)
+	ReviewReport(id int, reviewer string, ctx context.Context) error
+	ReviewAllReportsBy(reporter string, reviewer string, ctx context.Context) error
+
+	// moderator methods
+	MakeModerator(username string, ctx context.Context) error
+	RemoveModerator(username string, ctx context.Context) error
+	IsModerator(username string, ctx context.Context) (bool, error)
+	GetModerators(ctx context.Context) ([]string, error)
 }
 
 type Backlink struct {

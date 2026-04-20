@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -128,7 +127,7 @@ func mimeToExt(contentType string) (string, error) {
 	case "image/webp":
 		return ".webp", nil
 	default:
-		return "", errors.New(fmt.Sprintf("disallowed contentType: %s", contentType))
+		return "", fmt.Errorf("disallowed contentType: %s", contentType)
 	}
 }
 
@@ -586,13 +585,7 @@ func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "failed to get threads", http.StatusInternalServerError)
 		return
 	}
-	type tbumpedresp struct {
-		Threads []types.Thread
-	}
-	err = bumpedT.ExecuteTemplate(w, "bumped-threads", tbumpedresp{tt})
-	if err != nil {
-		clog.Warn("%s", err)
-	}
+	bumpedT.exec(w, bumpedresp{tt})
 }
 
 func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -611,39 +604,24 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
 	}
-	tt, err := h.db.GetBumps(r.Context())
+	title := ntid
+	if t.Topic != nil {
+		title = *t.Topic
+	}
+	br, err := h.makebase(title, c, r.Context())
 	if err != nil {
-		http.Error(w, "failed to get threads", http.StatusInternalServerError)
+		http.Error(w, "failed to get bumps", http.StatusInternalServerError)
 		return
 	}
-	title := ntid
+	br.Accent = utils.ColorToAp(t.OP.Color)
 	watched := h.db.IsWatched(c.Username, tid, r.Context())
-
-	type getthreadresp struct {
-		baseresp
-		Thread   *types.Thread
-		Archived bool
-		Watched  bool
-	}
-	gtr := getthreadresp{
-		baseresp: baseresp{
-			h.ca,
-			title,
-			tt,
-			h.crack,
-			&t.ReplyCount,
-			utils.ColorToAp(t.OP.Color),
-			true,
-			c.Username,
-		},
+	gtr := threadresp{
+		baseresp: br,
 		Thread:   t,
 		Watched:  watched,
 		Archived: utils.MaxReplies(t.ReplyCount),
 	}
-	err = threadT.ExecuteTemplate(w, "base", gtr)
-	if err != nil {
-		clog.Warn("%s", err)
-	}
+	threadT.exec(w, gtr)
 }
 
 func (h *Handler) getThreadWS(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -756,30 +734,21 @@ func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Reques
 	}
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
 }
+
 func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	type catalogresp struct {
-		baseresp
-		IsChrono     bool
-		ChronoCursor *uint32
-		BumpCursor   *time.Time
-		ThreadThumbs []types.Thread
-	}
-	base, err := h.makebase("catalog", c.Username, r.Context())
+	base, err := h.makebase("catalog", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
-	tr := catalogresp{
-		*base,
-		isChrono,
-		nil,
-		nil,
-		nil,
+	tr := catalogthreadsresp{
+		baseresp: base,
+		IsChrono: isChrono,
 	}
 	cursor := r.URL.Query().Get("cursor")
 	if isChrono {
@@ -811,10 +780,7 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		tr.BumpCursor = nc
 		tr.ThreadThumbs = fts
 	}
-	err = catalogT.ExecuteTemplate(w, "base", tr)
-	if err != nil {
-		clog.Warn("%s", err)
-	}
+	catalogT.exec(w, tr)
 }
 
 func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -822,25 +788,15 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	type threadsresp struct {
-		baseresp
-		IsChrono     bool
-		ChronoCursor *uint32
-		BumpCursor   *time.Time
-		ThreadThumbs []types.Thread
-	}
-	base, err := h.makebase("threads", c.Username, r.Context())
+	base, err := h.makebase("threads", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
-	tr := threadsresp{
-		*base,
-		isChrono,
-		nil,
-		nil,
-		nil,
+	tr := catalogthreadsresp{
+		baseresp: base,
+		IsChrono: isChrono,
 	}
 	cursor := r.URL.Query().Get("cursor")
 	if isChrono {
@@ -872,7 +828,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		tr.BumpCursor = nc
 		tr.ThreadThumbs = fts
 	}
-	err = threadsT.ExecuteTemplate(w, "base", tr)
+	threadsT.exec(w, tr)
 	if err != nil {
 		clog.Warn("%s", err)
 	}

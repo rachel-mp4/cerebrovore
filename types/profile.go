@@ -14,6 +14,9 @@ type ProfileHead struct {
 	Bio          *string
 	BioIsMono    *bool
 	AtIdentifier *string
+	Deleted      bool
+	Banned       bool
+	SelfBanned   bool
 }
 
 type Profile struct {

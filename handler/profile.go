@@ -26,25 +26,23 @@ func (h *Handler) profile(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get profile", http.StatusNotFound)
 		return
 	}
+	if profile.Banned {
+		clog.Info("%s", err)
+		http.Error(w, "user is banned", http.StatusForbidden)
+		return
+	}
 	var title = profile.Username
 	if profile.DisplayName != nil {
 		title = *profile.DisplayName
 	}
-	br, err := h.makebase(title, c.Username, r.Context())
+	br, err := h.makebase(title, c, r.Context())
 	if err != nil {
 		clog.Info("%s", err.Error())
 		http.Error(w, "internal error", http.StatusInternalServerError)
 		return
 	}
 	br.Accent = utils.ColorToAp(profile.Color)
-	type profileresp struct {
-		baseresp
-		Profile *types.Profile
-	}
-	err = profileT.ExecuteTemplate(w, "base", profileresp{*br, profile})
-	if err != nil {
-		clog.Info("%s", err.Error())
-	}
+	profileT.exec(w, profileresp{br, profile})
 }
 
 func (h *Handler) postProfile(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -319,21 +317,14 @@ func (h *Handler) editProfile(c *Client, w http.ResponseWriter, r *http.Request)
 			return
 		}
 	}
-	type editprofileresp struct {
-		baseresp
-		Profile *types.Profile
-	}
-	base, err := h.makebase("edit profile", c.Username, r.Context())
+	base, err := h.makebase("edit profile", c, r.Context())
 	if err != nil {
 		clog.Info("%s", err)
 		http.Error(w, "error rendering", http.StatusInternalServerError)
 		return
 	}
-	err = editprofileT.ExecuteTemplate(w, "base", editprofileresp{
-		*base,
+	editprofileT.exec(w, editprofileresp{
+		base,
 		p,
 	})
-	if err != nil {
-		clog.Info("%s", err)
-	}
 }

@@ -16,8 +16,13 @@
       <a href="/settings">view my settings</a>
     </div>
     <div>
-      <a href="/new">start a new thread</a>
+      <a href="/new">create a new thread</a>
     </div>
+    {{if .IsMod}}
+      <div>
+        <a href="/moderate">view moderation panel</a>
+      </div>
+    {{end}}
   </div>
   <div class="sidebar-group" id="watched-threads">
     <div>

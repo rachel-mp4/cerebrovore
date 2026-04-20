@@ -4,9 +4,10 @@ import (
 	"time"
 )
 
-type Appeal struct {
-	Ban
-	Post
+type Action struct {
+	Ban   *Ban
+	Post  *Post
+	IsMod bool
 }
 
 type Ban struct {

@@ -2,22 +2,9 @@
   <h1 class="banned">
     YOU ARE BANNED
   </h1>
-  {{if .Ban.Reason}}
-    <div class="reason">
-      {{.Ban.Reason}}
-    </div>
-  {{end}}
-  <div>
-    remaining time: <span class="remaining-time">{{remainingTime .Ban.Until}}</span>
-  </div>
-  {{if .Post}}
-    <div>
-      offending post:
-    </div>
-    {{template "post" .Post}}
-  {{end}}
+  {{template "ban" .}}
   <h2>
-    appeal ban:
+    appeal ban
   </h2>
   {{if not .Ban.Response}}
     <form hx-swap="outerHTML" hx-post="/appeal">

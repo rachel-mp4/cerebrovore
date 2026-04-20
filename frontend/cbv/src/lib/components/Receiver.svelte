@@ -72,15 +72,14 @@
         {/if}
         <button class="reply">{` #${b36encodenumber(item.id)}`}</button>
         {#if item.lrcdata.mine !== true}
+          <button class="report clickable">{" report"}</button>
           <button
             class="mute clickable"
             onclick={() => {
               item.lrcdata.muted = true;
               onmute?.(item.id);
-            }}
+            }}>{" mute"}</button
           >
-            mute
-          </button>
         {/if}
         {#if item.pubAt !== undefined}
           <time class="time" datetime={new Date(item.pubAt).toISOString()}
