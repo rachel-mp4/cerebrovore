@@ -245,7 +245,7 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "session")
 	session.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 180,
+		MaxAge:   86400 * 14,
 		HttpOnly: true,
 	}
 	session.Values = map[any]any{}
@@ -286,7 +286,7 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 	session, _ := h.sessionStore.Get(r, "session")
 	session.Options = &sessions.Options{
 		Path:     "/",
-		MaxAge:   86400 * 180,
+		MaxAge:   86400 * 14,
 		HttpOnly: true,
 	}
 	session.Values = map[any]any{}
@@ -368,6 +368,12 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			http.Redirect(w, r, "/login", http.StatusSeeOther)
 			return
 		}
+		s.Options = &sessions.Options{
+			Path:     "/",
+			MaxAge:   86400 * 14,
+			HttpOnly: true,
+		}
+		s.Save(r, w)
 		isadmin := os.Getenv("ADMIN_USERNAME") == username
 		ismod, err := h.db.IsModerator(username, r.Context())
 		if err != nil {
