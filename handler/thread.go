@@ -615,6 +615,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	br.Accent = utils.ColorToAp(t.OP.Color)
 	watched := h.db.IsWatched(c.Username, tid, r.Context())
+	br.justbaseresp.ReplyCount = &t.ReplyCount
 	gtr := threadresp{
 		baseresp: br,
 		Thread:   t,
