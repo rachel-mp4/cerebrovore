@@ -486,6 +486,7 @@ func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports 
 			if cid != nil {
 				p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
 			}
+			p.ID = *r.PostId
 			r.Post = &p
 		}
 		reports = append(reports, r)
