@@ -88,13 +88,21 @@
               onmute?.(item.id);
             }}>{" mute"}</button
           >
-        {:else if ismoderator}
-          <button class="delete clickable">{" delete"}</button>
-          <a class="moderate clickable" href={`/p/${b36encodenumber(item.id)}`}
-            >{" moderate"}</a
-          >
+          {#if ismoderator}
+            <button class="delete clickable">{" delete"}</button>
+            <a
+              class="moderate clickable"
+              href={`/p/${b36encodenumber(item.id)}`}>{" moderate"}</a
+            >
+          {/if}
         {:else}
           <button class="delete clickable">{" delete"}</button>
+          {#if ismoderator}
+            <a
+              class="moderate clickable"
+              href={`/p/${b36encodenumber(item.id)}`}>{" moderate"}</a
+            >
+          {/if}
         {/if}
         {#if item.pubAt !== undefined}
           <time class="time" datetime={new Date(item.pubAt).toISOString()}

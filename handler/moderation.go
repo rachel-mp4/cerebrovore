@@ -386,24 +386,29 @@ func (h *Handler) getReports(c *Client, w http.ResponseWriter, r *http.Request) 
 	moderateT.reports(w, reports, cursor)
 }
 
+func (h *Handler) reviewReport(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to review report", http.StatusUnauthorized)
+		return
+	}
+
+	aid := r.FormValue("id")
+	iid, err := strconv.Atoi(aid)
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	err = h.db.ReviewReport(iid, c.Username, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	moderateT.review(w)
+}
+
 func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized to report", http.StatusUnauthorized)
-		return
-	}
-	if c.IsMod {
-		aid := r.FormValue("id")
-		iid, err := strconv.Atoi(aid)
-		if err != nil {
-			moderateT.error(w, err.Error())
-			return
-		}
-		err = h.db.ReviewReport(iid, c.Username, r.Context())
-		if err != nil {
-			moderateT.error(w, err.Error())
-			return
-		}
-		moderateT.review(w)
 		return
 	}
 	report := types.Report{Reporter: c.Username}

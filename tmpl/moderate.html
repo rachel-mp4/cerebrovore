@@ -201,10 +201,10 @@
       {{.Reason}}
     </blockquote>
   {{end}}
-  <form hx-swap="outerHTML" hx-post="/report">
+  <form hx-swap="outerHTML" hx-post="/review-report">
     <input type="hidden" name="id" value="{{.Id}}">
     <div class="form-submit">
-      <input type="submit" value="report reviewed"/>
+      <input type="submit" value="job's done"/>
     </div>
   </form>
 {{end}}

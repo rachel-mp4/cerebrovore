@@ -75,6 +75,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /inspect-post", h.AM(h.inspectPost))
 	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
 	mux.HandleFunc("POST /report", h.AM(h.postReport))
+	mux.HandleFunc("POST /review-report", h.AM(h.reviewReport))
 	mux.HandleFunc("GET /reports", h.AM(h.getReports))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
