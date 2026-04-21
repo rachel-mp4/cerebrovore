@@ -10,6 +10,40 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.2.0",
+			Timestamp: "2026-04-20",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "capacity to report posts",
+				},
+				{
+					Type: "feature",
+					Name: "improve moderation tooling",
+				},
+				{
+					Type: "feature",
+					Name: "moderator role",
+				},
+				{
+					Type: "upgrade",
+					Name: "refresh session on access website",
+				},
+				{
+					Type: "upgrade",
+					Name: "show if user is debrainwormed on profile",
+				},
+				{
+					Type: "fix",
+					Name: "last seen no longer exposes posting in deleted threads",
+				},
+				{
+					Type: "fix",
+					Name: "ordering of featured accounts on profile is now preserved instead of being based on when they first logged in after the profile update",
+				},
+			},
+		},
+		{
 			Release:   "β.1.1",
 			Timestamp: "2026-04-11",
 			Notes: []types.Note{
