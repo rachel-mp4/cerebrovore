@@ -17,7 +17,7 @@
       </form>
     {{end}}
   {{end}}
-  <div id="eats-ur-brain">
+  <div id="eats-ur-brain" {{if .IsMod}}class="mod"{{end}}>
     {{range .Thread.Posts}}
       {{template "post" .}}
     {{end}}
@@ -34,7 +34,7 @@
       <script type="module" src="http://localhost:5173/src/chat.ts"></script>
     {{end}}
     <script src="/js/links.js"></script>
-    <script src="/js/report.js"></script>
+    <script src="/js/action.js"></script>
     <script src="/js/thumb.js"></script>
     <script src="/js/hydratetime.js"></script>
     <script src="/js/loadfontsize.js"></script>

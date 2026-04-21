@@ -91,6 +91,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("POST /t/{ntid}", h.AM(h.postPost))
 	mux.HandleFunc("GET /t/{ntid}", h.AM(h.getThread))
 	mux.HandleFunc("GET /p/{npid}", h.AM(h.getPost))
+	mux.HandleFunc("DELETE /p/{npid}", h.AM(h.deletePost))
 	mux.HandleFunc("POST /w/{ntid}", h.AM(h.watchThread))
 	mux.HandleFunc("POST /u/{ntid}", h.AM(h.unwatchThread))
 	mux.HandleFunc("GET /t/{ntid}/ws", h.AM(h.getThreadWS))

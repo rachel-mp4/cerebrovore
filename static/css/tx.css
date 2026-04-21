@@ -63,6 +63,10 @@
   font-size: .75em;
 }
 
+.you .handle::after {
+  content: " (you)";
+}
+
 .tx:not(:hover) .clickable {
   display: none;
 }

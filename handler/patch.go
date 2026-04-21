@@ -10,6 +10,25 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.2.1",
+			Timestamp: "2026-04-11",
+			Notes: []types.Note{
+				{
+					Type:        "feature",
+					Name:        "delete your posts!",
+					Description: "i don't have capacity to delete your threads yet, report it so a mod can take action",
+				},
+				{
+					Type: "feature",
+					Name: "not complete, but your posts now say (you) to help remind you if it's an anonymous post",
+				},
+				{
+					Type: "change",
+					Name: "timestamps look different now, sorry if you prefer the old way, ui getting busy",
+				},
+			},
+		},
+		{
 			Release:   "β.2.0",
 			Timestamp: "2026-04-20",
 			Notes: []types.Note{

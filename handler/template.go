@@ -247,7 +247,7 @@ type homeresp struct {
 var moderateT moderateTemplate
 
 func (t *moderateTemplate) inspect(w io.Writer, post *types.Post) {
-	post.ViewerIsMod = true
+	post.CanSeeAnon = true
 	clog.Tmpl(t.template.ExecuteTemplate(w, "check-post", inspectresp{post}))
 }
 
@@ -267,6 +267,17 @@ func (t *moderateTemplate) report(w io.Writer) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "report-submitted", nil))
 }
 
+func (t *moderateTemplate) review(w io.Writer) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "reviewed", nil))
+}
+
+func (t *moderateTemplate) deleted(w io.Writer, ismod bool) {
+	type s struct {
+		IsMod bool
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "deleted", s{ismod}))
+}
+
 func (t *moderateTemplate) error(w io.Writer, msg string) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "errored", moderateerrorresp{msg}))
 }
@@ -274,7 +285,7 @@ func (t *moderateTemplate) error(w io.Writer, msg string) {
 func (t *moderateTemplate) confirm(w io.Writer, action *types.Action, actioning string, nid string, username string, reason string, comment string, until string) {
 	action.IsMod = true
 	if action.Post != nil {
-		action.Post.ViewerIsMod = true
+		action.Post.CanSeeAnon = true
 	}
 	confirm := moderateconfirmresp{
 		Action:   *action,
@@ -295,11 +306,12 @@ func (t *moderateTemplate) reports(w io.Writer, reports []types.Report, cursor *
 func (t *moderateTemplate) confirmed(w io.Writer, action *types.Action, actioned string) {
 	action.IsMod = true
 	if action.Post != nil {
-		action.Post.ViewerIsMod = true
+		action.Post.CanSeeAnon = true
 	}
 	confirmed := moderateconfirmedresp{
-		Action: *action,
-		Type:   actioned,
+		Action:     *action,
+		Type:       actioned,
+		Autofillid: nil,
 	}
 	clog.Tmpl(t.template.ExecuteTemplate(w, "confirmed", confirmed))
 }
@@ -333,7 +345,8 @@ type moderateconfirmresp struct {
 
 type moderateconfirmedresp struct {
 	types.Action
-	Type string
+	Type       string
+	Autofillid *string
 }
 
 type moderateerrorresp struct {
@@ -342,9 +355,10 @@ type moderateerrorresp struct {
 
 type moderateresp struct {
 	baseresp
-	Appeals []types.Action
-	Reports []types.Report
-	Cursor  *int
+	Appeals    []types.Action
+	Reports    []types.Report
+	Cursor     *int
+	Autofillid *string
 }
 
 var adminT adminTemplate

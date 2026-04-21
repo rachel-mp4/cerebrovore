@@ -531,11 +531,11 @@ func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context)
 	return threads, cursor, nil
 }
 
-func (m *MockStore) GetThread(id uint32, ctx context.Context) (*types.Thread, error) {
+func (m *MockStore) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (*types.Thread, error) {
 	return nil, nil
 }
 
-func (s *Store) GetThread(id uint32, ctx context.Context) (thread *types.Thread, err error) {
+func (s *Store) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (thread *types.Thread, err error) {
 	thread = &types.Thread{ID: id}
 	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE", id)
 	err = row.Scan(&thread.Topic, &thread.ReplyCount)
@@ -590,6 +590,8 @@ func (s *Store) GetThread(id uint32, ctx context.Context) (thread *types.Thread,
 		if cid != nil {
 			p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
 		}
+		p.ViewerIsYou = viewerUsername == p.Username
+		p.LinkToModerate = viewerIsMod
 		thread.Posts = append(thread.Posts, p)
 	}
 	thread.OP = thread.Posts[0]

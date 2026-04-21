@@ -115,6 +115,27 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 	return rc, res, tx.Commit(ctx)
 }
 
+func (m *MockStore) EZPost(id uint32, ctx context.Context) (*types.Post, error) {
+	return nil, nil
+}
+
+func (s *Store) EZPost(id uint32, ctx context.Context) (*types.Post, error) {
+	row := s.pool.QueryRow(ctx, `
+		SELECT
+			thread_id,
+			username,
+			nick
+		FROM posts
+		WHERE id = $1
+		`, id)
+	p := types.Post{ID: id}
+	err := row.Scan(&p.ThreadID, &p.Username, &p.Nick)
+	if err != nil {
+		return nil, err
+	}
+	return &p, nil
+}
+
 func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 	row := s.pool.QueryRow(ctx, `
 	SELECT 

@@ -11,6 +11,26 @@ export function sanitizeUnicodeControls(input: string) {
     .trim();
 }
 
+export function newAbsoluteTimestamp(then: number): string {
+  const now = Date.now()
+  try {
+    if (then > now) {
+      return "in the future"
+    }
+    const formatter = new Intl.DateTimeFormat("en-us", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric"
+    })
+    return formatter.format(then).toLocaleLowerCase()
+  } catch {
+    return `sometime who cares`
+  }
+}
+
+// i like this one but i think that it makes timestamps that are too long at large font size
 export function smartAbsoluteTimestamp(then: number): string {
   const now = Date.now()
   try {

@@ -480,7 +480,7 @@ iframe {
   border: none;
 }
 
-#report-modal {
+#action-modal {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -490,14 +490,13 @@ iframe {
   backdrop-filter: brightness(50%);
 }
 
-#report-modal-content {
+#action-modal-content {
   max-width: 30rem;
-  max-height: 10rem;
   background: var(--gbg);
   padding: 1rem;
 }
 
-.reporting {
+.actioning {
   outline: .25rem dashed #ff0000 !important;
   background: #00ffff !important;
   color: #000000 !important;
@@ -514,4 +513,13 @@ iframe {
 .confirm-cancel {
   display: flex; 
   justify-content: space-between;
+}
+
+a.clickable {
+  font-weight: 400;
+  text-decoration: none;
+}
+
+a.clickable:hover {
+  font-weight: 700;
 }

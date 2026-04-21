@@ -9,18 +9,20 @@ import (
 )
 
 type Post struct {
-	ID           uint32
-	ThreadID     uint32
-	Username     string
-	Anon         bool
-	Nick         *string
-	Color        *uint32
-	PostedAt     time.Time
-	TextContent  *TextContent
-	ImageContent *ImageContent
-	Backlinks    []uint32
-	Deleted      bool
-	ViewerIsMod  bool
+	ID             uint32
+	ThreadID       uint32
+	Username       string
+	Anon           bool
+	Nick           *string
+	Color          *uint32
+	PostedAt       time.Time
+	TextContent    *TextContent
+	ImageContent   *ImageContent
+	Backlinks      []uint32
+	Deleted        bool
+	ViewerIsYou    bool
+	CanSeeAnon     bool
+	LinkToModerate bool
 }
 
 func (p *Post) String() string {

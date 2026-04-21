@@ -4,7 +4,7 @@
     <form hx-target="#inspected-post" hx-GET="/inspect-post">
       <div class="form-field">
         <label for="postid">id</label>
-        <input type="text" name="postid">
+        <input type="text" name="postid" {{with .Autofillid}}value="{{.}}"{{end}}>
       </div>
       <div class="form-submit">
         <input type="submit" value="inspect"/>
@@ -64,7 +64,7 @@
   <form hx-swap="outerHTML" hx-POST="/take-action">
     <div class="form-field">
       <label for="postid">id</label>
-      <input type="text" name="postid">
+      <input type="text" name="postid" {{with .Autofillid}}value="{{.}}"{{end}}>
     </div>
     <div class="form-field">
       <label for="username">username</label>
@@ -79,7 +79,7 @@
       <input type="text" name="comment">
     </div>
     <div class="form-field">
-      <label for="until">duration for ban (default 1 hour) (8760 hours in a year)</label>
+      <label for="until">duration for ban (default 1 hour) (8760h in one year)</label>
       <input type="text" name="until">
     </div>
     <div class="form-submit">
@@ -100,6 +100,27 @@
       <input type="submit" value="repeal ban"/>
     </div>
   </form>
+{{end}}
+
+{{define "deleted"}}
+  <div>
+    post deleted!
+  </div>
+  {{if not .IsMod}}
+    <div>
+      (when a post is deleted, anyone who loads the thread from now on will not see 
+      the post)
+    </div>
+    <div>
+      ((in the future i will send information to currently connected clients that
+      will inform them that they should delete the post, but it will always be
+      possible that they modify their client to ignore this information. be careful
+      out there, ok?))
+    </div>
+  {{end}}
+  <div>
+    <button class="close">close</button>
+  </div>
 {{end}}
 
 {{define "rejected"}}
@@ -180,7 +201,7 @@
       {{.Reason}}
     </blockquote>
   {{end}}
-  <form hx-target="outerHTML" hx-swap="delete" hx-post="/report">
+  <form hx-swap="outerHTML" hx-post="/report">
     <input type="hidden" name="id" value="{{.Id}}">
     <div class="form-submit">
       <input type="submit" value="report reviewed"/>

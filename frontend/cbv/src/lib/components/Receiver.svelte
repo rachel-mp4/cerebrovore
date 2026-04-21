@@ -4,7 +4,7 @@
   import MessageTransmission from "./MessageTransmission.svelte";
   import ImageTransmission from "./ImageTransmission.svelte";
   import type { Item } from "../types";
-  import { smartAbsoluteTimestamp } from "../utils";
+  import { newAbsoluteTimestamp } from "../utils";
   import { isMessage, isImage, isEnby } from "../types";
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
   interface Props {
@@ -13,8 +13,16 @@
     mylocalimage?: string | undefined;
     onmute?: (id: number) => void;
     onunmute?: (id: number) => void;
+    ismoderator: boolean;
   }
-  let { items, mylocaltext, mylocalimage, onmute, onunmute }: Props = $props();
+  let {
+    items,
+    mylocaltext,
+    mylocalimage,
+    onmute,
+    onunmute,
+    ismoderator,
+  }: Props = $props();
   const isActive = (item: Item): boolean => {
     if (isEnby(item)) {
       return true;
@@ -55,7 +63,7 @@
         ? ''
         : ' late'}{numIsDark(item.lrcdata?.init?.color ?? 0)
         ? ' light'
-        : ' dark'}"
+        : ' dark'}{item.lrcdata.mine === true ? ' you' : ''}"
     >
       <div class="header">
         {#if item.lrcdata.init}
@@ -80,10 +88,17 @@
               onmute?.(item.id);
             }}>{" mute"}</button
           >
+        {:else if ismoderator}
+          <button class="delete clickable">{" delete"}</button>
+          <a class="moderate clickable" href={`/p/${b36encodenumber(item.id)}`}
+            >{" moderate"}</a
+          >
+        {:else}
+          <button class="delete clickable">{" delete"}</button>
         {/if}
         {#if item.pubAt !== undefined}
           <time class="time" datetime={new Date(item.pubAt).toISOString()}
-            >posted {smartAbsoluteTimestamp(item.pubAt)}</time
+            >{newAbsoluteTimestamp(item.pubAt)}</time
           >
         {/if}
       </div>

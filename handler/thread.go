@@ -599,7 +599,7 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
 		return
 	}
-	t, err := h.db.GetThread(tid, r.Context())
+	t, err := h.db.GetThread(tid, c.IsMod, c.Username, r.Context())
 	if err != nil {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
@@ -832,5 +832,39 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 	threadsT.exec(w, tr)
 	if err != nil {
 		clog.Warn("%s", err)
+	}
+}
+
+func (h *Handler) deletePost(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	pid, err := utils.AToID(r.PathValue("npid"))
+	if err != nil {
+		clog.Info("%s", err.Error())
+		moderateT.error(w, "provided id failed to parse")
+		return
+	}
+	p, err := h.db.EZPost(pid, r.Context())
+	if err != nil {
+		clog.Info("%s", err.Error())
+		moderateT.error(w, "failed to find post")
+		return
+	}
+	if !c.IsMod && p.Username != c.Username {
+		moderateT.error(w, "you are not authorized to delete this post!")
+		return
+	}
+	if p.ID != p.ThreadID {
+		err = h.db.DeletePost(pid, r.Context())
+		if err != nil {
+			clog.Info("%s", err.Error())
+			moderateT.error(w, "failed to delete post")
+			return
+		}
+		moderateT.deleted(w, c.IsMod)
+	} else {
+		moderateT.error(w, fmt.Sprintf("sorry %s, i'm not 100%% confident in thread deletion yet, so i'm not letting you do that. if you really need thread deleted, report it and a moderator can take action!", c.Username))
 	}
 }

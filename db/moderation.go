@@ -467,9 +467,9 @@ func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports 
 		cursor = &r.Id
 		if r.PostId != nil {
 			p := types.Post{
-				Nick:        nick,
-				Color:       color,
-				ViewerIsMod: true,
+				Nick:       nick,
+				Color:      color,
+				CanSeeAnon: true,
 			}
 			if anon != nil {
 				p.Anon = *anon

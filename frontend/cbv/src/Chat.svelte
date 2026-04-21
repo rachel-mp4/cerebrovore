@@ -3,6 +3,11 @@
   import Transmitter from "./lib/components/Transmitter.svelte";
   import Console from "./lib/components/Console.svelte";
   import { WSContext } from "./lib/wscontext.svelte";
+
+  interface Props {
+    ismoderator: boolean;
+  }
+  let { ismoderator }: Props = $props();
   const url = window.location.href;
   // i think this should work for both http->ws and https->wss schemes, that's
   // why the magic number 4 is there
@@ -27,6 +32,7 @@
     mylocalimage={ctx.curImageBlobURL}
     onmute={ctx.mute}
     onunmute={ctx.unmute}
+    {ismoderator}
   />
   <Transmitter {ctx} />
   <Console log={ctx.log} />

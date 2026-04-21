@@ -37,6 +37,11 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
 		return
 	}
+	id := r.URL.Query().Get("id")
+	var autofillid *string
+	if id != "" {
+		autofillid = &id
+	}
 	base, _ := h.makebase("moderation", c, r.Context())
 	appeals, _, err := h.db.GetAppeals(10, nil, r.Context())
 	if err != nil {
@@ -53,6 +58,7 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 		appeals,
 		reports,
 		cursor,
+		autofillid,
 	})
 }
 
@@ -383,6 +389,21 @@ func (h *Handler) getReports(c *Client, w http.ResponseWriter, r *http.Request) 
 func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized to report", http.StatusUnauthorized)
+		return
+	}
+	if c.IsMod {
+		aid := r.FormValue("id")
+		iid, err := strconv.Atoi(aid)
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		err = h.db.ReviewReport(iid, c.Username, r.Context())
+		if err != nil {
+			moderateT.error(w, err.Error())
+			return
+		}
+		moderateT.review(w)
 		return
 	}
 	report := types.Report{Reporter: c.Username}

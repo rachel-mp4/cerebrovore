@@ -26,7 +26,25 @@ const tft = (then) => {
     return `sometime who cares`
   }
 }
+const nft = (then) => {
+  const now = Date.now()
+  try {
+    if (then > now) {
+      return "in the future"
+    }
+    const formatter = new Intl.DateTimeFormat("en-us", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric"
+    })
+    return formatter.format(then).toLocaleLowerCase()
+  } catch {
+    return `sometime who cares`
+  }
+}
 times.forEach((time) => {
   const ts = time.getAttribute("datetime")
-  time.innerText = `posted ${tft(Date.parse(ts))}`
+  time.innerText = `${nft(Date.parse(ts))}`
 })
