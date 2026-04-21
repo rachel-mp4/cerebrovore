@@ -12,9 +12,9 @@
     <link rel="stylesheet" href="/css/tx.css{{.Crack}}">
     <link rel="icon" href="/svg/favicon2.svg" type="image/svg+xml">
     <title>{{ .Title }}</title>
-    <script src="/js/htmx.min.js"></script>
+    <script src="/js/htmx.min.js{{.Crack}}"></script>
     {{if .Websockets}}
-      <script src="/js/websockets.js"></script>
+      <script src="/js/websockets.js{{.Crack}}"></script>
     {{end}}
   </head>
   <body class="tripartite">

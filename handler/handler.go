@@ -100,7 +100,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("POST /gen-code", h.AM(h.gencode))
 	mux.HandleFunc("POST /gen-public-code", h.AM(h.genpubliccode))
 	mux.Handle("GET /css/", h.StripCrack(http.FileServer(http.Dir("./static"))))
-	mux.Handle("GET /js/", http.FileServer(http.Dir("./static")))
+	mux.Handle("GET /js/", h.StripCrack(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /font/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /wav/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /svg/", http.FileServer(http.Dir("./static")))
