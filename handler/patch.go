@@ -10,8 +10,18 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.2.2",
+			Timestamp: "2026-04-22",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "yous in thread",
+				},
+			},
+		},
+		{
 			Release:   "β.2.1",
-			Timestamp: "2026-04-11",
+			Timestamp: "2026-04-21",
 			Notes: []types.Note{
 				{
 					Type:        "feature",
