@@ -981,9 +981,18 @@ function doattachreply(attach: lrc.AttachReply, ctx: WSContext) {
   if (from == null) {
     return
   }
+  const fn = b36encodenumber(from)
   const to = attach.to
+  const tn = b36encodenumber(to)
+  const fromel = document.getElementById(fn)
+  const toel = document.getElementById(tn)
+  if (fromel && toel?.classList.contains("you")) {
+    const ss = fromel.querySelectorAll(`a[href="/p/${tn}"]`)
+    ss.forEach((s) => {
+      s.classList.add("you")
+    })
+  }
   if (!ctx.existingindices.get(to)) {
-    const toel = document.getElementById(b36encodenumber(to))
     if (!toel) {
       console.log("i can't find to")
       return
