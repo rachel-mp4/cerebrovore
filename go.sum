@@ -27,6 +27,10 @@ github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZb
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rachel-mp4/lrcd v0.2.10 h1:SUSmnACyWYhoB5DK//8hjzxcuFNrID7Kdvl1RygsWiQ=
 github.com/rachel-mp4/lrcd v0.2.10/go.mod h1:nDUjQjSvdhThwzwyIsymt7Dob4lqJfNasmaA5n95uIc=
+github.com/rachel-mp4/lrcd v0.2.11 h1:SvXc0mbgG54kG5YdmUElFZ+ljo+FBxRu+jht1Wb1asM=
+github.com/rachel-mp4/lrcd v0.2.11/go.mod h1:nDUjQjSvdhThwzwyIsymt7Dob4lqJfNasmaA5n95uIc=
+github.com/rachel-mp4/lrcd v0.2.12 h1:hFgwbPb1befRThH3Cf57uP8nyMUwFMZwM696W4IVcJE=
+github.com/rachel-mp4/lrcd v0.2.12/go.mod h1:nDUjQjSvdhThwzwyIsymt7Dob4lqJfNasmaA5n95uIc=
 github.com/rachel-mp4/lrcproto v1.3.1 h1:eYNv4VtlSaBJFowz+TOrwdpc7fT2drd6U+rjDJbSvKs=
 github.com/rachel-mp4/lrcproto v1.3.1/go.mod h1:hQzO36tQELGbkmRnUtKeM6NMU34t79ZcTlhM+MO7pHw=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

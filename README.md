@@ -101,3 +101,20 @@ use n to denote if an id is in base 36. i think in some places i use p at the
 end of a function to say it accepts a pointer, in another place i use it to
 mean we panic if it fails. f at the end of a function means we force (ignore
 error)
+
+### environment variables
+- `SESSION_KEY` is for encrypting the cookie store
+- `LRCD_SECRET` is for generating nonces on lrcd inits for several purposes,
+but mostly to ensure that you don't try and post someone else's message
+- `POSTGRES_BLAH` are self explanatory, used in our postgres container
+- `YOUTUBE_API_KEY` is needed to get the duration & metadata of youtube videos
+in wormwatch
+- `ADMIN_USERNAME` is the username of the admin, which is like a moderator
+except they can create more moderators in the app through the /administrate
+endpoint. they don't need to be set as a moderator in the moderators table to
+have moderator powers
+- `DISCORD_LINK` is a url for a discord invite to a discord server that is
+associated with your site
+- `REPORT_DELIMITER` is a delimiter used to add the current in-progress status
+of reported messages to report reasons, it's just nice to not expose to users
+so they don't try and file misleading reports

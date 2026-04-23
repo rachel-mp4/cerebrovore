@@ -28,7 +28,6 @@
       ban appeals
     </h2>
     {{range .Appeals}}
-      <hr>
       {{template "appeal" .}}
     {{end}}
   {{end}}
@@ -190,18 +189,17 @@
 {{end}}
 
 {{define "report"}}
-  <hr>
-  <a href="/profile/{{.Reporter}}">@{{.Reporter}}</a> reported <a href="/profile/{{.Reported}}">@{{.Reported}}</a> for {{if .ForProfile}}their profile{{else if .PostId}} post <a href="/p/{{idtoa .PostId}}">#{{idtoa .PostId}}</a>{{else}}just a suspiscion{{end}}
-  {{with .Post}}
-    <div>the post:</div>
-    {{template "post" .}}
-  {{end}}
-  {{if .Reason}}
-    <blockquote>
-      {{.Reason}}
-    </blockquote>
-  {{end}}
   <form hx-swap="outerHTML" hx-post="/review-report">
+    <span><a href="/profile/{{.Reporter}}">@{{.Reporter}}</a> reported <a href="/profile/{{.Reported}}">@{{.Reported}}</a> for {{if .ForProfile}}their profile{{else if .PostId}} post <a href="/p/{{idtoa .PostId}}">#{{idtoa .PostId}}</a>{{else}}a post that wasn't yet in database{{end}}</span>
+    {{with .Post}}
+      <div>the post:</div>
+      {{template "post" .}}
+    {{end}}
+    {{if .Reason}}
+      <blockquote>
+        {{.Reason}}
+      </blockquote>
+    {{end}}
     <input type="hidden" name="id" value="{{.Id}}">
     <div class="form-submit">
       <input type="submit" value="job's done"/>

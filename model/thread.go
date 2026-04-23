@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/rachel-mp4/cerebrovore/utils"
 	"github.com/rachel-mp4/lrcd"
@@ -30,6 +31,24 @@ type threadModel struct {
 	wormwatchdata  *wormwatchdata
 	wormwatchers   map[*clientConn]bool // values mean nothing
 	wormwatchersmu sync.Mutex
+}
+
+func (m *Model) GetMessageData(tid uint32, pid uint32) (username *string, curState *string, err error) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[tid]
+	m.tmapmu.RUnlock()
+	if !ok {
+		err = ErrThreadDNE
+		return
+	}
+	tm.mu.Lock()
+	if tm.server != nil {
+		username, curState, err = tm.server.GetExternIDAndBodyFrom(pid)
+	} else {
+		err = ErrServerDNE
+	}
+	tm.mu.Unlock()
+	return
 }
 
 // newThreadModel creates a new thread model. it does not create or start
@@ -68,6 +87,7 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	opts := []lrcd.Option{
 		lrcd.WithIDAllocator(idAllocator),
 		lrcd.WithConsumerSetExternalId(),
+		lrcd.WithSlowCleanup(5 * time.Minute),
 		lrcd.WithServerURIAndSecret(utils.IDToA(tm.id), os.Getenv("LRCD_SECRET")),
 	}
 	if tm.topic != nil {

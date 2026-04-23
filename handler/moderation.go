@@ -2,6 +2,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,8 +10,11 @@ import (
 	"time"
 
 	"github.com/rachel-mp4/cerebrovore/clog"
+	"github.com/rachel-mp4/cerebrovore/model"
 	"github.com/rachel-mp4/cerebrovore/types"
 	"github.com/rachel-mp4/cerebrovore/utils"
+
+	"github.com/rachel-mp4/lrcd"
 )
 
 func (h *Handler) inspectPost(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -420,13 +424,54 @@ func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) 
 			moderateT.error(w, err.Error())
 			return
 		}
-		report.PostId = &id
 		post, err = h.db.GetPost(id, r.Context())
 		if err != nil {
-			moderateT.error(w, err.Error())
-			return
+			threadid := r.FormValue("threadid")
+			tid, err := utils.AToID(threadid)
+			if err != nil {
+				moderateT.error(w, err.Error())
+				return
+			}
+			username, curState, err := h.m.GetMessageData(tid, id)
+			if username != nil {
+				report.Reported = *username
+			}
+
+			if errors.Is(err, model.ErrThreadDNE) {
+				moderateT.error(w, "i think thread does not exist?")
+				return
+			} else if errors.Is(err, lrcd.ErrIDDNE) {
+				moderateT.error(w, "i think the post does not exist? you might be too late, sorry")
+				return
+			} else if errors.Is(err, lrcd.ErrIDDone) {
+				dlm := os.Getenv("REPORT_DELIMITER")
+				rsn := fmt.Sprintf("PUBLISHED #%s %s ", postid, dlm)
+				report.Reason = &rsn
+			} else if err == nil {
+				if curState != nil {
+					dlm := os.Getenv("REPORT_DELIMITER")
+					rsn := fmt.Sprintf("IN PROGRESS #%s %s %s %s ", postid, dlm, *curState, dlm)
+					report.Reason = &rsn
+				} else {
+					clog.Fail("somehow the post body is nil without throwing an error! likely there's an error in implementation")
+					moderateT.error(w, "uncaught error, get stupid devs to check log!")
+					return
+				}
+			} else {
+				clog.Fail("%s", err)
+				moderateT.error(w, "uncaught error, get stupid devs to check log!")
+				return
+			}
+
+			// if we didn't early return, the username should have been set immediately after we queried model, but it might've been nil
+			if report.Reported == "" {
+				clog.Fail("somehow user entered thread without an external id! that's bad! more likely there's an error in error handling")
+				moderateT.error(w, "uncaught error, get stupid devs to check log!")
+				return
+			}
 		}
 		if post != nil {
+			report.PostId = &id
 			report.Reported = post.Username
 		}
 	}
@@ -446,7 +491,11 @@ func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 	reason := r.FormValue("reason")
 	if reason != "" {
-		report.Reason = &reason
+		if report.Reason != nil {
+			*report.Reason = *report.Reason + reason
+		} else {
+			report.Reason = &reason
+		}
 	}
 	err := h.db.Report(&report, r.Context())
 	if err != nil {

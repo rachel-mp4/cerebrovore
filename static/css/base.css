@@ -526,3 +526,7 @@ a.clickable:hover {
 a.you::after {
   content: " (you)";
 }
+
+form:has(.form-submit) {
+  margin-bottom: 2rem;
+}
