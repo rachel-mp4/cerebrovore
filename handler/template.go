@@ -533,7 +533,7 @@ type patchresp struct {
 var codeT codeTemplate
 
 func (t *codeTemplate) exec(w io.Writer, code coderesp) {
-	clog.Tmpl(t.template.ExecuteTemplate(w, "base", code))
+	clog.Tmpl(t.template.ExecuteTemplate(w, "code", code))
 }
 
 type codeTemplate struct {
@@ -547,7 +547,7 @@ type coderesp struct {
 var codeerrT codeerrTemplate
 
 func (t *codeerrTemplate) exec(w io.Writer, codeerr codeerrresp) {
-	clog.Tmpl(t.template.ExecuteTemplate(w, "base", codeerr))
+	clog.Tmpl(t.template.ExecuteTemplate(w, "coderr", codeerr))
 }
 
 type codeerrTemplate struct {
