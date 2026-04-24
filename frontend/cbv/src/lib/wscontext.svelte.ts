@@ -131,9 +131,6 @@ export class WSContext {
         } else {
           throw new Error(`HTTP ${response.status}`)
         }
-        if (body.includes("#desh") || body.includes("#molt") || body.includes("#debrainworm") || body.includes("#deshell")) {
-          setTimeout(() => { window.location.reload() }, 50)
-        }
       }).catch(console.error)
       this.myMessage = undefined
       this.messageactive = false
@@ -894,7 +891,6 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       return 1
     }
 
-
     case "mute": {
       const id = event.msg.mute.id ?? 0
       if (id === 0) return 0
@@ -919,6 +915,12 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       }
       return 0
     }
+
+    case "kick": {
+      window.location.href = window.location.origin
+      return 0
+    }
+
     //TODO: better logging system so that way even non hrt messages
     // can have the background effect!
     case "editbatch": {
