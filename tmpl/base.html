@@ -1,4 +1,4 @@
-{{define "base"}}
+{{define "base-top"}}
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -17,7 +17,9 @@
       <script src="/js/websockets.js{{.Crack}}"></script>
     {{end}}
   </head>
-  <body class="tripartite">
+{{end}}
+
+{{define "base-bot"}}
     <aside id="left-sidebar" style="--accent:{{.Accent}}; {{if .ReplyCount}}--remaining:{{percentRemaining .ReplyCount}}{{end}}">
       {{template "left-sidebar" .}}
     </aside>
@@ -29,4 +31,16 @@
     </aside>
   </body>
 </html>
+{{end}}
+
+{{define "base"}}
+  {{template "base-top" .}}
+  <body class="tripartite">
+  {{template "base-bot" .}}
+{{end}}
+
+{{define "base-wide-right"}}
+  {{template "base-top" .}}
+  <body class="wide-right">
+  {{template "base-bot" .}}
 {{end}}

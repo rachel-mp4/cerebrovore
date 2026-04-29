@@ -48,17 +48,20 @@ type Storer interface {
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
 	GetRecentThreads(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
+	GetRecentDeadThreads(before *uint32, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error)
 
 	// GetBumpedThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently bumped limit threads before before (if given).
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
 	GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+	GetBumpedDeadThreads(before *time.Time, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error)
 
 	// GetThread gets all the stored information about a thread, and up to limit replies,
 	// reverse chronologically, posted before before, if provided. if there are more replies
 	// in a thread that aren't provided, the cursor will be non-nil, and
 	GetThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (threads *types.Thread, err error)
+	GetDeadThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (threads *types.Thread, err error)
 
 	// DeleteThread sets a thread's deleted column to deleted, to hide it from users
 	DeleteThread(id uint32, ctx context.Context) error
@@ -84,6 +87,7 @@ type Storer interface {
 
 	// ThreadStatus returns if a thread is at bump limit, or reply limit
 	ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error)
+	ThreadIsDead(id uint32, ctx context.Context) (bool, error)
 
 	// post methods
 	CreatePost(post *types.Post, ctx context.Context) (int, []Backlink, error)

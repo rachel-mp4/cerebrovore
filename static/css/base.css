@@ -57,7 +57,7 @@ textarea, select {
 
 /* Make sure textareas without a rows attribute are not tiny */
 textarea:not([rows]) {
-  min-height: 10em;
+  min-height: 6em;
 }
 
 /* Anything that has been anchored to should have extra scroll margin */
@@ -110,65 +110,129 @@ body {
   position: relative;
 }
 
-#left-sidebar, #right-sidebar {
+.wide-right {
+  display: grid;
+  grid-template-columns: 12rem calc(40rem + calc(.6 * calc(100% - 70rem))) calc(18rem + calc(.4 * calc(100% - 70rem)));
+  position: relative;
+}
+
+#left-sidebar, .tripartite #right-sidebar {
   width: 12rem;
   max-height: 100vh;
   overflow-y: scroll;
   scrollbar-width: none;
 }
 
-#left-sidebar {
+#left-sidebar, .wide-right #right-sidebar {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
   justify-content: space-around;
 }
 
-@media (min-width: 52rem) and (max-width: 64rem) {
-  .tripartite: {
-    display: grid;
-    grid-template-columns: 0fr 1fr;
-  }
-  #right-sidebar {
-    display: none;
-  }
+#left-sidebar {
+  align-items: flex-end;
+}
 
-  #main-content {
-    margin-right: calc(100vw - 52rem);
+@media (min-width: 52rem) and (max-width: 70rem) {
+  .wide-right {
+    grid-template-columns: 12rem 40rem calc(100% - 52rem);
+    #right-sidebar {
+      grid-column: 2 / 3;
+    }
+    #left-sidebar {
+      position: sticky;
+      top:0;
+    }
+    #main-content {
+      max-height: none;
+      height: unset;
+    }
+  }
+}  
+
+@media (min-width: 52rem) and (max-width: 64rem) {
+  .tripartite {
+    grid-template-columns: 0fr 1fr;
+    #right-sidebar {
+      display: none;
+    }
+    #main-content {
+      margin-right: calc(100vw - 52rem);
+    }
   }
 }
 
 @media (min-width: 48rem) and (max-width: 52rem) {
-  .tripartite: {
+  .tripartite {
     display: grid;
     grid-template-columns: 0fr 1fr;
+
+    #right-sidebar {
+      display: none;
+    }
   }
-  #right-sidebar {
-    display: none;
+  .wide-right {
+    grid-template-columns: 12rem calc(100% - 12rem);
+    #right-sidebar {
+      grid-column: 2 / 3;
+    }
+    #main-content {
+      max-height: none;
+      height: unset;
+    }
+    #left-sidebar {
+      position: sticky;
+      top:0;
+    }
   }
 }
 
 @media (min-width: 36rem) and (max-width: 48rem) {
   .tripartite {
     display: block;
+    #left-sidebar, #right-sidebar {
+      display: none
+    }
+    #main-content {
+      margin-left: calc(100vw - 36rem);
+    }
   }
-  #left-sidebar, #right-sidebar {
-    display: none
-  }
-  #main-content {
-    margin-left: calc(100vw - 36rem);
+  .wide-right {
+    grid-template-columns: calc(100% - 36rem) 36rem;
+    #left-sidebar {
+      display: none
+    }
+    #main-content, #right-sidebar {
+      grid-column: 2 / 3;
+    }
+    #main-content {
+      max-height: none;
+      height: unset;
+    }
   }
 }
 
 @media (max-width: 36rem) {
   .tripartite {
     display: block;
+    #left-sidebar, #right-sidebar {
+      display: none
+    }
   }
-  #left-sidebar, #right-sidebar {
-    display: none
+  .wide-right {
+    display: block;
+    #left-sidebar {
+      display: none
+    }
+    #main-content {
+      max-height: none;
+      height: unset;
+    }
+  }
+  #brains-ur-eat#brains-ur-eat {
+    font-size: var(--fs-min);
   }
 }
-
 
 .sidebar-group {
   display:flex;
@@ -321,6 +385,7 @@ form {
   background-color: var(--fg);
   color: var(--bg);
   flex-grow: 1;
+  max-width: 100%;
 }
 
 .form-submit > input {
@@ -429,6 +494,10 @@ form {
   background: var(--primary);
 }
 
+.profile-head ::selection {
+  background: var(--accent);
+}
+
 .banned {
   font-size: 8rem;
   line-height: 1;
@@ -443,7 +512,7 @@ form {
   max-height: 12rem;
 }
 
-:is(.tx, .profile-friend) .avatar.thumb img {
+:is(.tx, .profile-friend, .forum-post) .avatar.thumb img {
   max-width: 6rem;
   max-height: 6rem;
 } 
@@ -529,4 +598,131 @@ a.you::after {
 
 form:has(.form-submit) {
   margin-bottom: 2rem;
+}
+
+.watch-toggle {
+  align-self: flex-start;
+}
+
+.rooms {
+  display: grid;
+  grid-template-columns: 12rem calc(100% - 12rem);
+}
+
+.profile-room {
+  width: 12rem;
+}
+
+.profile-room .profile {
+  position: sticky;
+  top: 0;
+}
+
+.profile-room .image-wrapper {
+  float: none;
+}
+
+.roof {
+  background: var(--accent);
+  display: flex;
+}
+
+.dark .roof {
+  color: var(--fg);
+  .clickable {
+    color: var(--fl);
+    &:hover{ 
+      color: var(--fg);
+    }
+  }
+  .reply {
+    color: var(--fg)
+  }
+}
+
+.light .roof {
+  color: var(--bg);
+  .clickable {
+    color: var(--bl);
+    &:hover{ 
+      color: var(--bg);
+    }
+  }
+  .reply {
+    color: var(--bg)
+  }
+}
+
+.roof .reply {
+  margin-left: auto;
+}
+
+#brains-ur-eat {
+  font-size: calc(var(--fs-min) + calc(var(--fs-pmax) * .5));
+}
+
+.forum-link {
+  display: flex;
+  cursor: pointer;
+  background: var(--accent);
+}
+
+.forum-link .handle {
+  font-size: 1rem;
+}
+
+.forum-link .thread {
+  width: 60%;
+}
+
+.forum-post .status {
+  font-size: 0.75em;
+}
+
+.forum-post {
+  margin-bottom: 1rem;
+}
+
+.forum-transmitter .nick {
+  color: var(--fg);
+} 
+
+.forum-post.collapsed :is(.rooms) {
+  display: none;
+}
+
+.forum-post .time {
+  cursor: pointer;
+}
+
+#right-sidebar:has(.hide-ftx.hidden) .forum-transmitter {
+  visibility: hidden;
+}
+
+.hide-ftx::before {
+  content: "hide ";
+}
+
+.hide-ftx.hidden::before {
+  content: "show ";
+}
+
+#forum-notification-canvas {
+  z-index: -1;
+  position:fixed;
+  top: 0;
+  left: 0;
+  filter: blur(2rem);
+}
+
+.new-post {
+  display: none;
+}
+
+.wide-right:not(:has(.new-post)) .new-posts {
+  visibility: hidden;
+}
+
+#action-modal form, form.forum-transmitter {
+  margin-bottom: 0;
 }

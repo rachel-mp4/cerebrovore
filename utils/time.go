@@ -6,7 +6,7 @@ import (
 )
 
 func RemainingTime(t time.Time) string {
-	dur := t.Sub(time.Now())
+	dur := -time.Since(t)
 	return dur.Round(time.Second).String()
 }
 
@@ -14,7 +14,7 @@ func TimeSince(t *time.Time) string {
 	if t == nil {
 		return ""
 	}
-	dur := time.Now().Sub(*t)
+	dur := time.Since(*t)
 	res := strings.TrimSuffix(dur.Round(time.Minute).String(), "0s")
 	if res == "" {
 		return "0m"

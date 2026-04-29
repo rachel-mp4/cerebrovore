@@ -32,6 +32,7 @@ export class WSContext {
   myImageNonce: string | undefined
   myMedia: cbv.Media | undefined
   mediaactive: boolean = false
+  cc: BroadcastChannel
 
   volume: number
   ping: HTMLAudioElement = new Audio('/wav/notif.wav')
@@ -43,6 +44,7 @@ export class WSContext {
   lrceventqueue: Array<lrc.Edit> = []
 
   constructor(defaultNick: string, defaultColor: number) {
+    this.cc = new BroadcastChannel("chirpchan")
     this.nick = defaultNick
     this.color = defaultColor
     this.volume = getVolume()
@@ -298,6 +300,7 @@ export class WSContext {
       console.log("you tried to push an item who exists!")
       return
     }
+    this.cc.postMessage(b36encodenumber(item.id))
     if (document.hidden || !document.hasFocus()) {
       this.ping.currentTime = 0
       this.ping.play()

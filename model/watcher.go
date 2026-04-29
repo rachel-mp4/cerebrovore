@@ -17,7 +17,8 @@ type watchMessage struct {
 // watches; it gets sent on threadsocket to anyone connected
 type watchEvent struct {
 	Topic     *string `json:"topic,omitempty"`
-	ID        uint32  `json:"id"`
+	TID       uint32  `json:"tid"`
+	PID       uint32  `json:"pid"`
 	BumpLimit *bool   `json:"bumpLimit,omitempty"`
 	New       *bool   `json:"new,omitempty"`
 }
@@ -109,7 +110,7 @@ func (m *Model) NotifyNewThread(threadID uint32) {
 				continue
 			}
 			select {
-			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, ID: threadID, BumpLimit: nil, New: &knew}}:
+			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, TID: threadID, BumpLimit: nil, New: &knew}}:
 			default:
 			}
 		}
@@ -120,7 +121,7 @@ func (m *Model) NotifyNewThread(threadID uint32) {
 
 // NotifyWatchers notifies all online watchers of a thread that a
 // bump just occurred
-func (m *Model) NotifyWatchers(forID uint32) {
+func (m *Model) NotifyWatchers(forID uint32, pID uint32) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[forID]
 	m.tmapmu.RUnlock()
@@ -143,7 +144,7 @@ func (m *Model) NotifyWatchers(forID uint32) {
 		watcherctx.ocmu.RLock()
 		for w := range watcherctx.openConns {
 			select {
-			case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, forID, nil, nil}}:
+			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, TID: forID, PID: pID, BumpLimit: nil, New: nil}}:
 			default:
 			}
 		}
@@ -154,7 +155,7 @@ func (m *Model) NotifyWatchers(forID uint32) {
 // NotifyBumpLimit notifies all online watchers of a thread that the
 // thread just hit the bump limit, and it removes them all from the
 // map for good measure
-func (m *Model) NotifyBumpLimit(threadID uint32) {
+func (m *Model) NotifyBumpLimit(threadID uint32, pID uint32) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.RUnlock()
@@ -181,7 +182,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32) {
 			watcherctx.ocmu.RLock()
 			for w := range watcherctx.openConns {
 				select {
-				case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, threadID, &bl, nil}}:
+				case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, threadID, pID, &bl, nil}}:
 				default:
 				}
 			}

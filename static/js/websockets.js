@@ -10,7 +10,13 @@ setTimeout(() => {
     const ntid = match[1]
     wsurl = `${withproto}&wormwatch=${ntid}&thread=${ntid}`
   } else {
-    wsurl = withproto
+    const match2 = path.match(/^\/ft\/([0-9a-z]+)/)
+    if (match2 !== null) {
+      const ntid = match2[1]
+      wsurl = `${withproto}&wormwatch=${ntid}&thread=${ntid}`
+    } else {
+      wsurl = withproto
+    }
   }
   const ws = new WebSocket(wsurl)
   ws.onopen = () => { console.log("hello ws") }

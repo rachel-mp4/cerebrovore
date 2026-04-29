@@ -7,6 +7,9 @@
       <a href="/t">view index</a>
     </div>
     <div>
+      <a href="/ft">view forums</a>
+    </div>
+    <div>
       <a href="/catalog">view catalog</a>
     </div>
     <div>
@@ -25,11 +28,7 @@
     {{end}}
   </div>
   <div class="sidebar-group" id="watched-threads">
-    <div>
-      <button class="recent-activity">
-        watched threads
-      </button>
-    </div>
+    <div><button class="recent-activity clickable">watched threads</button></div>
   </div>
   <div class="sidebar-group" id="bumped-threads">
     {{template "bumped-threads" .}}

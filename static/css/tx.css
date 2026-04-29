@@ -5,7 +5,7 @@
   font-size: var(--size);
 }
 
-.tx .body {
+.tx .body, .forum-post .body {
   white-space: pre-wrap;
   word-wrap: break-word;
   max-width: 100%;

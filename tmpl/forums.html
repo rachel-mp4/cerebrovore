@@ -1,0 +1,59 @@
+{{define "content"}}
+  <h1>forum index</h1>
+  <div>
+    <a href="/new">start a new thread</a>
+  </div>
+  {{if .IsChrono}}
+    <h2>
+      sorted reverse chronologically
+      <a href="/ft">(switch to bump order)</a>
+    </h2>
+  {{else}}
+    <h2>
+      sorted by bump order
+      <a href="/ft?chrono=yes">(switch to reverse chronological)</a>
+    </h2>
+  {{end}}
+  {{range .ThreadThumbs}}
+    <li class="forum-link {{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80" data-link="/ft/{{idtoa .ID}}">
+      <div class="thread">
+        <div>
+          <a href="/ft/{{idtoa .ID}}">
+            <span class="topic">{{forumTopicOrIdtoa .}}</span>
+            <span>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}({{intto36a .ReplyCount}} {{if eq .ReplyCount 1}}reply{{else}}replies{{end}}){{end}}</span>
+          </a>
+        </div>
+        <div>
+          by {{with .OP.Nick}}<span class="nick">{{.}}</span>{{end -}}
+          {{- if not .OP.Anon}}<a class="handle" href="/profile/{{.OP.Username}}">@{{.OP.Username}}</a>{{end}}
+        </div>
+      </div>
+      {{with .LP}}
+        <div class="latest-post">
+          <div>
+            <span>latest reply by {{with .Nick}}<span class="nick">{{.}}</span>{{end}}{{if not .Anon}}<a class="handle" href="/profile/{{.Username}}">@{{.Username}}</a>{{end}}</span>
+          </div>
+          <div>
+            <span>
+              {{timeSince .PostedAt}} ago
+            </span>
+          </div>
+        </div>
+      {{end}}
+    </li>
+  {{end}}
+  {{if .IsChrono}}
+    {{if .ChronoCursor}}
+      <a href="/ft?chrono=yes&cursor={{idtoa .ChronoCursor}}">Next page</a>
+    {{end}}
+  {{else}}
+    {{if .BumpCursor}}
+      <a href="/ft?cursor={{formatTime .BumpCursor}}">Next page</a>
+    {{end}}
+  {{end}}
+  <script src="/js/forum-links.js{{.Crack}}"></script>
+  <script src="/js/links.js{{.Crack}}"></script>
+  <script src="/js/action.js{{.Crack}}"></script>
+  <script src="/js/thumb.js{{.Crack}}"></script>
+  <script src="/js/hydratetime.js{{.Crack}}"></script>
+{{end}}

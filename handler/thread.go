@@ -94,8 +94,14 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 			thread.OP.ImageContent.Alt = &b
 		}
 	}
-
-	tid := h.m.AddThread(thread.Topic)
+	_, ok = r.MultipartForm.Value["dead"]
+	thread.Dead = ok
+	var tid uint32
+	if ok {
+		tid = h.m.AddDeadThread()
+	} else {
+		tid = h.m.AddThread(thread.Topic)
+	}
 	thread.ID = tid
 	thread.OP.ID = tid
 	thread.OP.ThreadID = tid
@@ -112,7 +118,11 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "failed to create thread", http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	letter := ""
+	if ok {
+		letter = "f"
+	}
+	http.Redirect(w, r, fmt.Sprintf("/%st/%s", letter, ntid), http.StatusSeeOther)
 	go h.m.NotifyNewThread(tid)
 }
 
@@ -196,6 +206,7 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		clog.Warn("blob thumbnail: %s", err)
 		http.Error(w, "encountered an error 2", http.StatusInternalServerError)
+		return
 	}
 	// i'm not really sure why there's a uuid, but i remember a few months ago
 	// being certain it was necessary. not gonna think too hard about it haha
@@ -351,6 +362,88 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 	return
 }
 
+func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	r.ParseMultipartForm(10 << 20)
+	var post types.Post
+	post.Username = c.Username
+	_, ok := r.MultipartForm.Value["anon"]
+	post.Anon = ok
+	nick, ok := r.Form["nick"]
+	if ok && len(nick) > 0 {
+		post.Nick = &nick[0]
+	}
+	color, ok := r.MultipartForm.Value["color"]
+	if ok && len(color) > 0 {
+		c, err := utils.AToColor(color[0])
+		if err == nil {
+			post.Color = &c
+		}
+	}
+	body, ok := r.MultipartForm.Value["body"]
+	var extras []uint64
+	if ok && len(body) > 0 {
+		b := body[0]
+		if b != "" {
+			post.TextContent = &types.TextContent{Body: b}
+			post.Backlinks, extras = utils.ParseBodyForBacklinks(b)
+		}
+	}
+	_, ok = r.MultipartForm.File["image"]
+	if ok {
+		file, _, err := r.FormFile("image")
+		if err != nil {
+			http.Error(w, "requires file", http.StatusBadRequest)
+			return
+		}
+		cid, err, code := saveFileToContentAddress(file)
+		if err != nil {
+			clog.Warn("blob save: %s", err)
+			http.Error(w, "encountered an error", code)
+			return
+		}
+		err = genThumbnail(cid)
+		if err != nil {
+			clog.Warn("blob thumbnail: %s", err)
+			http.Error(w, "encountered an error 2", http.StatusInternalServerError)
+			return
+		}
+		alt, ok := r.MultipartForm.Value["alt"]
+		if ok && len(alt) > 0 {
+			post.ImageContent = &types.ImageContent{CID: cid, Alt: &alt[0]}
+		} else {
+			post.ImageContent = &types.ImageContent{CID: cid}
+		}
+	}
+	if post.ImageContent == nil && post.TextContent == nil {
+		http.Error(w, "post must have an image or text", http.StatusBadRequest)
+		return
+	}
+
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		clog.Warn("%s", err)
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	post.ThreadID = tid
+	post.ID = h.m.AllocateId()
+
+	rc, backlinks, err := h.db.CreatePost(&post, r.Context())
+	if err != nil {
+		clog.Warn("%s", err)
+		http.Error(w, "failed to create post", http.StatusInternalServerError)
+		return
+	}
+
+	forumT.ftx(w, ForumTransmitter{tid, post.Anon, post.Nick, post.Color})
+	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), extras)
+}
+
 func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
@@ -470,12 +563,12 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.AddBacklinks(post.ThreadID, batch)
 	}
 	if post.Anon {
-		h.m.NotifyReply(post.ThreadID, post.ID, nil, replyCount)
+		h.m.NotifyReply(post.ThreadID, post.ID, nil, post.Color, replyCount)
 	} else {
-		h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, replyCount)
+		h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, post.Color, replyCount)
 	}
 	if replyCount < utils.BUMP_LIMIT {
-		h.m.NotifyWatchers(post.ThreadID)
+		h.m.NotifyWatchers(post.ThreadID, post.ID)
 		changed, err := h.db.WatchThread(c.Username, post.ThreadID, ctx)
 		if err != nil {
 			clog.Warn("%s", err)
@@ -484,7 +577,7 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			h.m.Watch(c.Username, post.ThreadID)
 		}
 	} else if replyCount == utils.BUMP_LIMIT {
-		h.m.NotifyBumpLimit(post.ThreadID)
+		h.m.NotifyBumpLimit(post.ThreadID, post.ID)
 		err := h.db.RemoveWatchersFor(post.ThreadID, ctx)
 		if err != nil {
 			clog.Warn("%s", err)
@@ -572,7 +665,16 @@ func (h *Handler) getPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "post does not exist", http.StatusNotFound)
 		return
 	}
-	http.Redirect(w, r, fmt.Sprintf("/t/%s#%s", utils.IDToA(tid), npid), http.StatusFound)
+	dead, err := h.db.ThreadIsDead(tid, r.Context())
+	if err != nil {
+		http.Error(w, "post does not exist", http.StatusNotFound)
+		return
+	}
+	letter := ""
+	if dead {
+		letter = "f"
+	}
+	http.Redirect(w, r, fmt.Sprintf("/%st/%s#%s", letter, utils.IDToA(tid), npid), http.StatusFound)
 }
 
 func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -588,6 +690,64 @@ func (h *Handler) getTBumped(c *Client, w http.ResponseWriter, r *http.Request) 
 	bumpedT.exec(w, bumpedresp{tt})
 }
 
+func (h *Handler) getForumThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	ntid := r.PathValue("ntid")
+	tid, err := utils.AToID(ntid)
+	if err != nil {
+		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	dead, err := h.db.ThreadIsDead(tid, r.Context())
+	if err != nil {
+		http.Error(w, "failed to check thread metadata", http.StatusInternalServerError)
+		return
+	}
+	if !dead {
+		http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusFound)
+		return
+	}
+	t, err := h.db.GetDeadThread(tid, c.IsMod, c.Username, r.Context())
+	if err != nil {
+		http.Error(w, "failed to get thread", http.StatusNotFound)
+		return
+	}
+	title := ntid
+	if t.Topic != nil {
+		title = *t.Topic
+	}
+	br, err := h.makebase(title, c, r.Context())
+	if err != nil {
+		http.Error(w, "failed to get bumps", http.StatusInternalServerError)
+		return
+	}
+	br.Accent = utils.ColorToAp(t.OP.Color)
+	watched := h.db.IsWatched(c.Username, tid, r.Context())
+	br.justbaseresp.ReplyCount = &t.ReplyCount
+	profilehead, err := h.db.GetProfile(c.Username, r.Context())
+	var ftx ForumTransmitter
+	ftx.TID = tid
+	if err != nil {
+		n := "wanderer"
+		ftx.Nick = &n
+		ftx.Color = nil
+	} else {
+		ftx.Nick = profilehead.DisplayName
+		ftx.Color = profilehead.Color
+	}
+	gftr := forumresp{
+		baseresp: br,
+		Thread:   t,
+		Watched:  watched,
+		Archived: utils.MaxReplies(t.ReplyCount),
+		Ftx:      ftx,
+	}
+	forumT.exec(w, gftr)
+}
+
 func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -597,6 +757,15 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	tid, err := utils.AToID(ntid)
 	if err != nil {
 		http.Error(w, "invalid thread id", http.StatusBadRequest)
+		return
+	}
+	dead, err := h.db.ThreadIsDead(tid, r.Context())
+	if err != nil {
+		http.Error(w, "failed to check thread metadata", http.StatusInternalServerError)
+		return
+	}
+	if dead {
+		http.Redirect(w, r, fmt.Sprintf("/ft/%s", ntid), http.StatusFound)
 		return
 	}
 	t, err := h.db.GetThread(tid, c.IsMod, c.Username, r.Context())
@@ -711,7 +880,7 @@ func (h *Handler) watchThread(c *Client, w http.ResponseWriter, r *http.Request)
 			}
 		}
 	}
-	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	threadT.unwatch(w, tid)
 }
 
 func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -733,7 +902,7 @@ func (h *Handler) unwatchThread(c *Client, w http.ResponseWriter, r *http.Reques
 	if changed {
 		h.m.Unwatch(c.Username, tid)
 	}
-	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+	threadT.watch(w, tid)
 }
 
 func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -782,6 +951,57 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		tr.ThreadThumbs = fts
 	}
 	catalogT.exec(w, tr)
+}
+
+func (h *Handler) forumthreads(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized", http.StatusUnauthorized)
+		return
+	}
+	base, err := h.makebase("forum threads", c, r.Context())
+	if err != nil {
+		clog.Warn("bumps %s", err)
+	}
+	chrono := r.URL.Query().Get("chrono")
+	isChrono := chrono != ""
+	tr := forumthreadsresp{
+		baseresp: base,
+		IsChrono: isChrono,
+	}
+	cursor := r.URL.Query().Get("cursor")
+	if isChrono {
+		var cc *uint32
+		id, err := utils.AToID(cursor)
+		if err == nil {
+			cc = &id
+		}
+		fts, nc, err := h.db.GetRecentDeadThreads(cc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		if err != nil {
+			clog.Warn("%s", err)
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.ChronoCursor = nc
+		tr.ThreadThumbs = fts
+	} else {
+		var bc *time.Time
+		t, err := utils.ParseTime(cursor)
+		if err == nil {
+			bc = &t
+		}
+		fts, nc, err := h.db.GetBumpedDeadThreads(bc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		if err != nil {
+			clog.Warn("%s", err)
+			http.Error(w, "error getting threads", http.StatusInternalServerError)
+			return
+		}
+		tr.BumpCursor = nc
+		tr.ThreadThumbs = fts
+	}
+	forumsT.exec(w, tr)
+	if err != nil {
+		clog.Warn("%s", err)
+	}
 }
 
 func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -867,4 +1087,36 @@ func (h *Handler) deletePost(c *Client, w http.ResponseWriter, r *http.Request) 
 	} else {
 		moderateT.error(w, fmt.Sprintf("sorry %s, i'm not 100%% confident in thread deletion yet, so i'm not letting you do that. if you really need thread deleted, report it and a moderator can take action!", c.Username))
 	}
+}
+
+func (h *Handler) forumPost(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized to view post", http.StatusUnauthorized)
+		return
+	}
+	nid := r.PathValue("npid")
+	id, err := utils.AToID(nid)
+	if err != nil {
+		forumT.error(w, "failed to parse id")
+		return
+	}
+	post, err := h.db.GetPost(id, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	if !post.Anon {
+		profilehead, err := h.db.GetProfile(post.Username, r.Context())
+		if err == nil {
+			post.ProfileHead = profilehead
+		}
+	}
+	if c.Username == post.Username {
+		post.ViewerIsYou = true
+	}
+	if c.IsMod {
+		post.LinkToModerate = true
+	}
+	w.Header().Add("HX-Trigger-After-Settle", fmt.Sprintf(`{"cbv:htmxForumPost":%d}`, id))
+	forumT.forumpost(w, post)
 }

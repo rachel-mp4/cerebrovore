@@ -3,12 +3,13 @@
   import WatchedThread from "./WatchedThread.svelte";
   import NewThread from "./NewThread.svelte";
   interface Props {
+    isforum: boolean;
     items: Array<WatchThread>;
     newitems: Array<WatchThread>;
     watchIdx: (idx: number) => void;
     rmIdx: (idx: number) => void;
   }
-  let { items, newitems, watchIdx, rmIdx }: Props = $props();
+  let { isforum, items, newitems, watchIdx, rmIdx }: Props = $props();
   let bumpOrder = $derived(
     items
       .toSorted((a: WatchThread, b: WatchThread) => b.bumpedAt - a.bumpedAt)

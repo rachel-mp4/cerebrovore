@@ -148,17 +148,23 @@ func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 		p.deleted,
 		t.body,
 		i.cid,
-		i.alt
+		i.alt,
+		COALESCE(pr.replies, '{}') AS replies
 	FROM posts p
 	LEFT JOIN text_posts t ON p.id = t.post_id
 	LEFT JOIN image_posts i ON p.id = i.post_id
+	LEFT JOIN (
+		SELECT to_id, array_agg(from_id) AS replies
+		FROM post_replies
+		GROUP BY to_id
+	) pr ON pr.to_id = p.id
 	WHERE p.id = $1
   `, id)
 	p := types.Post{}
 	var body *string
 	var cid *string
 	var alt *string
-	err := row.Scan(&p.ThreadID, &p.Username, &p.Anon, &p.Nick, &p.Color, &p.PostedAt, &p.Deleted, &body, &cid, &alt)
+	err := row.Scan(&p.ThreadID, &p.Username, &p.Anon, &p.Nick, &p.Color, &p.PostedAt, &p.Deleted, &body, &cid, &alt, &p.Backlinks)
 	if err != nil {
 		return nil, err
 	}

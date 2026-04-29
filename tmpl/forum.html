@@ -1,0 +1,61 @@
+{{define "content"}}
+  {{if .Thread.Topic}}
+    <h1 class="thread-topic">{{.Thread.Topic}}</h1>
+  {{end}}
+  {{if not (maxBumps .Thread.ReplyCount)}}
+    {{if .Watched}}
+      {{template "unwatch" .Thread}}
+    {{else}}
+      {{template "watch" .Thread}}
+    {{end}}
+  {{end}}
+  <div id="brains-ur-eat">
+    {{range .Thread.Posts}}
+      {{template "forum-post" .}}
+    {{end}}
+  </div>
+  {{if .Archived}}
+    <div>[reply limit hit; thread archived]</div>
+  {{else}}
+    <script src="/js/loadfontsize.js{{.Crack}}"></script>
+  {{end}}
+  <script src="/js/findyous.js{{.Crack}}"></script>
+  <script src="/js/action.js{{.Crack}}"></script>
+  <script src="/js/hydratetime.js{{.Crack}}"></script>
+  <script src="/js/links.js{{.Crack}}"></script>
+  <script src="/js/thumb.js{{.Crack}}"></script>
+  <script src="/js/forum.js{{.Crack}}"></script>
+  <canvas id="forum-notification-canvas"></canvas>
+{{end}}
+
+{{define "right-sidebar"}}
+  {{template "forum-transmitter" .Ftx}}
+  <div class="sidebar-group">
+    <button class="hide-ftx clickable" onclick='this.classList.toggle("hidden")'>forum transmitter</button>
+    <button class="new-posts clickable">there are new posts</button>
+  </div>
+{{end}}
+
+{{define "forum-transmitter"}}
+  <form class="forum-transmitter" hx-swap="outerHTML" hx-post="/ft/{{idtoa .TID}}" hx-encoding="multipart/form-data">
+    <div class="wrapper">
+      <input type="color" name="color" value="{{colorToA .Color}}" />
+      <input type="text" class="nick" name="nick" size="16" placeholder="alice!" value="{{.Nick}}" />
+      <input type="checkbox" id="anon-box" name="anon" {{if .Anon}}checked{{end}} />
+      <label for="anon-box">anon</label>
+    </div>
+    <div class="form-field">
+      <textarea id="response-form" type="text" name="body" placeholder="this is your response" required></textarea>
+    </div>
+    <div class="form-field">
+      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
+    </div>
+    <div class="form-field">
+      <label for="alt">alt</label>
+      <input type="text" name="alt">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="post"/>
+    </div>
+  </form>
+{{end}}

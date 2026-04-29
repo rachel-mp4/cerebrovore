@@ -1,0 +1,46 @@
+{{define "forum-post"}}
+<div class="forum-post {{colorIsDark .Color}}{{if .ViewerIsYou}} you{{end}}" id="{{idtoa .ID}}" {{with .Color}}style="--accent:{{colorToA .}};--accentl:{{colorToA .}}80"{{end}}>
+    <div class="roof">
+      <time class="time" datetime="{{formatTime .PostedAt}}"></time>
+      <button class="report clickable"> report</button>
+      {{- if or .ViewerIsYou .LinkToModerate -}}<button class="delete clickable"> delete</button>{{- end -}}
+      {{- if .LinkToModerate -}}<a class="moderate clickable" href="/moderate?id={{idtoa .ID}}"> moderate</a>{{- end -}}
+      <button class="reply"> #{{- idtoa .ID -}}</button>
+    </div>
+    <div class="rooms">
+      <div class="profile-room">
+        <div class="profile">
+          <div class="nick">{{.Nick}}</div>
+          {{if not .Anon}}<div class="handle"><a href="/profile/{{.Username}}">{{.Username}}</a></div>{{end}}
+          {{if and (not .Anon) .ProfileHead}}{{if .ProfileHead.Avatar}}{{renderAvatarPFP .ProfileHead.Avatar .ProfileHead.DisplayName .ProfileHead.IsPixelArt}}{{end}}{{end}}
+          {{if and (not .Anon) .ProfileHead}}{{if .ProfileHead.Status}}<div class="status">{{.ProfileHead.Status}}</div>{{end}}{{end}}
+        </div>
+      </div>
+      <div class="body">
+        {{- if .ImageContent -}}
+        {{- renderImageBody .ImageContent.CID .ImageContent.Alt -}}
+        {{- end -}}
+        {{- if .TextContent -}}
+          <div>
+            {{- renderTextBody .TextContent.Body -}}
+          </div>
+        {{- end -}}
+      </div>
+    </div>
+    <div class="floor">
+      {{- range $i, $v := .Backlinks -}}
+      {{- if $i }} {{ end -}}
+      <a href="/p/{{idtoa .}}">#{{idtoa .}}</a>
+      {{- end -}}
+    </div>
+  </div>
+{{end}}
+
+{{define "forum-error"}}
+  <div>
+    error fetching post! hopefully everything will be ok on refresh!
+  </div>
+  <div>
+    {{.Message}}
+  </div>
+{{end}}

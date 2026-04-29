@@ -45,6 +45,12 @@ const (
 	Soundcloud
 )
 
+func init() {
+	if Youtube != 0 {
+		panic("don't change me!")
+	}
+}
+
 type PlayInput struct {
 	Site     PlaySite      `json:"site"`
 	ID       string        `json:"id"`
@@ -67,8 +73,8 @@ func ParseBodyForPlays(s string) (res []*PlayInput, unpause bool) {
 	res = make([]*PlayInput, 0)
 	for scanner.Scan() {
 		l := scanner.Text()
-		if strings.HasPrefix(l, "#play ") {
-			literal := strings.TrimPrefix(l, "#play ")
+		literal, found := strings.CutPrefix(l, "#play ")
+		if found {
 			playurl, err := url.Parse(literal)
 			if err != nil {
 				clog.Warn("post parse: %s", err)
@@ -92,7 +98,6 @@ func ParseBodyForPlays(s string) (res []*PlayInput, unpause bool) {
 				}
 				res = append(res, pi)
 				// case "soundcloud.com", "on.soundcloud.com", "www.soundcloud.com":
-				// res = append(res, PlayInput{Soundcloud, literal, literal})
 			}
 		} else if l == "#play" {
 			unpause = true
@@ -134,7 +139,7 @@ func getDurationForYoutubeId(id string) (*PlayInput, error) {
 	if err != nil {
 		return nil, err
 	}
-	if ytresp.Items == nil || len(ytresp.Items) == 0 {
+	if len(ytresp.Items) == 0 {
 		return nil, errors.New("no items")
 	}
 	ti := ytresp.Items[0]
@@ -167,7 +172,6 @@ func getDurationForYoutubeId(id string) (*PlayInput, error) {
 		Width:    width,
 		Height:   height,
 	}, nil
-
 }
 
 func RenderTextBody(s string) template.HTML {

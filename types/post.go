@@ -23,6 +23,7 @@ type Post struct {
 	ViewerIsYou    bool
 	CanSeeAnon     bool
 	LinkToModerate bool
+	ProfileHead    *ProfileHead
 }
 
 func (p *Post) String() string {
@@ -62,6 +63,17 @@ func blprint(blbl []uint32) string {
 	return fmt.Sprintf(f, a...)
 }
 
+type ForumThreadThumb struct {
+	ID         uint32
+	Topic      *string
+	PostedAt   time.Time
+	BumpedAt   time.Time
+	ReplyCount int
+	OP         Post
+	LP         *Post
+	Deleted    bool
+}
+
 type Thread struct {
 	ID         uint32
 	Topic      *string
@@ -71,6 +83,7 @@ type Thread struct {
 	OP         Post
 	Posts      []Post
 	Deleted    bool
+	Dead       bool
 }
 
 func (t *Thread) String() string {
@@ -91,6 +104,13 @@ func TopicOrIdtoa(t Thread) string {
 		return *t.Topic
 	}
 	return fmt.Sprintf("#%s", utils.IDToA(t.ID))
+}
+
+func ForumTopicOrIdtoa(ft ForumThreadThumb) string {
+	if ft.Topic != nil && *ft.Topic != "" {
+		return *ft.Topic
+	}
+	return fmt.Sprintf("#%s", utils.IDToA(ft.ID))
 }
 
 func safeprint(s *string) string {

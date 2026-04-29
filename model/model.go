@@ -43,12 +43,18 @@ func NewModel(threads []types.Thread, maxid uint32) *Model {
 
 // recreateThread is an internal function to recreateThreads
 // that already existed, for use in model initialization,
-// reading from database
+// reading from database. we don't need to check MaxReplies
+// because we only are supposed to be given non archived threads
 func (m *Model) recreateThread(thread types.Thread) {
 	if utils.MaxReplies(thread.ReplyCount) {
 		return
 	}
-	rt := newThreadModel(thread.ID, thread.Topic)
+	var rt *threadModel
+	if thread.Dead {
+		rt = newDeadThreadModel(thread.ID)
+	} else {
+		rt = newThreadModel(thread.ID, thread.Topic)
+	}
 	if utils.MaxBumps(thread.ReplyCount) {
 		rt.bumplimit = true
 	}
@@ -58,10 +64,22 @@ func (m *Model) recreateThread(thread types.Thread) {
 // AddThread allocates and returns the id for a new thread,
 // which it creates
 func (m *Model) AddThread(topic *string) uint32 {
-	m.tmapmu.RLock()
+	m.tmapmu.RLock() // why is this a read lock? shouldn't it be write? i'm not sure
 	defer m.tmapmu.RUnlock()
 	threadID := m.getIDAllocator()()
 	nt := newThreadModel(threadID, topic)
+	m.tmap[threadID] = nt
+	return threadID
+}
+
+func (m *Model) AddDeadThread() uint32 {
+	// i'm adding this method which is similar to above method, but i wasn't sure why
+	// why it used a read lock. i'm using a write lock just to be safe here but leaving
+	// the above method untouched
+	m.tmapmu.Lock()
+	defer m.tmapmu.Unlock()
+	threadID := m.getIDAllocator()()
+	nt := newDeadThreadModel(threadID)
 	m.tmap[threadID] = nt
 	return threadID
 }
@@ -90,6 +108,9 @@ func (m *Model) GetThreadWSHandler(threadID uint32, username string) (http.Handl
 	if !ok {
 		return nil, ErrThreadDNE
 	}
+	if tm.dead {
+		return nil, ErrThreadDead
+	}
 	tm.mu.Lock()
 	if tm.full {
 		tm.mu.Unlock()
@@ -117,7 +138,9 @@ func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {
 	if !ok {
 		return
 	}
-	tm.server.SendReplyBatch(&batch)
+	if tm.server != nil {
+		tm.server.SendReplyBatch(&batch)
+	}
 }
 
 func (m *Model) ReplyLimit(threadID uint32) {
@@ -162,13 +185,15 @@ func (m *Model) BanUser(name string) {
 	m.tmapmu.RLock()
 	defer m.tmapmu.RUnlock()
 	for _, tm := range m.tmap {
-		go func() {
-			tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
-			if tm.server != nil {
-				tm.server.KickExternalId(name)
-			}
-			tm.mu.Unlock()
-		}()
+		if !tm.dead {
+			go func() {
+				tm.mu.Lock() // maybe excessive haha, no null chaining operator in go
+				if tm.server != nil {
+					tm.server.KickExternalId(name)
+				}
+				tm.mu.Unlock()
+			}()
+		}
 	}
 }
 
@@ -179,6 +204,10 @@ func (m *Model) getIDAllocator() func() uint32 {
 		next := atomic.AddUint32(&m.id, 1)
 		return next
 	}
+}
+
+func (m *Model) AllocateId() uint32 {
+	return m.getIDAllocator()()
 }
 
 // cleaner cleans up any empty servers every 10 minutes, i just
@@ -296,7 +325,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 			}()
 		}
 
-		if ok && !tm.full && myoptions.wormwatch {
+		if ok && !tm.full && !tm.dead && myoptions.wormwatch {
 			go func() {
 				tm.wormwatchersmu.Lock()
 				defer tm.wormwatchersmu.Unlock()

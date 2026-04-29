@@ -60,6 +60,9 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 	if !ok {
 		return
 	}
+	if tm.dead {
+		return
+	}
 	wwd := tm.wormwatchdata
 	// not totally ideal to allocate and copy all this while i hold lock,
 	// however otherwise there's a race condition on two queue inserts at once
@@ -186,10 +189,13 @@ func (m *Model) Pause(threadID uint32, username string) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.RUnlock()
-	wwd := tm.wormwatchdata
 	if !ok {
 		return
 	}
+	if tm.dead {
+		return
+	}
+	wwd := tm.wormwatchdata
 	tm.wormwatchersmu.Lock()
 	if wwd.start == nil || wwd.pausedAt != nil {
 		tm.wormwatchersmu.Unlock()
@@ -221,6 +227,9 @@ func (m *Model) Skip(threadID uint32, username string) {
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.RUnlock()
 	if !ok {
+		return
+	}
+	if tm.dead {
 		return
 	}
 	wwd := tm.wormwatchdata
@@ -264,6 +273,9 @@ func (m *Model) Unpause(threadID uint32, username string) {
 	tm, ok := m.tmap[threadID]
 	m.tmapmu.RUnlock()
 	if !ok {
+		return
+	}
+	if tm.dead {
 		return
 	}
 	wwd := tm.wormwatchdata

@@ -9,18 +9,19 @@ type socketMessage struct {
 	Data socketEvent `json:"data"`
 }
 
-// watchEvent represents a bump happening in a thread that a user
+// socketEvent represents a reply happening in a thread that a user
 // watches; it gets sent on threadsocket to anyone connected
 type socketEvent struct {
 	SystemMessage *string `json:"systemMessage,omitempty"`
 	ID            *uint32 `json:"id,omitempty"`
+	Color         *uint32 `json:"color,omitempty"`
 	Username      *string `json:"username,omitempty"`
 	Remaining     *string `json:"remaining,omitempty"`
 	BumpLimit     *bool   `json:"bumpLimit,omitempty"`
 	ReplyLimit    *bool   `json:"replyLimit,omitempty"`
 }
 
-func (m *Model) NotifyReply(tid uint32, id uint32, username *string, replyCount int) {
+func (m *Model) NotifyReply(tid uint32, id uint32, username *string, color *uint32, replyCount int) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[tid]
 	m.tmapmu.RUnlock()
@@ -28,7 +29,7 @@ func (m *Model) NotifyReply(tid uint32, id uint32, username *string, replyCount 
 		return
 	}
 	rem := utils.PercentRemaining(&replyCount)
-	e := socketMessage{"thread", socketEvent{ID: &id, Username: username, Remaining: &rem}}
+	e := socketMessage{"thread", socketEvent{ID: &id, Username: username, Color: color, Remaining: &rem}}
 	go func() {
 		tm.subsmu.RLock()
 		defer tm.subsmu.RUnlock()

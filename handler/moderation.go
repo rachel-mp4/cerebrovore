@@ -440,6 +440,9 @@ func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) 
 			if errors.Is(err, model.ErrThreadDNE) {
 				moderateT.error(w, "i think thread does not exist?")
 				return
+			} else if errors.Is(err, model.ErrThreadDead) {
+				moderateT.error(w, err.Error())
+				return
 			} else if errors.Is(err, lrcd.ErrIDDNE) {
 				moderateT.error(w, "i think the post does not exist? you might be too late, sorry")
 				return

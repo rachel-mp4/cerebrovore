@@ -4,17 +4,9 @@
   {{end}}
   {{if not (maxBumps .Thread.ReplyCount)}}
     {{if .Watched}}
-      <form action="/u/{{idtoa .Thread.ID}}" method="POST">
-        <div class="form-submit">
-          <input type="submit" value="unwatch">
-        </div>
-      </form>
+      {{template "unwatch" .Thread}}
     {{else}}
-      <form action="/w/{{idtoa .Thread.ID}}" method="POST">
-        <div class="form-submit">
-          <input type="submit" value="watch">
-        </div>
-      </form>
+      {{template "watch" .Thread}}
     {{end}}
   {{end}}
   <div id="eats-ur-brain" {{if .IsMod}}class="mod"{{end}}>
@@ -33,11 +25,11 @@
     {{else}}
       <script type="module" src="http://localhost:5173/src/chat.ts"></script>
     {{end}}
-    <script src="/js/links.js{{.Crack}}"></script>
-    <script src="/js/findyous.js{{.Crack}}"></script>
-    <script src="/js/action.js{{.Crack}}"></script>
-    <script src="/js/thumb.js{{.Crack}}"></script>
-    <script src="/js/hydratetime.js{{.Crack}}"></script>
     <script src="/js/loadfontsize.js{{.Crack}}"></script>
   {{end}}
+  <script src="/js/findyous.js{{.Crack}}"></script>
+  <script src="/js/action.js{{.Crack}}"></script>
+  <script src="/js/hydratetime.js{{.Crack}}"></script>
+  <script src="/js/links.js{{.Crack}}"></script>
+  <script src="/js/thumb.js{{.Crack}}"></script>
 {{end}}

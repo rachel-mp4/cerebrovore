@@ -91,6 +91,7 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/wormwatch.html",
 		"./tmpl/thread.html",
+		"./tmpl/partial/watch.html",
 		"./tmpl/partial/post.html",
 	)}
 	profileT = profileTemplate{newTemplate(
@@ -146,6 +147,26 @@ func init() {
 	codeerrT = codeerrTemplate{newTemplate(
 		"./tmpl/codeerr.html",
 	)}
+	forumT = forumTemplate{newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/forum.html",
+		"./tmpl/partial/watch.html",
+		"./tmpl/partial/post.html",
+		"./tmpl/partial/forum-post.html",
+	)}
+	forumsT = forumsTemplate{newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/forums.html",
+		"./tmpl/partial/post.html",
+		"./tmpl/partial/forum-post.html",
+	)}
 }
 
 type baseresp struct {
@@ -189,22 +210,23 @@ func newTemplate(files ...string) *template.Template {
 	return template.Must(
 		template.New("").Funcs(
 			template.FuncMap{
-				"idtoa":            utils.IDToA,
-				"intto36a":         utils.IntTo36A,
-				"renderImageBody":  utils.RenderImageBody,
-				"renderAvatarPFP":  utils.RenderAvatarPFP,
-				"renderTextBody":   utils.RenderTextBody,
-				"colorIsDark":      utils.ColorIsDark,
-				"colorToA":         utils.ColorToAp,
-				"maxReplies":       utils.MaxReplies,
-				"maxBumps":         utils.MaxBumps,
-				"formatTime":       utils.FormatTime,
-				"remainingTime":    utils.RemainingTime,
-				"timeSince":        utils.TimeSince,
-				"ftime":            utils.FTime,
-				"topicOrIdtoa":     types.TopicOrIdtoa,
-				"percentRemaining": utils.PercentRemaining,
-				"boolPtrIsTrue":    boolPtrIsTrue,
+				"idtoa":             utils.IDToA,
+				"intto36a":          utils.IntTo36A,
+				"renderImageBody":   utils.RenderImageBody,
+				"renderAvatarPFP":   utils.RenderAvatarPFP,
+				"renderTextBody":    utils.RenderTextBody,
+				"colorIsDark":       utils.ColorIsDark,
+				"colorToA":          utils.ColorToAp,
+				"maxReplies":        utils.MaxReplies,
+				"maxBumps":          utils.MaxBumps,
+				"formatTime":        utils.FormatTime,
+				"remainingTime":     utils.RemainingTime,
+				"timeSince":         utils.TimeSince,
+				"ftime":             utils.FTime,
+				"topicOrIdtoa":      types.TopicOrIdtoa,
+				"forumTopicOrIdtoa": types.ForumTopicOrIdtoa,
+				"percentRemaining":  utils.PercentRemaining,
+				"boolPtrIsTrue":     boolPtrIsTrue,
 			}).ParseFiles(files...),
 	)
 }
@@ -493,7 +515,31 @@ func (t *threadsTemplate) exec(w io.Writer, threads catalogthreadsresp) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "base", threads))
 }
 
+func (t *threadTemplate) watch(w io.Writer, tid uint32) {
+	type watchresp struct {
+		ID uint32
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "watch", watchresp{tid}))
+}
+
+func (t *threadTemplate) unwatch(w io.Writer, tid uint32) {
+	type watchresp struct {
+		ID uint32
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "unwatch", watchresp{tid}))
+}
+
 type threadsTemplate struct {
+	template *template.Template
+}
+
+var forumsT forumsTemplate
+
+func (t *forumsTemplate) exec(w io.Writer, threads forumthreadsresp) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "base", threads))
+}
+
+type forumsTemplate struct {
 	template *template.Template
 }
 
@@ -513,6 +559,14 @@ type catalogthreadsresp struct {
 	ChronoCursor *uint32
 	BumpCursor   *time.Time
 	ThreadThumbs []types.Thread
+}
+
+type forumthreadsresp struct {
+	baseresp
+	IsChrono     bool
+	ChronoCursor *uint32
+	BumpCursor   *time.Time
+	ThreadThumbs []types.ForumThreadThumb
 }
 
 var patchT patchTemplate
@@ -607,4 +661,44 @@ type editprofileTemplate struct {
 type editprofileresp struct {
 	baseresp
 	Profile *types.Profile
+}
+
+var forumT forumTemplate
+
+type forumTemplate struct {
+	template *template.Template
+}
+
+func (t *forumTemplate) exec(w io.Writer, forum forumresp) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "base-wide-right", forum))
+}
+
+func (t *forumTemplate) forumpost(w io.Writer, post *types.Post) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "forum-post", post))
+}
+
+func (t *forumTemplate) ftx(w io.Writer, ftx ForumTransmitter) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "forum-transmitter", ftx))
+}
+
+func (t *forumTemplate) error(w io.Writer, msg string) {
+	type errorresp struct {
+		Message string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "forum-error", errorresp{msg}))
+}
+
+type forumresp struct {
+	baseresp
+	Thread   *types.Thread
+	Archived bool
+	Watched  bool
+	Ftx      ForumTransmitter
+}
+
+type ForumTransmitter struct {
+	TID   uint32
+	Anon  bool
+	Nick  *string
+	Color *uint32
 }

@@ -13,5 +13,11 @@
   if (eub !== null) {
     eub.style.setProperty("--fs-min", fsmin)
     eub.style.setProperty("--fs-pmax", fspmax)
+  } else {
+    const bue = document.getElementById("brains-ur-eat")
+    if (bue !== null) {
+      bue.style.setProperty("--fs-min", fsmin)
+      bue.style.setProperty("--fs-pmax", fspmax)
+    }
   }
 })()

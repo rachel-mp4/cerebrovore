@@ -19,6 +19,7 @@ type threadModel struct {
 	topic  *string
 	server *lrcd.Server
 	full   bool
+	dead   bool
 	mu     sync.Mutex
 
 	subs   map[*clientConn]bool
@@ -39,6 +40,10 @@ func (m *Model) GetMessageData(tid uint32, pid uint32) (username *string, curSta
 	m.tmapmu.RUnlock()
 	if !ok {
 		err = ErrThreadDNE
+		return
+	}
+	if tm.dead {
+		err = ErrThreadDead
 		return
 	}
 	tm.mu.Lock()
@@ -67,8 +72,20 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 	}
 }
 
+func newDeadThreadModel(id uint32) *threadModel {
+	return &threadModel{
+		id:       id,
+		dead:     true,
+		subs:     make(map[*clientConn]bool),
+		watchers: make(map[string]bool),
+	}
+}
+
 // GetWSHandler returns the wshandler for an lrc server, if it exists
 func (tm *threadModel) getWSHandler(username string) (http.HandlerFunc, error) {
+	if tm.dead {
+		return nil, ErrThreadDead
+	}
 	if tm.server == nil {
 		return nil, ErrServerDNE
 	}
@@ -81,6 +98,9 @@ func (tm *threadModel) recreateServer(idAllocator func() uint32) error {
 	// perhaps 2 clients requested thread at same time, the first got lock and
 	// recreated server while the second was waiting and then the second got
 	// lock and the server now exists
+	if tm.dead {
+		return ErrThreadDead
+	}
 	if tm.server != nil {
 		return nil
 	}
