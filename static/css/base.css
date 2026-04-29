@@ -681,6 +681,9 @@ form:has(.form-submit) {
 
 .forum-post {
   margin-bottom: 1rem;
+  .image-wrapper {
+    float: right;
+  }
 }
 
 .forum-transmitter .nick {
@@ -714,3 +717,4 @@ form:has(.form-submit) {
 #action-modal form, form.forum-transmitter {
   margin-bottom: 0;
 }
+
