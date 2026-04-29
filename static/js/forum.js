@@ -1,3 +1,24 @@
+document.addEventListener("paste", (e) => {
+  const items = e.clipboardData?.items;
+  if (items === undefined) {
+    return;
+  }
+  for (const item of items) {
+    if (item.type.startsWith("image/")) {
+      const blob = item.getAsFile();
+      if (blob === null) {
+        return;
+      }
+      e.preventDefault();
+      const dt = new DataTransfer()
+      dt.items.add(blob)
+      const fimg = document.getElementById("ftx-image")
+      fimg.files = dt.files
+    }
+  }
+
+})
+
 document.addEventListener("cbv:thread", (e) => {
   const tse = e.detail
   if (tse.remaining !== undefined) {

@@ -10,11 +10,11 @@
     </div>
     <div class="form-field">
       <label for="nick">nick</label>
-      <input type="text" name="nick" value="wanderer">
+      <input type="text" name="nick" {{with .DisplayName}}value="{{.}}"{{end}}>
     </div>
     <div class="form-field">
       <label for="color">color</label>
-      <input type="color" name="color" value="#452faa">
+      <input type="color" name="color" value="{{colorToA .Color}}">
     </div>
     <div class="form-field">
       <label for="body">body</label>

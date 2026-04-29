@@ -31,7 +31,6 @@
 {{define "right-sidebar"}}
   {{template "forum-transmitter" .Ftx}}
   <div class="sidebar-group">
-    <button class="hide-ftx clickable" onclick='this.classList.toggle("hidden")'>forum transmitter</button>
     <button class="new-posts clickable">there are new posts</button>
   </div>
 {{end}}
@@ -40,7 +39,7 @@
   <form class="forum-transmitter" hx-swap="outerHTML" hx-post="/ft/{{idtoa .TID}}" hx-encoding="multipart/form-data">
     <div class="wrapper">
       <input type="color" name="color" value="{{colorToA .Color}}" />
-      <input type="text" class="nick" name="nick" size="16" placeholder="alice!" value="{{.Nick}}" />
+      <input type="text" class="nick" name="nick" size="16" placeholder="alice!" {{with .Nick}}value="{{.}}"{{end}} />
       <input type="checkbox" id="anon-box" name="anon" {{if .Anon}}checked{{end}} />
       <label for="anon-box">anon</label>
     </div>
@@ -48,7 +47,7 @@
       <textarea id="response-form" type="text" name="body" placeholder="this is your response" required></textarea>
     </div>
     <div class="form-field">
-      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
+      <input id="ftx-image" type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
     </div>
     <div class="form-field">
       <label for="alt">alt</label>

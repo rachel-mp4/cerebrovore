@@ -189,13 +189,16 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
+	pro, err := h.db.GetProfile(c.Username, r.Context())
+	if err != nil {
+		clog.Warn("%s", err.Error())
+		pro = &types.ProfileHead{}
+	}
 	newthreadT.exec(w, newthreadresp{
 		base,
+		pro.DisplayName,
+		pro.Color,
 	})
-	if err != nil {
-		clog.Warn("%s", err)
-		http.Error(w, "error templating", http.StatusInternalServerError)
-	}
 }
 
 func (h *Handler) login(w http.ResponseWriter, r *http.Request) {

@@ -72,10 +72,11 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 	}
 }
 
-func newDeadThreadModel(id uint32) *threadModel {
+func newDeadThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
 		id:       id,
 		dead:     true,
+		topic:    topic,
 		subs:     make(map[*clientConn]bool),
 		watchers: make(map[string]bool),
 	}

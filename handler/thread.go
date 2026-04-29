@@ -98,7 +98,7 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	thread.Dead = ok
 	var tid uint32
 	if ok {
-		tid = h.m.AddDeadThread()
+		tid = h.m.AddDeadThread(thread.Topic)
 	} else {
 		tid = h.m.AddThread(thread.Topic)
 	}

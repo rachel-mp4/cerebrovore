@@ -695,18 +695,6 @@ form:has(.form-submit) {
   cursor: pointer;
 }
 
-#right-sidebar:has(.hide-ftx.hidden) .forum-transmitter {
-  visibility: hidden;
-}
-
-.hide-ftx::before {
-  content: "hide ";
-}
-
-.hide-ftx.hidden::before {
-  content: "show ";
-}
-
 #forum-notification-canvas {
   z-index: -1;
   position:fixed;

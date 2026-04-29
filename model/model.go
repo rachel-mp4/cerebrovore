@@ -51,7 +51,7 @@ func (m *Model) recreateThread(thread types.Thread) {
 	}
 	var rt *threadModel
 	if thread.Dead {
-		rt = newDeadThreadModel(thread.ID)
+		rt = newDeadThreadModel(thread.ID, thread.Topic)
 	} else {
 		rt = newThreadModel(thread.ID, thread.Topic)
 	}
@@ -72,14 +72,14 @@ func (m *Model) AddThread(topic *string) uint32 {
 	return threadID
 }
 
-func (m *Model) AddDeadThread() uint32 {
+func (m *Model) AddDeadThread(topic *string) uint32 {
 	// i'm adding this method which is similar to above method, but i wasn't sure why
 	// why it used a read lock. i'm using a write lock just to be safe here but leaving
 	// the above method untouched
 	m.tmapmu.Lock()
 	defer m.tmapmu.Unlock()
 	threadID := m.getIDAllocator()()
-	nt := newDeadThreadModel(threadID)
+	nt := newDeadThreadModel(threadID, topic)
 	m.tmap[threadID] = nt
 	return threadID
 }

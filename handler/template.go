@@ -493,6 +493,8 @@ type newthreadTemplate struct {
 
 type newthreadresp struct {
 	baseresp
+	DisplayName *string
+	Color       *uint32
 }
 
 var bumpedT bumpedTemplate
