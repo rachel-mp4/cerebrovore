@@ -1,2 +1,1 @@
-DROP INDEX IF EXISTS idx_posts_username;
 ALTER TABLE threads DROP COLUMN IF EXISTS dead;
