@@ -83,6 +83,18 @@ textarea:not([rows]) {
   --gsecondaryl: #fea2db80; /*global secondary light*/
   --secondaryl: var(--gsecondaryl); /*secondary light*/
 }
+
+.dark {
+  --bg: var(--gfg);
+  --bl: var(--gfl);
+  --fg: var(--gbg);
+  --fl: var(--gbl);
+}
+
+:is(.light, .dark) {
+  color: var(--fg);
+}
+
 @font-face {
   font-family: 'SourceSans';
   src: url('/font/SS3IVariable.ttf') format('truetype');
@@ -627,32 +639,6 @@ form:has(.form-submit) {
   display: flex;
 }
 
-.dark .roof {
-  color: var(--fg);
-  .clickable {
-    color: var(--fl);
-    &:hover{ 
-      color: var(--fg);
-    }
-  }
-  .reply {
-    color: var(--fg)
-  }
-}
-
-.light .roof {
-  color: var(--bg);
-  .clickable {
-    color: var(--bl);
-    &:hover{ 
-      color: var(--bg);
-    }
-  }
-  .reply {
-    color: var(--bg)
-  }
-}
-
 .roof .reply {
   margin-left: auto;
 }
@@ -681,7 +667,8 @@ form:has(.form-submit) {
 
 .forum-post {
   margin-bottom: 1rem;
-  .image-wrapper {
+  /* if i just do :not .profile preprocessor inserts an &, undesired */
+  .profile-room :not(.profile) .image-wrapper {
     float: right;
   }
 }

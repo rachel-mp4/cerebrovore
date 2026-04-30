@@ -15,7 +15,9 @@
   font-weight: 600;
 }
 
-
+.tx:not(.active) {
+  color: var(--gfg);
+}
 
 /* transmission image styles */
 .image-wrapper {
@@ -57,10 +59,22 @@
   white-space: pre-wrap;
 }
 
-.handle {
-  color: var(--fl);
+.tx:not(.active) .handle {
+  color: var(--gfl);
   position: relative;
   font-size: .75em;
+}
+
+.active .handle {
+  color: var(--fl);
+}
+
+.tx:not(.active) .reply {
+  color: var(--gfg);
+}
+
+.tx:not(.active) .time {
+  color: var(--gfl);
 }
 
 .tx:not(:hover) .clickable {
@@ -70,6 +84,10 @@
 .clickable {
   color: var(--fl);
   cursor: pointer;
+}
+
+.tx:not(.active) .clickable {
+  color: var(--gfl);
 }
 
 .clickable:hover {
@@ -109,24 +127,15 @@
   opacity: 0.5;
 }
 
-.tx.dark {
-  --bg: var(--gfg)
-}
-
 .tx ::selection {
   background: var(--accent);
 }
 
 .tx:not(.active) ::selection {
-  color: var(--bg)
+  color: var(--gbg)
 }
 
-.tx.active.light ::selection {
-  background: var(--gbg);
-  color: var(--accent);
-}
-
-.tx.active.dark ::selection {
-  background: var(--gfg);
+.tx.active ::selection {
+  background: var(--fg);
   color: var(--accent);
 }

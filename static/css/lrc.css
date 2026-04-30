@@ -80,14 +80,6 @@
   background-color: var(--accentl);
 }
 
-.active.dark {
-  color: var(--fg);
-}
-
-.active.light {
-  color: var(--bg);
-}
-
 .active::before {
   position: absolute;
   content: "";
@@ -98,20 +90,12 @@
 
 
 /* diff styles */
-.dark .removed {
+.removed {
   text-decoration: line-through var(--fl);
 }
 
-.dark .appended {
+.appended {
   color: var(--fl);
-}
-
-.light .removed {
-  text-decoration: line-through var(--bl);
-}
-
-.light .appended {
-  color: var(--bl);
 }
 
 

@@ -1,6 +1,6 @@
 {{define "forum-post"}}
-<div class="forum-post {{colorIsDark .Color}}{{if .ViewerIsYou}} you{{end}}" id="{{idtoa .ID}}" {{with .Color}}style="--accent:{{colorToA .}};--accentl:{{colorToA .}}80"{{end}}>
-    <div class="roof">
+<div class="forum-post {{if .ViewerIsYou}} you{{end}}" id="{{idtoa .ID}}" {{with .Color}}style="--accent:{{colorToA .}};--accentl:{{colorToA .}}80"{{end}}>
+    <div class="roof {{colorIsDark .Color}}">
       <time class="time" datetime="{{formatTime .PostedAt}}"></time>
       <button class="report clickable"> report</button>
       {{- if or .ViewerIsYou .LinkToModerate -}}<button class="delete clickable"> delete</button>{{- end -}}

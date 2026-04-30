@@ -15,7 +15,7 @@
     </h2>
   {{end}}
   {{range .ThreadThumbs}}
-    <li class="forum-link {{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80" data-link="/ft/{{idtoa .ID}}">
+    <li class="forum-link {{colorIsDark .OP.Color}}{{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80" data-link="/ft/{{idtoa .ID}}">
       <div class="thread">
         <div>
           <a href="/ft/{{idtoa .ID}}">

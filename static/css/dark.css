@@ -4,3 +4,17 @@
   --gfg: #ededeb;
   --gfl: #ededeb80;
 }
+
+.dark {
+  --bg: var(--gbg);
+  --bl: var(--gbl);
+  --fg: var(--gfg);
+  --fl: var(--gfl);
+}
+
+.light {
+  --bg: var(--gfg);
+  --bl: var(--gfl);
+  --fg: var(--gbg);
+  --fl: var(--gbl);
+}
