@@ -6,8 +6,10 @@
 
   interface Props {
     ismoderator: boolean;
+    defaultnick: string | null;
+    defaultcolor: number | null;
   }
-  let { ismoderator }: Props = $props();
+  let { ismoderator, defaultnick, defaultcolor }: Props = $props();
   const url = window.location.href;
   // i think this should work for both http->ws and https->wss schemes, that's
   // why the magic number 4 is there
@@ -19,8 +21,8 @@
   const nick = localStorage.getItem("nick");
   const color = localStorage.getItem("color");
   const ctx = new WSContext(
-    nick ?? "wanderer",
-    color ? parseInt(color, 10) : 4534186,
+    nick ?? defaultnick ?? "wanderer",
+    color ? parseInt(color, 10) : (defaultcolor ?? 4534186),
   );
   ctx.connect(address);
 </script>

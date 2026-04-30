@@ -9,7 +9,7 @@
       {{template "watch" .Thread}}
     {{end}}
   {{end}}
-  <div id="eats-ur-brain" {{if .IsMod}}class="mod"{{end}}>
+  <div id="eats-ur-brain"{{if .IsMod}} class="mod"{{end}}{{with .Color}} data-color="{{.}}"{{end}}{{with .Nick}} data-nick="{{.}}"{{end}}>
     {{range .Thread.Posts}}
       {{template "post" .}}
     {{end}}

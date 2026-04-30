@@ -782,11 +782,19 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get bumps", http.StatusInternalServerError)
 		return
 	}
+	pro, err := h.db.GetProfile(c.Username, r.Context())
+	if err != nil {
+		http.Error(w, "failed to get profile", http.StatusInternalServerError)
+		return
+	}
+
 	br.Accent = utils.ColorToAp(t.OP.Color)
 	watched := h.db.IsWatched(c.Username, tid, r.Context())
 	br.justbaseresp.ReplyCount = &t.ReplyCount
 	gtr := threadresp{
 		baseresp: br,
+		Color:    pro.Color,
+		Nick:     pro.DisplayName,
 		Thread:   t,
 		Watched:  watched,
 		Archived: utils.MaxReplies(t.ReplyCount),

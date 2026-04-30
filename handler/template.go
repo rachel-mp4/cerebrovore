@@ -476,6 +476,8 @@ type threadTemplate struct {
 
 type threadresp struct {
 	baseresp
+	Color    *uint32
+	Nick     *string
 	Thread   *types.Thread
 	Archived bool
 	Watched  bool
