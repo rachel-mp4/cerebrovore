@@ -653,9 +653,9 @@ form:has(.form-submit) {
   background: var(--accent);
 }
 
-.forum-link .handle {
+:not(.tx) .handle {
   color: var(--fl);
-  font-size: 1rem;
+  font-size: .75em;
 }
 
 .forum-link .thread {
@@ -668,8 +668,7 @@ form:has(.form-submit) {
 
 .forum-post {
   margin-bottom: 1rem;
-  /* if i just do :not .profile preprocessor inserts an &, undesired */
-  .profile-room :not(.profile) .image-wrapper {
+  :not(.avatar).image-wrapper {
     float: right;
   }
 }

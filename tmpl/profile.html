@@ -2,7 +2,7 @@
   <div class="profile-head">
     {{if .Profile.ProfileHead.Avatar}}{{renderAvatarPFP .Profile.ProfileHead.Avatar .Profile.ProfileHead.DisplayName .Profile.ProfileHead.IsPixelArt}}{{end}}
     <div class="profile-names">
-      {{if .Profile.ProfileHead.DisplayName}}<h1>{{.Profile.ProfileHead.DisplayName}}</h1><h2>@{{.Profile.ProfileHead.Username}}</h2>{{else}}<h1>@{{.Profile.Username}}</h1>{{end}}
+      {{if .Profile.ProfileHead.DisplayName}}<h1>{{.Profile.ProfileHead.DisplayName}}<span class="handle">@{{.Profile.ProfileHead.Username}}</span></h1>{{else}}<h1>@{{.Profile.Username}}</h1>{{end}}
       {{if .Profile.ProfileHead.Status}}<h3>{{.Profile.ProfileHead.Status}}</h3>{{end}}
       {{if .Profile.ProfileHead.SelfBanned}}
         <div>
