@@ -36,6 +36,6 @@
     onunmute={ctx.unmute}
     {ismoderator}
   />
-  <Transmitter {ctx} />
+  <Transmitter {ctx} {defaultnick} {defaultcolor} />
   <Console log={ctx.log} />
 {/if}

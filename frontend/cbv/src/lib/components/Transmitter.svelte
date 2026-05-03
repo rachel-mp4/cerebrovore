@@ -6,8 +6,10 @@
   import { onMount } from "svelte";
   interface Props {
     ctx: WSContext;
+    defaultnick: string | null;
+    defaultcolor: number | null;
   }
-  let { ctx }: Props = $props();
+  let { ctx, defaultnick, defaultcolor }: Props = $props();
   let nick = $state(ctx.nick);
   let anon = $state(ctx.anon);
   let imageURL: string | undefined = $state();
@@ -21,8 +23,28 @@
   $effect(() => {
     if (ctx) {
       ctx.setAnon(anon);
+      setnameandcolor();
     }
   });
+
+  var initial = true;
+  const setnameandcolor = () => {
+    if (initial) {
+      initial = false;
+      return;
+    }
+    if (anon) {
+      nick = "wanderer";
+      ctx.setColor(4534186);
+    } else {
+      if (defaultnick !== null) {
+        nick = defaultnick;
+      }
+      if (defaultcolor !== null) {
+        ctx.setColor(defaultcolor);
+      }
+    }
+  };
 
   let message = $state("");
   const addReply = (str: string) => {
