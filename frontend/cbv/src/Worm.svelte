@@ -10,6 +10,9 @@
   // and have the /ws not be interpreted as part of the hashtag
   const address = `ws${sansproto.split("#")[0]}/ww`;
   const ctx = new WormWatchContext(address);
+  const nww = localStorage.getItem("nowormwatch");
 </script>
 
-<WormWatch {ctx} />
+{#if nww === null || nww === ""}
+  <WormWatch {ctx} />
+{/if}

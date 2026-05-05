@@ -2,6 +2,8 @@
   import VolumeSettings from "./lib/components/VolumeSettings.svelte";
   const ntv = localStorage.getItem("new-threads");
   let wantsNewThreads = $state(ntv !== "");
+  const nww = localStorage.getItem("nowormwatch");
+  let noWormWatch = $state(nww !== "");
   const dp = localStorage.getItem("displayPing");
   let displayPing = $state(dp !== null);
   // effect is ok for this because we use checkbox, however prefer onchange
@@ -9,6 +11,9 @@
   // localStorage
   $effect(() => {
     localStorage.setItem("new-threads", wantsNewThreads ? "yes" : "");
+  });
+  $effect(() => {
+    localStorage.setItem("nowormwatch", noWormWatch ? "yes" : "");
   });
   $effect(() => {
     if (displayPing) {
@@ -120,3 +125,5 @@
   >display your ping while in thread if you're interested or maybe for debugging
   (requires refresh)</label
 >
+<input type="checkbox" bind:checked={noWormWatch} id="no-worm-watch" />
+<label for="no-worm-watch">disable worm watch</label>
