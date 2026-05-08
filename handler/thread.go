@@ -539,17 +539,23 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
 	if len(backlinks) != 0 {
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
+		umap := make(map[string]int, len(backlinks))
+		rslice := make([]string, 0, len(backlinks))
+		gvalue := 0
 		for _, bl := range backlinks {
+			umap[bl.ToUsername] += 1
 			if bl.From == post.ID {
 				reply := lrcpb.Reply{
 					Reply: &lrcpb.Reply_Attachreply{Attachreply: &lrcpb.AttachReply{From: &post.ID, To: bl.To}},
 				}
 				replies = append(replies, &reply)
+				rslice = append(rslice, bl.ToUsername)
 			} else if bl.To == post.ID {
 				reply := lrcpb.Reply{
 					Reply: &lrcpb.Reply_Attachreply{Attachreply: &lrcpb.AttachReply{To: post.ID, From: &bl.From}},
 				}
 				replies = append(replies, &reply)
+				gvalue += 1
 			} else {
 				clog.Fail("bad backlink: from=%d to=%d", bl.From, bl.To)
 			}
@@ -561,6 +567,11 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			},
 		}
 		h.m.AddBacklinks(post.ThreadID, batch)
+		h.db.CreateReplyNotifications(rslice, post.ID, ctx)
+		if gvalue != 0 {
+			h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx)
+		}
+		h.m.DispatchReplyNotifications(umap)
 	}
 	if post.Anon {
 		h.m.NotifyReply(post.ThreadID, post.ID, nil, post.Color, replyCount)
@@ -619,7 +630,6 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		case utils.DESHELL_EX:
 			cmd.deshell = true
 		}
-
 	}
 	if cmd.play {
 		res, unpause := utils.ParseBodyForPlays(post.TextContent.Body)
@@ -651,6 +661,14 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 	if cmd.debrainworm {
 		h.selfban(c.Username, &post.ID, "*debrainworms u*", time.Now().Add(5*time.Minute), ctx)
 	}
+	if post.TextContent != nil {
+		mentions := utils.ParseBodyForMentions(post.TextContent.Body)
+		if len(mentions) > 0 {
+			h.db.CreateMentionNotifications(mentions, post.ID, ctx)
+			h.m.BulkDispatch(mentions)
+		}
+	}
+	h.db.CreateWatchNotifications(post.ThreadID, ctx)
 }
 
 func (h *Handler) getPost(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -828,7 +846,7 @@ func (h *Handler) getJSONWebsockets(c *Client, w http.ResponseWriter, r *http.Re
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	opts := make([]model.Option, 0)
+	opts := []model.Option{model.WithCleanupFunction(h.db.EndWatchContext)}
 	ntid := r.URL.Query().Get("thread")
 	if ntid != "" {
 		tid, err := utils.AToID(ntid)
@@ -838,7 +856,7 @@ func (h *Handler) getJSONWebsockets(c *Client, w http.ResponseWriter, r *http.Re
 	}
 	watcher := r.URL.Query().Get("watcher")
 	if watcher != "" {
-		opts = append(opts, model.WithWatchedThreads(h.db.GetWatchedThreads, watcher == "and-new-threads"))
+		opts = append(opts, model.WithWatchedThreads(h.db.StartWatchContext, watcher == "and-new-threads"))
 	}
 	ntid = r.URL.Query().Get("wormwatch")
 	if ntid != "" {

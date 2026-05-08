@@ -1,0 +1,49 @@
+{{define "content"}}
+  <h1>inbox<button class="clickable" hx-post="/inbox">read all</button></h1>
+  <ul class="notifications">
+    {{template "notifications" .}}
+  </ul>
+  <script src="/js/links.js{{.Crack}}"></script>
+  <script src="/js/action.js{{.Crack}}"></script>
+{{end}}
+
+{{define "notifications"}}
+  {{range .NotificationList}}
+    {{if .IsLastRead}}<hr><em>old news onwards!</em>{{end}}
+    {{if .ReplyId}}
+      <li class="reply-notification">
+        you got a reply!
+        {{template "post" .Reply}}
+      </li>
+    {{else if .MentionId}}
+      <li class="mention-notification">
+        {{if or .MentionNick (not (boolPtrIsTrue .MentionAnon))}}{{with .MentionNick}}<span class="nick">{{.}}</span>{{end}}{{if not (boolPtrIsTrue .MentionAnon)}}<span class="username"><a href="/profile/{{.Mentioner}}">@{{.Mentioner}}</a></span>{{end}} mentioned you{{else}}you were mentioned{{end}} in post <a href="/p/{{idtoa .MentionId}}">#{{idtoa .MentionId}}</a>
+      </li>
+    {{else if .ThreadId}}
+      <li class="thread-notification">
+        there's been activity in <a href="/t/{{idtoa .ThreadId}}"><span class="topic">{{with .Topic}}{{.}}{{else}}#{{idtoa .ThreadId}}{{end}}</span></a>
+      </li>
+    {{else if .Poker}}
+      <li class="poke-notification">
+        <span class="username"><a href="/profile/{{.Poker}}">@{{.Poker}}</a></span> poked you {{with .PokeMessage}}<blockquote class="message">{{.}}</blockquote>{{end}} {{template "poke" (dict "Username" .Poker "Value" "poke them back")}}
+      </li>
+    {{else if .Reason}}
+      <li class="mod-notification">
+        {{.Reason}}
+      </li>
+    {{else if .GetId}}
+      <li class="get-notification">
+        {{.Value}} {{if eq (intptoint .Value) 1}}person{{else}}people{{end}} replied to your post <a href="/p/{{idtoa .GetId}}">#{{idtoa .GetId}}</a> before you submitted it. {{if gt (intptoint .Value) 5}}checked!{{end}}
+      </li>
+    {{end}}
+  {{end}}
+  {{if .Cursor}}
+    <button hx-get="/inbox?cursor={{.Cursor}}" hx-swap="outerHTML">load more notifications</button>
+  {{end}}
+{{end}}
+
+{{define "error"}}
+  <div>
+    error fetching extra notifications: {{.Message}}. sorry about that
+  </div>
+{{end}}

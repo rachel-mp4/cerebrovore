@@ -501,6 +501,32 @@ func (m *MockStore) GetReports(limit int, after *int, ctx context.Context) ([]ty
 	return nil, nil, nil
 }
 
+func (s *Store) GetReportersFor(username string, ctx context.Context) (reporters []string, err error) {
+	rows, err := s.pool.Query(ctx, `
+		SELECT DISTINCT reporter
+		FROM reports
+		WHERE reported = $1
+		LIMIT 100
+		`, username)
+	if err != nil {
+		return
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var reporter string
+		err = rows.Scan(&reporter)
+		if err != nil {
+			return
+		}
+		reporters = append(reporters, reporter)
+	}
+	return
+}
+
+func (m *MockStore) GetReportersFor(username string, ctx context.Context) (reporters []string, err error) {
+	return
+}
+
 func (s *Store) ReviewReport(id int, reviewer string, ctx context.Context) error {
 	_, err := s.pool.Exec(ctx, `UPDATE reports SET reviewed_by = $1 WHERE id = $2`, reviewer, id)
 	return err

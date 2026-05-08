@@ -868,13 +868,16 @@ func (s *Store) GetDeadThread(id uint32, viewerIsMod bool, viewerUsername string
 	return thread, nil
 }
 
-func (m *MockStore) GetWatchedThreads(username string, ctx context.Context) ([]uint32, error) {
+func (m *MockStore) StartWatchContext(username string, ctx context.Context) ([]uint32, error) {
 	return nil, nil
 }
 
-func (s *Store) GetWatchedThreads(username string, ctx context.Context) ([]uint32, error) {
+func (s *Store) StartWatchContext(username string, ctx context.Context) ([]uint32, error) {
 	rows, err := s.pool.Query(ctx, `
-		SELECT thread_id FROM watched_threads WHERE username = $1
+		UPDATE watched_threads
+		SET notified = TRUE
+		WHERE username = $1
+		RETURNING thread_id
 		`, username)
 	if err != nil {
 		return nil, err
@@ -890,6 +893,18 @@ func (s *Store) GetWatchedThreads(username string, ctx context.Context) ([]uint3
 		res = append(res, v)
 	}
 	return res, nil
+}
+
+func (s *Store) EndWatchContext(username string, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+	UPDATE watched_threads
+	SET notified = FALSE
+	WHERE username = $1`, username)
+	return err
+}
+
+func (m *MockStore) EndWatchContext(username string, ctx context.Context) error {
+	return nil
 }
 
 func (m *MockStore) WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error) {

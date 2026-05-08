@@ -284,7 +284,7 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 				moderateT.error(w, err.Error())
 				return
 			}
-			go h.postBanCleanup(action.Ban.Username)
+			go h.postBanCleanup(action.Ban.Username, true)
 		}
 		moderateT.confirmed(w, &action, actioned)
 		return
@@ -318,17 +318,31 @@ func composeBan(username, reason, comment, until string) types.Ban {
 func (h *Handler) selfban(username string, postid *uint32, reason string, til time.Time, ctx context.Context) error {
 	err := h.db.SelfBan(username, postid, reason, til, ctx)
 	if err == nil {
-		go h.postBanCleanup(username)
+		go h.postBanCleanup(username, false)
 	}
 	return err
 }
 
-func (h *Handler) postBanCleanup(username string) {
+func (h *Handler) postBanCleanup(username string, bymod bool) {
 	h.m.BanUser(username)
+	if !bymod {
+		return
+	}
+	reporters, err := h.db.GetReportersFor(username, context.Background())
+	if err != nil {
+		clog.Fail("postBanCleanup getReportersFor error: %s", err)
+		return
+	}
+	err = h.db.CreateModNotifications(reporters, "action has been taken against someone you reported", context.Background())
+	if err != nil {
+		clog.Fail("postBanCleanup createModNotifications error: %s", err)
+		return
+	}
+	h.m.BulkDispatch(reporters)
 }
 
 func (h *Handler) postAppeal(w http.ResponseWriter, r *http.Request) {
-	s, _ := h.sessionStore.Get(r, "session")
+	s, _ := h.scs.Get(r, "session")
 	id, ok := s.Values["id"].(string)
 	username, bok := s.Values["username"].(string)
 	if !ok || !bok {

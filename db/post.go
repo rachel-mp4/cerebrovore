@@ -78,13 +78,18 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		INSERT INTO post_replies (from_id, to_id)
-		SELECT p.from_id, p.to_id
-		FROM pending_post_replies p
-		JOIN posts target ON target.id = p.to_id
-		WHERE p.from_id = $1 OR p.to_id = $1
-		ON CONFLICT DO NOTHING
-		RETURNING from_id, to_id
+		WITH inserted AS (
+			INSERT INTO post_replies (from_id, to_id)
+			SELECT p.from_id, p.to_id
+			FROM pending_post_replies p
+			JOIN posts target ON target.id = p.to_id
+			WHERE p.from_id = $1 OR p.to_id = $1
+			ON CONFLICT DO NOTHING
+			RETURNING from_id, to_id
+		)
+		SELECT i.from_id, i.to_id, p.username
+		FROM inserted i 
+		JOIN POSTS p ON p.id = to_id
 		`, post.ID)
 	if err != nil {
 		clog.Warn("db: %s", err)
@@ -94,7 +99,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 	res := make([]Backlink, 0)
 	for rows.Next() {
 		var bl Backlink
-		err := rows.Scan(&bl.From, &bl.To)
+		err := rows.Scan(&bl.From, &bl.To, &bl.ToUsername)
 		if err != nil {
 			clog.Warn("db: %s", err)
 			return 0, nil, err

@@ -248,6 +248,7 @@ type options = struct {
 	watchedthreads    bool
 	getwatchedthreads func(string, context.Context) ([]uint32, error)
 	newthreads        bool
+	cleanup           func(string, context.Context) error
 }
 
 func WithThreadSocket(id uint32) Option {
@@ -277,6 +278,17 @@ func WithWormwatch(id uint32) Option {
 		}
 		options.thread = &id
 		options.wormwatch = true
+		return nil
+	}
+}
+
+// the idea behind cleanup function is we basically wanna be able to send to a user
+// one thread notification per session, so like if we're gonna send an irrelevant
+// notification to them, we realize that we don't need to send it, but then once
+// they go offline, activity in that thread would become relevant again
+func WithCleanupFunction(cleanup func(string, context.Context) error) Option {
+	return func(options *options) error {
+		options.cleanup = cleanup
 		return nil
 	}
 }
@@ -443,6 +455,16 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 						panic("i think that this is a weird case! cleanup watch context")
 					}
 					uwctx.cleanupTimer = time.AfterFunc(10*time.Second, func() {
+						if myoptions.cleanup != nil {
+							// seems to me since we're unprotected by mutex, there's a race between
+							// start and end watch context functions (gwt & cu) & idk why it's so
+							// important i have all this indirection twixt model handler and db
+							// i just love shiny things..........................................
+							// doesn't seem like so big a deal, just in a very rare case some extra
+							// or missing notifications and seems like doing it safely could slow
+							// everything for everyone but i'm just noting it
+							defer myoptions.cleanup(username, context.Background())
+						}
 						// probably i'm being a bit wow shiny toy apropos mutex
 						// not necessary and introduce a lot of unnecessary overhead, but
 						// anyway, it needs to go this order of nesting since that's

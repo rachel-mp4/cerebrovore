@@ -597,11 +597,6 @@ iframe {
 
 a.clickable {
   font-weight: 400;
-  text-decoration: none;
-}
-
-a.clickable:hover {
-  font-weight: 700;
 }
 
 a.you::after {
@@ -705,3 +700,134 @@ form:has(.form-submit) {
   margin-bottom: 0;
 }
 
+.pair {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+}
+
+.sidebar-group:hover .hidden-till-hover {
+  visibility: visible;
+}
+
+.hidden-till-hover {
+  color: var(--fl);
+  margin-inline: auto;
+  visibility: hidden;
+  :hover {
+    color: var(--fg);
+    visibility: visible;
+  }
+}
+
+/* was doing it this way & i'd prefer it, but i think attr() seems a bit buggy ngl */
+/* #inbox-counter::before { */
+/*   content: attr(data-ncount); */
+/* } */
+/**/
+/* #inbox-counter[data-count="0"]::before { */
+/*   content: ""; */
+/* } */
+/**/
+/* #inbox-counter:is([data-count="0"],[data-count="1"])::after { */
+/*   content: ""; */
+/* } */
+/**/
+/* #inbox-counter::after { */
+/*   content: "s"; */
+/* } */
+/**/
+/* #inbox-counter[data-count="0"] { */
+/*   color: transparent */
+/* } */
+/**/
+#inbox-counter {
+  width: 5.5rem;
+  position: relative;
+}
+
+.sidebar-group:has(a[href="/inbox"]:hover) a[href="/inbox"] {
+  animation: squiggly-anim 0.34s linear infinite;
+}
+
+a:hover {
+  animation: squiggly-anim 0.34s linear infinite;
+}
+
+.forum-link:hover:not(:has(a:hover)) {
+  animation: biggly-anim 0.34s 0.067s linear infinite;
+}
+
+@keyframes squiggly-anim {
+  0% {
+    filter: url("/svg/squiggly.svg#0-0");
+  }
+  25% {
+    filter: url("/svg/squiggly.svg#0-1");
+  }
+  50% {
+    filter: url("/svg/squiggly.svg#0-2");
+  }
+  75% {
+    filter: url("/svg/squiggly.svg#0-3");
+  }
+  100% {
+    filter: url("/svg/squiggly.svg#0-4");
+  }
+}
+
+@keyframes biggly-anim {
+  0% {
+    filter: url("/svg/squiggly.svg#1-0");
+  }
+  25% {
+    filter: url("/svg/squiggly.svg#1-1");
+  }
+  50% {
+    filter: url("/svg/squiggly.svg#1-2");
+  }
+  75% {
+    filter: url("/svg/squiggly.svg#1-3");
+  }
+  100% {
+    filter: url("/svg/squiggly.svg#1-4");
+  }
+}
+
+.notifications li:not(hr ~ li) {
+  background: var(--primaryl);
+  &:hover {
+    background: var(--primary);
+  }
+}
+
+/* to escape user agent, which we are not sure how big margin for ul might be, */ 
+/* i just pick a big number to be safe */
+.notifications hr {
+  margin-inline: -20rem;
+}
+
+.notifications:not(:has(li)) {
+  display: none;
+}
+
+.poke {
+  flex-direction: row;
+  input {
+    color: var(--fg);
+    margin: 0;
+    padding: 0;
+    &[type="submit"]:hover {
+      font-weight: 700;
+    }
+  }
+}
+
+.poke span::after {
+  content: "?";
+}
+
+.poke:has([type="submit"]:hover) span::after {
+  content: "!";
+  font-weight: 700;
+}

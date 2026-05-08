@@ -18,6 +18,9 @@
         <em>last seen in <a href="/t/{{idtoa .Profile.LastSeenLocation}}">{{if .Profile.LastSeenTopic}}{{.Profile.LastSeenTopic}}{{else}}thread #{{idtoa .Profile.LastSeenLocation}}{{end}}</a> {{timeSince .Profile.LastSeenTime}} ago</em>
       </div>
     {{end}}
+    {{if not (eq .Username .Profile.Username)}}
+      {{template "poke" (dict "Username" .Profile.Username "Value" "poke")}}
+    {{end}}
     {{if .Profile.Friends}}
       {{with .Profile.FriendsHeader}}<h3>{{.}}</h3>{{end}}
       <div class="friends">
@@ -76,4 +79,14 @@
   {{if eq .Username .Profile.Username}}<div><a href="/profile">edit profile</a></div>{{end}}
   <script src="/js/thumb.js{{.Crack}}"></script>
   <script src="/js/action.js{{.Crack}}"></script>
+{{end}}
+
+{{define "error"}}
+  <div>
+    you failed to poke them. {{.Message}}
+  </div>
+{{end}}
+
+{{define "poked"}}
+  <div>poked!</div>
 {{end}}

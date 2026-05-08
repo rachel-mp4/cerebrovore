@@ -3,6 +3,16 @@
 {{end}}
 
 {{define "content"}}
+  <h2>notify ALL</h2>
+  <form hx-swap="outerHTML" hx-POST="/notify-all">
+    <div class="form-field">
+      <label for="message">message</label>
+      <input type="text" name="message">
+    </div>
+    <div class="form-submit">
+      <input type="submit" value="notify ALL"/>
+    </div>
+  </form>
   <h2>
     new moderator
   </h2>
@@ -22,3 +32,10 @@
   </ol>
 {{end}}
 
+{{define "error"}}
+  <div>error: {{.Message}}</div
+{{end}}
+
+{{define "notified"}}
+  <div>notified {{.Count}} users</div>
+{{end}}

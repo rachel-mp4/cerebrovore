@@ -12,6 +12,16 @@ import (
 )
 
 func init() {
+	inboxT = inboxTemplate{newTemplate(
+		"./tmpl/base.html",
+		"./tmpl/threads.html",
+		"./tmpl/partial/threadlink.html",
+		"./tmpl/bumped-threads.html",
+		"./tmpl/empty.html",
+		"./tmpl/inbox.html",
+		"./tmpl/partial/post.html",
+		"./tmpl/partial/poke.html",
+	)}
 	homeT = homeTemplate{newTemplate(
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
@@ -102,6 +112,7 @@ func init() {
 		"./tmpl/empty.html",
 		"./tmpl/profile.html",
 		"./tmpl/partial/post.html",
+		"./tmpl/partial/poke.html",
 	)}
 	editprofileT = editprofileTemplate{newTemplate(
 		"./tmpl/base.html",
@@ -173,16 +184,26 @@ type baseresp struct {
 	justbaseresp
 	CompiledAssets *CompiledAssets
 	Threads        []types.Thread
+	Notifications  int
 	Username       string
 	IsMod          bool
 }
 
 func (h *Handler) makebase(title string, c *Client, ctx context.Context) (baseresp, error) {
 	tt, err := h.db.GetBumps(ctx)
+	if err != nil {
+		return baseresp{}, err
+	}
+	n, err := h.db.GetUnreadNotificationCount(c.Username, ctx)
+	if err != nil {
+		return baseresp{}, err
+	}
+
 	return baseresp{
 		h.makejustbase(title, true),
 		h.ca,
 		tt,
+		n,
 		c.Username,
 		c.IsMod,
 	}, err
@@ -227,8 +248,27 @@ func newTemplate(files ...string) *template.Template {
 				"forumTopicOrIdtoa": types.ForumTopicOrIdtoa,
 				"percentRemaining":  utils.PercentRemaining,
 				"boolPtrIsTrue":     boolPtrIsTrue,
+				"dict":              dictify,
+				"intptoint":         intptoint,
 			}).ParseFiles(files...),
 	)
+}
+func intptoint(p *int) int {
+	if p == nil {
+		return 0
+	}
+	return *p
+}
+
+func dictify(values ...any) map[string]any {
+	if len(values)%2 != 0 {
+		return nil
+	}
+	dict := make(map[string]any, len(values)/2)
+	for i := 0; i < len(values); i += 2 {
+		dict[values[i].(string)] = values[i+1]
+	}
+	return dict
 }
 
 func boolPtrIsTrue(ptr *bool) bool {
@@ -247,6 +287,38 @@ func boolPtrIsTrue(ptr *bool) bool {
 // in addition to exec, you can define other methods as well. clog.Tmpl()
 // automatically logs any errors from templating, if they exist, so make sure
 // to wrap any template executions in this
+
+var inboxT inboxTemplate
+
+func (t *inboxTemplate) exec(w io.Writer, inbox inboxResp) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "base", inbox))
+}
+
+func (t *inboxTemplate) error(w io.Writer, msg string) {
+	type errorresp struct {
+		Message string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "error", errorresp{msg}))
+}
+
+func (t *inboxTemplate) notifications(w io.Writer, notifications notificationsResp) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "notifications", notifications))
+}
+
+type inboxTemplate struct {
+	template *template.Template
+}
+
+type inboxResp struct {
+	baseresp
+	NotificationList []types.Notification
+	Cursor           *int
+}
+
+type notificationsResp struct {
+	NotificationList []types.Notification
+	Cursor           *int
+}
 
 var homeT homeTemplate
 
@@ -391,6 +463,20 @@ func (t *adminTemplate) exec(w io.Writer, admin adminresp) {
 
 func (t *adminTemplate) plusmodsuccess(w io.Writer, username string) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "mod", username))
+}
+
+func (t *adminTemplate) error(w io.Writer, message string) {
+	type errorresp struct {
+		Message string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "error", errorresp{message}))
+}
+
+func (t *adminTemplate) notified(w io.Writer, count int) {
+	type errorresp struct {
+		Count int
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "notified", errorresp{count}))
 }
 
 type adminTemplate struct {
@@ -605,7 +691,7 @@ type coderesp struct {
 var codeerrT codeerrTemplate
 
 func (t *codeerrTemplate) exec(w io.Writer, codeerr codeerrresp) {
-	clog.Tmpl(t.template.ExecuteTemplate(w, "coderr", codeerr))
+	clog.Tmpl(t.template.ExecuteTemplate(w, "codeerr", codeerr))
 }
 
 type codeerrTemplate struct {
@@ -641,6 +727,17 @@ var profileT profileTemplate
 
 func (t *profileTemplate) exec(w io.Writer, profile profileresp) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "base", profile))
+}
+
+func (t *profileTemplate) error(w io.Writer, msg string) {
+	type errorresp struct {
+		Message string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "error", errorresp{msg}))
+}
+
+func (t *profileTemplate) poked(w io.Writer) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "poked", nil))
 }
 
 type profileTemplate struct {

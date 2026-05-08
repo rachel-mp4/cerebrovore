@@ -1,28 +1,26 @@
 {{define "left-sidebar"}}
   <div class="sidebar-group">
-    <div>
+    <div class="pair">
+      <a href="/new">create new thread</a>
+    </div>
+    <div class="pair">
+      <a href="/settings">view my settings</a>
       <a href="/">go home</a>
     </div>
-    <div>
+    <div class="pair">
+      <a href="/profile/{{.Username}}">view my profile</a>
       <a href="/t">view index</a>
     </div>
-    <div>
+    <div class="pair">
+      <a href="/inbox">view my inbox</a>
       <a style="letter-spacing:-0.25px" href="/ft">view forums</a>
     </div>
-    <div>
+    <div class="pair">
+      <a id="inbox-counter" href="/inbox" data-count="{{.Notifications}}">{{if ne .Notifications 0}}{{intto36a .Notifications}} w-mail{{if ne .Notifications 1}}s{{end}}{{end}}</a>
       <a style="letter-spacing:0.25px" href="/catalog">view catalog</a>
     </div>
-    <div>
-      <a href="/profile/{{.Username}}">view my profile</a>
-    </div>
-    <div>
-      <a href="/settings">view my settings</a>
-    </div>
-    <div>
-      <a href="/new">create a new thread</a>
-    </div>
     {{if .IsMod}}
-      <div>
+      <div class="hidden-till-hover">
         <a href="/moderate">view moderation panel</a>
       </div>
     {{end}}

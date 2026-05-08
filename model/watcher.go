@@ -47,6 +47,13 @@ type userWatcherCtx struct {
 	cleanupmu    sync.Mutex
 }
 
+func (m *Model) IsOnline(username string) bool {
+	m.watchersmu.RLock()
+	defer m.watchersmu.RUnlock()
+	_, ok := m.watchers[username]
+	return ok
+}
+
 func (m *Model) Watch(username string, threadID uint32) (bumplimit bool) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]

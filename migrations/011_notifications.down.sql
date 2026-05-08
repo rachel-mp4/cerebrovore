@@ -1,0 +1,10 @@
+DROP TABLE IF EXISTS get_notifications;
+DROP TABLE IF EXISTS mod_notifications;
+DROP TABLE IF EXISTS poke_notifications;
+DROP TABLE IF EXISTS watch_notifications;
+ALTER TABLE watched_threads DROP COLUMN IF EXISTS notified;
+DROP TABLE IF EXISTS mention_notifications;
+DROP TABLE IF EXISTS reply_notifications;
+DROP TABLE IF EXISTS read_notifications;
+DROP INDEX IF EXISTS idx_notifications_username;
+DROP TABLE IF EXISTS notifications;

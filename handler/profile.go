@@ -328,3 +328,31 @@ func (h *Handler) editProfile(c *Client, w http.ResponseWriter, r *http.Request)
 		p,
 	})
 }
+
+func (h *Handler) poke(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		return
+	}
+	pokee := r.PathValue("username")
+	if pokee == c.Username {
+		profileT.error(w, "no poking yourself")
+		return
+	}
+	_, err := h.db.GetProfile(pokee, r.Context())
+	if err != nil {
+		profileT.error(w, "user does not exist. are you hacking?")
+		return
+	}
+	var msg *string
+	m := r.FormValue("message")
+	if m != "" {
+		msg = &m
+	}
+	err = h.db.CreatePokeNotification(pokee, c.Username, msg, r.Context())
+	if err != nil {
+		profileT.error(w, "create poke notification error aaaaa")
+		return
+	}
+	profileT.poked(w)
+	go h.m.DispatchNotification(pokee, nil)
+}

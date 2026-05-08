@@ -51,7 +51,8 @@
       htmx.process(document.getElementById("action-modal"))
     }
   }
-  if (window.location.pathname.startsWith("/t/")) {
+  const pn = window.location.pathname
+  if (pn.startsWith("/t/") || pn.startsWith("/inbox")) {
     document.addEventListener("click", (e) => {
       trycloseactionmodal(e)
       if (tryremoveimageblur(e)) {
@@ -59,7 +60,7 @@
       }
       actionify(e, ".tx")
     })
-  } else if (window.location.pathname.startsWith("/ft/")) {
+  } else if (pn.startsWith("/ft/")) {
     document.addEventListener("click", (e) => {
       trycloseactionmodal(e)
       if (tryremoveimageblur(e)) {

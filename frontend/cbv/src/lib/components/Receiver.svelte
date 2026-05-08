@@ -92,7 +92,7 @@
             <button class="delete clickable">{" delete"}</button>
             <a
               class="moderate clickable"
-              href={`/p/${b36encodenumber(item.id)}`}>{" moderate"}</a
+              href={`/moderate?id=${b36encodenumber(item.id)}`}>{" moderate"}</a
             >
           {/if}
         {:else}
@@ -100,7 +100,7 @@
           {#if ismoderator}
             <a
               class="moderate clickable"
-              href={`/p/${b36encodenumber(item.id)}`}>{" moderate"}</a
+              href={`/moderate?id=${b36encodenumber(item.id)}`}>{" moderate"}</a
             >
           {/if}
         {/if}

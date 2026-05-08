@@ -68,14 +68,17 @@ type Storer interface {
 
 	// watch methods
 
-	// GetWatchedThreads gets all the threads that a username is currently watching
-	GetWatchedThreads(username string, ctx context.Context) ([]uint32, error)
+	// StartWatchContext gets all the threads that a username is currently watching
+	// & sets their notification status to true so that unneeded persistent notifications
+	// aren't created
+	StartWatchContext(username string, ctx context.Context) (threadsWatching []uint32, err error)
+	EndWatchContext(username string, ctx context.Context) error
 
 	// WatchThread watches a thread for a user, and if they weren't already watching
 	// it, returns changed = true
 	WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
 
-	// UnwatchThread watches a thread for a user, and if they were already watching
+	// UnwatchThread unwatches a thread for a user, and if they were already watching
 	// it, returns changed = true
 	UnwatchThread(username string, id uint32, ctx context.Context) (changed bool, err error)
 
@@ -122,6 +125,7 @@ type Storer interface {
 	// report methods
 	Report(report *types.Report, ctx context.Context) error
 	GetReports(limit int, after *int, ctx context.Context) (reports []types.Report, cursor *int, err error)
+	GetReportersFor(username string, ctx context.Context) (reporters []string, err error)
 	ReviewReport(id int, reviewer string, ctx context.Context) error
 	ReviewAllReportsBy(reporter string, reviewer string, ctx context.Context) error
 
@@ -130,11 +134,25 @@ type Storer interface {
 	RemoveModerator(username string, ctx context.Context) error
 	IsModerator(username string, ctx context.Context) (bool, error)
 	GetModerators(ctx context.Context) ([]string, error)
+
+	//notification methods
+	GetNotifications(username string, limit int, before *int, ctx context.Context) (notifications []types.Notification, cursor *int, includesLastRead bool, err error)
+	GetUnreadNotificationCount(username string, ctx context.Context) (int, error)
+	ReadNotifications(username string, ctx context.Context) error
+	GetAllUsernames(ctx context.Context) ([]string, error)
+	CreateReplyNotifications(usernames []string, postid uint32, ctx context.Context) error
+	CreateMentionNotifications(usernames []string, postid uint32, ctx context.Context) error
+	CreateWatchNotifications(threadid uint32, ctx context.Context) ([]string, error)
+	CreatePokeNotification(username string, from string, message *string, ctx context.Context) error
+	CreateModNotification(username string, reason string, ctx context.Context) error
+	CreateModNotifications(usernames []string, reason string, ctx context.Context) error
+	CreateGetNotification(username string, postid uint32, value int, ctx context.Context) error
 }
 
 type Backlink struct {
-	From uint32
-	To   uint32
+	From       uint32
+	To         uint32
+	ToUsername string
 }
 
 type MockStore struct {

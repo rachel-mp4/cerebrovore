@@ -22,9 +22,16 @@ var hashtagRE = regexp.MustCompile(`#([0-9A-Za-z]+)`)
 
 func ParseBodyForBacklinks(s string) (backlinks []uint32, extras []uint64) {
 	matches := hashtagRE.FindAllStringSubmatch(s, -1)
+	blmap := make(map[string]bool)
 	backlinks = make([]uint32, 0)
 	extras = make([]uint64, 0)
 	for _, m := range matches {
+		b := m[1]
+		added := blmap[b]
+		if added {
+			continue
+		}
+		blmap[b] = true
 		bl, blerr, ex, exerr := AToEx(m[1])
 		if blerr == nil {
 			backlinks = append(backlinks, bl)
@@ -36,6 +43,24 @@ func ParseBodyForBacklinks(s string) (backlinks []uint32, extras []uint64) {
 		}
 	}
 	return
+}
+
+var mentionRE = regexp.MustCompile(`@([0-9a-z]+)`)
+
+func ParseBodyForMentions(s string) []string {
+	matches := mentionRE.FindAllStringSubmatch(s, -1)
+	menmap := make(map[string]bool)
+	res := make([]string, 0)
+	for _, m := range matches {
+		men := m[1]
+		added := menmap[men]
+		if added {
+			continue
+		}
+		menmap[men] = true
+		res = append(res, m[1])
+	}
+	return res
 }
 
 type PlaySite int
@@ -81,7 +106,7 @@ func ParseBodyForPlays(s string) (res []*PlayInput, unpause bool) {
 				continue
 			}
 			switch playurl.Host {
-			case "youtube.com", "www.youtube.com":
+			case "youtube.com", "www.youtube.com", "m.youtube.com":
 				id := playurl.Query().Get("v")
 				pi, err := getDurationForYoutubeId(id)
 				if err != nil {

@@ -1,0 +1,6 @@
+{{define "poke"}}
+  <form class="poke" hx-post="/poke/{{.Username}}">
+    <input type="submit" value="{{.Value}}"><span></span>
+    <input type="text" name="message" placeholder="(opt. msg.)">
+  </form>
+{{end}}
