@@ -720,30 +720,18 @@ form:has(.form-submit) {
   }
 }
 
-/* was doing it this way & i'd prefer it, but i think attr() seems a bit buggy ngl */
-/* #inbox-counter::before { */
-/*   content: attr(data-ncount); */
-/* } */
-/**/
-/* #inbox-counter[data-count="0"]::before { */
-/*   content: ""; */
-/* } */
-/**/
-/* #inbox-counter:is([data-count="0"],[data-count="1"])::after { */
-/*   content: ""; */
-/* } */
-/**/
-/* #inbox-counter::after { */
-/*   content: "s"; */
-/* } */
-/**/
-/* #inbox-counter[data-count="0"] { */
-/*   color: transparent */
-/* } */
-/**/
 #inbox-counter {
   width: 5.5rem;
   position: relative;
+  &:empty {
+    background: none;
+    backdrop-filter: none;
+  }
+}
+
+.pair a {
+  background: var(--bl);
+  backdrop-filter: blur(0.25rem);
 }
 
 .sidebar-group:has(a[href="/inbox"]:hover) a[href="/inbox"] {

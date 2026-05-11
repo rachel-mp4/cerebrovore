@@ -567,9 +567,9 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			},
 		}
 		h.m.AddBacklinks(post.ThreadID, batch)
-		h.db.CreateReplyNotifications(rslice, post.ID, ctx)
+		clog.LogE(h.db.CreateReplyNotifications(rslice, post.ID, ctx))
 		if gvalue != 0 {
-			h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx)
+			clog.LogE(h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx))
 		}
 		h.m.DispatchReplyNotifications(umap)
 	}
@@ -589,10 +589,7 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		}
 	} else if replyCount == utils.BUMP_LIMIT {
 		h.m.NotifyBumpLimit(post.ThreadID, post.ID)
-		err := h.db.RemoveWatchersFor(post.ThreadID, ctx)
-		if err != nil {
-			clog.Warn("%s", err)
-		}
+		clog.LogE(h.db.RemoveWatchersFor(post.ThreadID, ctx))
 	} else if utils.MaxReplies(replyCount) {
 		h.m.ReplyLimit(post.ThreadID)
 	}
@@ -650,25 +647,29 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		h.m.Unpause(post.ThreadID, c.Username)
 	}
 	if cmd.desh {
-		h.selfban(c.Username, &post.ID, "*deshs u*", time.Now().Add(5*time.Minute), ctx)
+		clog.LogE(h.selfban(c.Username, &post.ID, "*deshs u*", time.Now().Add(5*time.Minute), ctx))
 	}
 	if cmd.molt {
-		h.selfban(c.Username, &post.ID, "*molts u*", time.Now().Add(5*time.Minute), ctx)
+		clog.LogE(h.selfban(c.Username, &post.ID, "*molts u*", time.Now().Add(5*time.Minute), ctx))
 	}
 	if cmd.deshell {
-		h.selfban(c.Username, &post.ID, "*deshells u*", time.Now().Add(5*time.Minute), ctx)
+		clog.LogE(h.selfban(c.Username, &post.ID, "*deshells u*", time.Now().Add(5*time.Minute), ctx))
 	}
 	if cmd.debrainworm {
-		h.selfban(c.Username, &post.ID, "*debrainworms u*", time.Now().Add(5*time.Minute), ctx)
+		clog.LogE(h.selfban(c.Username, &post.ID, "*debrainworms u*", time.Now().Add(5*time.Minute), ctx))
 	}
 	if post.TextContent != nil {
 		mentions := utils.ParseBodyForMentions(post.TextContent.Body)
 		if len(mentions) > 0 {
-			h.db.CreateMentionNotifications(mentions, post.ID, ctx)
-			h.m.BulkDispatch(mentions)
+			err := h.db.CreateMentionNotifications(mentions, post.ID, ctx)
+			if err == nil {
+				h.m.BulkDispatch(mentions)
+			} else {
+				clog.Fail("%s", err)
+			}
 		}
 	}
-	h.db.CreateWatchNotifications(post.ThreadID, ctx)
+	clog.LogE(h.db.CreateWatchNotifications(post.ThreadID, ctx))
 }
 
 func (h *Handler) getPost(c *Client, w http.ResponseWriter, r *http.Request) {

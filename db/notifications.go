@@ -222,9 +222,12 @@ func (m *MockStore) CreateMentionNotifications(username []string, postid uint32,
 // maybe an index is appropriate & justified on wt.notified, but my reasoning is that
 // number of people who watch a given thread is going to be quite low and it's not
 // that big a deal and i don't know enough about sql optimization here to stand behind
-// this decision without seeing what things are like in the real world for a bit
-func (s *Store) CreateWatchNotifications(threadid uint32, ctx context.Context) (usernames []string, err error) {
-	rows, err := s.pool.Query(ctx, `
+// this decision without seeing what things are like in the real world for a bit.
+// TBH this initially returned the list of users notified, but they're supposed to be
+// offline, so that seemed unnecessary. can turn the insert clause into another with,
+// and return from users_notified if situation changes
+func (s *Store) CreateWatchNotifications(threadid uint32, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
 	WITH users_notified AS (
 		UPDATE watched_threads
 		SET notified = TRUE
@@ -236,33 +239,16 @@ func (s *Store) CreateWatchNotifications(threadid uint32, ctx context.Context) (
 		SELECT username
 		FROM users_notified
 		RETURNING id
-	),
-	inserted_thread_notifications AS (
-		INSERT INTO thread_notifications (notification_id, thread_id)
-		SELECT id, $1
-		FROM inserted_notifications
 	)
-	SELECT username
-	FROM users_notified
+	INSERT INTO watch_notifications (notification_id, thread_id)
+	SELECT id, $1
+	FROM inserted_notifications
 	`, threadid)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-	var username string
-	for rows.Next() {
-		err = rows.Scan(&username)
-		if err != nil {
-			usernames = nil
-			return
-		}
-		usernames = append(usernames, username)
-	}
-	return
+	return err
 }
 
-func (m *MockStore) CreateWatchNotifications(threadid uint32, ctx context.Context) ([]string, error) {
-	return nil, nil
+func (m *MockStore) CreateWatchNotifications(threadid uint32, ctx context.Context) error {
+	return nil
 }
 
 func (s *Store) CreatePokeNotification(username string, from string, message *string, ctx context.Context) error {
@@ -374,7 +360,7 @@ func (m *MockStore) CreateGetNotification(username string, postid uint32, value 
 }
 
 func (s *Store) GetAllUsernames(ctx context.Context) (usernames []string, err error) {
-	rows, err := s.pool.Query(ctx, `SELECT username FROM read_notifications`)
+	rows, err := s.pool.Query(ctx, `SELECT username FROM profiles`)
 	if err != nil {
 		return
 	}

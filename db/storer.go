@@ -142,7 +142,7 @@ type Storer interface {
 	GetAllUsernames(ctx context.Context) ([]string, error)
 	CreateReplyNotifications(usernames []string, postid uint32, ctx context.Context) error
 	CreateMentionNotifications(usernames []string, postid uint32, ctx context.Context) error
-	CreateWatchNotifications(threadid uint32, ctx context.Context) ([]string, error)
+	CreateWatchNotifications(threadid uint32, ctx context.Context) error
 	CreatePokeNotification(username string, from string, message *string, ctx context.Context) error
 	CreateModNotification(username string, reason string, ctx context.Context) error
 	CreateModNotifications(usernames []string, reason string, ctx context.Context) error

@@ -637,6 +637,7 @@ export const initImage = (ctx: WSContext) => {
       mediainit: {
         nick: ctx.nick,
         color: ctx.color,
+        ...(ctx.anon && { externalID: "" }),
       }
     }
   }
