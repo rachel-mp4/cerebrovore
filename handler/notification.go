@@ -34,6 +34,7 @@ func (h *Handler) inbox(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	notifications, ncursor, includesLastRead, err := h.db.GetNotifications(c.Username, 36, before, r.Context())
+	shouldRead := err == nil && (ncursor == nil || includesLastRead)
 	if err != nil {
 		if before != nil {
 			inboxT.error(w, "db error")
@@ -52,12 +53,12 @@ func (h *Handler) inbox(c *Client, w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "internal error", http.StatusInternalServerError)
 			return
 		}
-		if includesLastRead {
+		if shouldRead {
 			base.Notifications = 0
 		}
 		inboxT.exec(w, inboxResp{base, notifications, ncursor})
 	}
-	if includesLastRead {
+	if shouldRead {
 		go func() {
 			err := h.db.ReadNotifications(c.Username, context.Background())
 			if err != nil {
