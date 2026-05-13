@@ -37,6 +37,8 @@ func (s *Store) GetNotifications(username string, limit int, before *int, ctx co
 		mod.reason,
 		get.post_id,
 		get.value,
+		report.report_id,
+		rs.reviewed_by,
 		read.username
 	FROM notifications n
 	LEFT JOIN reply_notifications r ON r.notification_id = n.id
@@ -44,9 +46,11 @@ func (s *Store) GetNotifications(username string, limit int, before *int, ctx co
 	LEFT JOIN text_posts tp ON p.id = tp.post_id
 	LEFT JOIN image_posts ip ON p.id = ip.post_id
 	LEFT JOIN (
-		SELECT to_id, array_agg(from_id) AS replies
-		FROM post_replies
-		GROUP BY to_id
+		SELECT pr.to_id, array_agg(pr.from_id) AS replies
+		FROM post_replies pr
+		JOIN posts rp ON rp.id = pr.from_id
+		WHERE rp.deleted = FALSE
+		GROUP BY pr.to_id
 	) pr ON pr.to_id = p.id
 	LEFT JOIN mention_notifications m ON m.notification_id = n.id
 	LEFT JOIN posts mp ON mp.id = m.post_id
@@ -55,6 +59,8 @@ func (s *Store) GetNotifications(username string, limit int, before *int, ctx co
 	LEFT JOIN poke_notifications poke ON poke.notification_id = n.id
 	LEFT JOIN mod_notifications mod ON mod.notification_id = n.id
 	LEFT JOIN get_notifications get ON get.notification_id = n.id
+	LEFT JOIN report_notifications report ON report.notification_id = n.id
+	LEFT JOIN reports rs ON rs.id = report.report_id
 	LEFT JOIN read_notifications read ON read.notification_id = n.id
 	WHERE n.username = $2 %s
 	ORDER BY n.id DESC
@@ -90,7 +96,7 @@ func (s *Store) GetNotifications(username string, limit int, before *int, ctx co
 		var cid *string
 		var alt *string
 		var read *string
-		err = rows.Scan(&n.Id, &n.ReplyId, &postusername, &postanon, &post.Nick, &post.Color, &postpostedat, &postdeleted, &body, &cid, &alt, &post.Backlinks, &n.MentionId, &n.Mentioner, &n.MentionAnon, &n.MentionNick, &n.ThreadId, &n.Topic, &n.Poker, &n.PokeMessage, &n.Reason, &n.GetId, &n.Value, &read)
+		err = rows.Scan(&n.Id, &n.ReplyId, &postusername, &postanon, &post.Nick, &post.Color, &postpostedat, &postdeleted, &body, &cid, &alt, &post.Backlinks, &n.MentionId, &n.Mentioner, &n.MentionAnon, &n.MentionNick, &n.ThreadId, &n.Topic, &n.Poker, &n.PokeMessage, &n.Reason, &n.GetId, &n.Value, &n.Report, &n.Reviewer, &read)
 		if err != nil {
 			return
 		}
@@ -378,4 +384,22 @@ func (s *Store) GetAllUsernames(ctx context.Context) (usernames []string, err er
 
 func (m *MockStore) GetAllUsernames(ctx context.Context) (usernames []string, err error) {
 	return
+}
+
+func (s *Store) CreateReportNotifications(usernames []string, id int, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `
+	WITH inserted_notifications AS (
+		INSERT INTO notifications (username)
+		SELECT unnest($1::text[])
+		RETURNING id
+	)
+	INSERT INTO report_notifications (notification_id, report_id)
+	SELECT id, $2
+	FROM inserted_notifications
+	`, usernames, id)
+	return err
+}
+
+func (m *MockStore) CreateReportNotifications(usernames []string, id int, ctx context.Context) error {
+	return nil
 }

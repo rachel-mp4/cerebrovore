@@ -1,23 +1,23 @@
 {{define "left-sidebar"}}
   <div class="sidebar-group">
     <div class="pair">
-      <a href="/new">create new thread</a>
+      <a href="/new">NEW THREAD</a>
     </div>
     <div class="pair">
-      <a href="/settings">view my settings</a>
-      <a href="/">go home</a>
+      <a href="/settings">SETTINGS</a>
+      <a href="/">HOME</a>
     </div>
     <div class="pair">
-      <a href="/profile/{{.Username}}">view my profile</a>
-      <a href="/t">view index</a>
+      <a href="/profile/{{.Username}}">PROFILE</a>
+      <a href="/t">INDEX</a>
     </div>
     <div class="pair">
-      <a href="/inbox">view my inbox</a>
-      <a style="letter-spacing:-0.25px" href="/ft">view forums</a>
+      <a href="/inbox">INBOX</a>
+      <a href="/ft">FORUMS</a>
     </div>
     <div class="pair">
-      <a id="inbox-counter" href="/inbox" data-count="{{.Notifications}}">{{if ne .Notifications 0}}{{intto36a .Notifications}} w-mail{{if ne .Notifications 1}}s{{end}}{{end}}</a>
-      <a style="letter-spacing:0.25px" href="/catalog">view catalog</a>
+      <a id="inbox-counter" href="/inbox" data-count="{{.Notifications}}">{{if ne .Notifications 0}}{{intto36a .Notifications}} wMAIL{{if ne .Notifications 1}}s{{end}}{{end}}</a>
+      <a href="/catalog">CATALOG</ahref>
     </div>
     {{if .IsMod}}
       <div class="hidden-till-hover">

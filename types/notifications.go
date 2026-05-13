@@ -27,5 +27,8 @@ type Notification struct {
 	GetId *uint32
 	Value *int
 
+	Report   *int
+	Reviewer *string
+
 	IsLastRead bool
 }

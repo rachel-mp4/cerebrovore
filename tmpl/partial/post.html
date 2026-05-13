@@ -3,8 +3,8 @@
     <div class="header">
       {{- if .Nick -}}<span class="nick">{{- .Nick -}}</span>{{- end -}}
       {{- if or .CanSeeAnon (not .Anon) -}}<span class="handle"><a href="/profile/{{- .Username -}}">@{{- .Username -}}</a></span>{{- end -}} {{if and .CanSeeAnon .Anon}}<span>as anon</span>{{end}} {{if and .CanSeeAnon .Deleted}}<span>deleted</span> {{end}}
-      <button class="reply"> #{{- idtoa .ID -}}</button>
-      <button class="report clickable"> report</button>
+      <button class="reply" type="button"> #{{- idtoa .ID -}}</button>
+      <button class="report clickable" type="button"> report</button>
       {{- if or .ViewerIsYou .LinkToModerate -}}<button class="delete clickable"> delete</button>{{- end -}}
       {{- if .LinkToModerate -}}<a class="moderate clickable" href="/moderate?id={{idtoa .ID}}"> moderate</a>{{- end -}}
       <time class="time" datetime="{{formatTime .PostedAt}}"></time>

@@ -191,20 +191,35 @@
 {{define "report"}}
   <form hx-swap="outerHTML" hx-post="/review-report">
     <span><a href="/profile/{{.Reporter}}">@{{.Reporter}}</a> reported <a href="/profile/{{.Reported}}">@{{.Reported}}</a> for {{if .ForProfile}}their profile{{else if .PostId}} post <a href="/p/{{idtoa .PostId}}">#{{idtoa .PostId}}</a>{{else}}a post that wasn't yet in database{{end}}</span>
-    {{with .Post}}
-      <div>the post:</div>
-      {{template "post" .}}
+    {{if .Post}}
+      <div><a href="/profile/{{.Reported}}">@{{.Reported}}</a>'s post:</div>
+      {{template "post" .Post}}
     {{end}}
     {{if .Reason}}
+      <div><a href="/profile/{{.Reporter}}">@{{.Reporter}}</a>'s reason:</div>
       <blockquote>
         {{.Reason}}
       </blockquote>
     {{end}}
     <input type="hidden" name="id" value="{{.Id}}">
-    <div class="form-submit">
-      <input type="submit" value="job's done"/>
-    </div>
+    {{with .ReviewedBy}}
+      <div>
+        report already reviewed by <a href="/profile/{{.}}">@{{.}}</a>
+      </div>
+    {{else}}
+      {{with .Post}}<div><button hx-swap="outerHTML" hx-target="closest div" hx-DELETE="/p/{{idtoa .ID}}">delete post</button></div>{{end}}
+      <div><button hx-swap="outerHTML" hx-POST="/ban/{{.Reported}}">1h ban</button></div>
+      <div class="form-submit">
+        <input type="submit" value="job's done"/>
+      </div>
+    {{end}}
   </form>
+{{end}}
+
+{{define "ezbanresp"}}
+  <div>
+    banned {{.}} for 1 hour
+  </div>
 {{end}}
 
 {{define "report-submitted"}}

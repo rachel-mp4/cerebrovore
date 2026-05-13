@@ -361,6 +361,10 @@ func (t *moderateTemplate) report(w io.Writer) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "report-submitted", nil))
 }
 
+func (t *moderateTemplate) areport(w io.Writer, report types.Report) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "report", report))
+}
+
 func (t *moderateTemplate) review(w io.Writer) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "reviewed", nil))
 }
@@ -374,6 +378,10 @@ func (t *moderateTemplate) deleted(w io.Writer, ismod bool) {
 
 func (t *moderateTemplate) error(w io.Writer, msg string) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "errored", moderateerrorresp{msg}))
+}
+
+func (t *moderateTemplate) banned(w io.Writer, username string) {
+	clog.Tmpl(t.template.ExecuteTemplate(w, "ezbanresp", username))
 }
 
 func (t *moderateTemplate) confirm(w io.Writer, action *types.Action, actioning string, nid string, username string, reason string, comment string, until string) {

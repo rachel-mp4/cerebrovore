@@ -67,13 +67,8 @@ func (h *Handler) moderate(c *Client, w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) administrate(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+	if c == nil || c.Username != h.admin {
 		http.Redirect(w, r, "/", http.StatusFound)
-		return
-	}
-	mods, err := h.db.GetModerators(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	base, err := h.makebase("administrate", c, r.Context())
@@ -83,12 +78,12 @@ func (h *Handler) administrate(c *Client, w http.ResponseWriter, r *http.Request
 	}
 	adminT.exec(w, adminresp{
 		base,
-		mods,
+		h.moderators,
 	})
 }
 
 func (h *Handler) addModerator(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c == nil || c.Username != os.Getenv("ADMIN_USERNAME") {
+	if c == nil || c.Username != h.admin {
 		http.Redirect(w, r, "/", http.StatusFound)
 		return
 	}
@@ -98,6 +93,7 @@ func (h *Handler) addModerator(c *Client, w http.ResponseWriter, r *http.Request
 		moderateT.error(w, err.Error())
 		return
 	}
+	h.moderators = append(h.moderators, username)
 	adminT.plusmodsuccess(w, username)
 }
 
@@ -142,6 +138,25 @@ func (h *Handler) cancelAction(c *Client, w http.ResponseWriter, r *http.Request
 	moderateT.canceled(w)
 }
 
+func (h *Handler) postBan(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to not moderate wait-", http.StatusUnauthorized)
+		return
+	}
+	username := r.PathValue("username")
+	if username == "" {
+		moderateT.error(w, "didn't provide a username")
+		return
+	}
+	ban := composeBan(username, "take a chill pill", "1 click ban through notifications", "", c.Username) //empty time = 1h
+	err := h.db.Ban(&ban, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	moderateT.banned(w, username)
+}
+
 func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c == nil || !c.IsMod {
 		http.Error(w, "not authorized to moderate", http.StatusUnauthorized)
@@ -171,7 +186,7 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 		actioning = "just performing a ban!"
 		actioned = "just performed a ban!"
 
-		ban := composeBan(username, reason, comment, until)
+		ban := composeBan(username, reason, comment, until, c.Username)
 		action.Ban = &ban
 	} else if nid != "" && username != "" {
 		// id and username = delete and ban them if the post with that id is really that user's
@@ -193,7 +208,7 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 			moderateT.error(w, fmt.Sprintf("username: %s does not match post username: %s", username, post.Username))
 			return
 		}
-		ban := composeBan(username, reason, comment, until)
+		ban := composeBan(username, reason, comment, until, c.Username)
 		ban.PostId = &id
 		action.Ban = &ban
 		if post.ID == post.ThreadID {
@@ -219,7 +234,7 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 			return
 		}
 		action.Post = post
-		ban := composeBan(post.Username, reason, comment, until)
+		ban := composeBan(post.Username, reason, comment, until, c.Username)
 		ban.PostId = &id
 		action.Ban = &ban
 		if post.ID == post.ThreadID {
@@ -292,9 +307,10 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 	moderateT.confirm(w, &action, actioning, nid, username, reason, comment, until)
 }
 
-func composeBan(username, reason, comment, until string) types.Ban {
+func composeBan(username, reason, comment, until, moderator string) types.Ban {
 	b := types.Ban{
-		Username: username,
+		Username:  username,
+		Moderator: moderator,
 	}
 	if reason != "" {
 		b.Reason = &reason
@@ -338,7 +354,7 @@ func (h *Handler) postBanCleanup(username string, bymod bool) {
 		clog.Fail("postBanCleanup createModNotifications error: %s", err)
 		return
 	}
-	h.m.BulkDispatch(reporters)
+	h.m.BulkDispatch(reporters, nil)
 }
 
 func (h *Handler) postAppeal(w http.ResponseWriter, r *http.Request) {
@@ -402,6 +418,25 @@ func (h *Handler) getReports(c *Client, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	moderateT.reports(w, reports, cursor)
+}
+
+func (h *Handler) getReport(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil || !c.IsMod {
+		http.Error(w, "not authorized to view reports", http.StatusUnauthorized)
+		return
+	}
+	a := r.URL.Query().Get("id")
+	id, err := strconv.Atoi(a)
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	report, err := h.db.GetReport(id, r.Context())
+	if err != nil {
+		moderateT.error(w, err.Error())
+		return
+	}
+	moderateT.areport(w, report)
 }
 
 func (h *Handler) reviewReport(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -514,11 +549,16 @@ func (h *Handler) postReport(c *Client, w http.ResponseWriter, r *http.Request) 
 			report.Reason = &reason
 		}
 	}
-	err := h.db.Report(&report, r.Context())
+	id, err := h.db.Report(&report, r.Context())
 	if err != nil {
 		clog.Warn("%s", err)
 		moderateT.error(w, "error saving report")
 		return
 	}
 	moderateT.report(w)
+	go func() {
+		clog.LogE(h.db.CreateReportNotifications(h.moderators, id, context.Background()), "create report notes")
+		n1000 := 36 * 36 * 36
+		h.m.BulkDispatch(h.moderators, &n1000)
+	}()
 }

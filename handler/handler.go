@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"context"
 	"crypto/rand"
 	"errors"
 	"fmt"
@@ -8,6 +9,7 @@ import (
 	"net/http/pprof"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"time"
 
@@ -41,7 +43,9 @@ type Handler struct {
 	// reqcode is true if the current id provider requires invite codes for account registration
 	reqcode bool
 
-	commit string
+	commit     string
+	moderators []string
+	admin      string
 }
 
 type CompiledAssets struct {
@@ -78,12 +82,14 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /administrate", h.AM(h.administrate))
 	mux.HandleFunc("POST /add-moderator", h.AM(h.addModerator))
 	mux.HandleFunc("POST /take-action", h.AM(h.takeAction))
+	mux.HandleFunc("POST /ban/{username}", h.AM(h.postBan))
 	mux.HandleFunc("GET /cancel-action", h.AM(h.cancelAction))
 	mux.HandleFunc("GET /inspect-post", h.AM(h.inspectPost))
 	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
 	mux.HandleFunc("POST /report", h.AM(h.postReport))
 	mux.HandleFunc("POST /review-report", h.AM(h.reviewReport))
 	mux.HandleFunc("GET /reports", h.AM(h.getReports))
+	mux.HandleFunc("GET /report", h.AM(h.getReport))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /login", h.postLogin)
@@ -137,6 +143,14 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 		panic(err)
 	}
 	h.commit = strings.TrimSpace(string(out))
+	h.admin = os.Getenv("ADMIN_USERNAME")
+	h.moderators, err = h.db.GetModerators(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	if !slices.Contains(h.moderators, h.admin) {
+		h.moderators = append(h.moderators, h.admin)
+	}
 
 	return h
 }
@@ -368,7 +382,7 @@ func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) AllowAdmin(f func(w http.ResponseWriter, r *http.Request)) func(c *Client, w http.ResponseWriter, r *http.Request) {
 	return func(c *Client, w http.ResponseWriter, r *http.Request) {
-		if c.Username != os.Getenv("ADMIN_USERNAME") {
+		if c.Username != h.admin {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
 		}
 		f(w, r)
@@ -376,7 +390,7 @@ func (h *Handler) AllowAdmin(f func(w http.ResponseWriter, r *http.Request)) fun
 }
 
 func (h *Handler) notifyAll(c *Client, w http.ResponseWriter, r *http.Request) {
-	if c.Username != os.Getenv("ADMIN_USERNAME") {
+	if c.Username != h.admin {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 	}
 	msg := r.FormValue("message")
@@ -419,7 +433,7 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			HttpOnly: true,
 		}
 		s.Save(r, w)
-		isadmin := os.Getenv("ADMIN_USERNAME") == username
+		isadmin := h.admin == username
 		ismod, err := h.db.IsModerator(username, r.Context())
 		if err != nil {
 			clog.Info("%s", err)

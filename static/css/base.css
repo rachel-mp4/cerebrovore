@@ -371,6 +371,8 @@ button {
   color: var(--fg);
   padding: 0;
   cursor: pointer;
+  line-height: 1.5; /* i'm not sure why body line-height doesn't cascade onto buttons */
+  /* perhaps there is some user-agent or maybe this is builtin css jank */
 }
 
 button:hover {
@@ -720,13 +722,9 @@ form:has(.form-submit) {
   }
 }
 
-#inbox-counter {
-  width: 5.5rem;
-  position: relative;
-  &:empty {
-    background: none;
-    backdrop-filter: none;
-  }
+#inbox-counter:empty {
+  background: none;
+  backdrop-filter: none;
 }
 
 .pair a {
@@ -789,6 +787,10 @@ a:hover {
   }
 }
 
+.notifications hr ~ li:hover {
+  background: var(--primaryl);
+}
+
 /* to escape user agent, which we are not sure how big margin for ul might be, */ 
 /* i just pick a big number to be safe */
 .notifications hr {
@@ -818,4 +820,8 @@ a:hover {
 .poke:has([type="submit"]:hover) span::after {
   content: "!";
   font-weight: 700;
+}
+
+form .close {
+  display: none;
 }

@@ -159,9 +159,11 @@ func (s *Store) GetPost(id uint32, ctx context.Context) (*types.Post, error) {
 	LEFT JOIN text_posts t ON p.id = t.post_id
 	LEFT JOIN image_posts i ON p.id = i.post_id
 	LEFT JOIN (
-		SELECT to_id, array_agg(from_id) AS replies
-		FROM post_replies
-		GROUP BY to_id
+		SELECT pr.to_id, array_agg(pr.from_id) AS replies
+		FROM post_replies pr
+		JOIN posts rp ON rp.id = pr.from_id
+		WHERE rp.deleted = FALSE
+		GROUP BY pr.to_id
 	) pr ON pr.to_id = p.id
 	WHERE p.id = $1
   `, id)
@@ -205,7 +207,7 @@ func (s *Store) GetMaxPostId(ctx context.Context) (uint32, error) {
 
 func (s *Store) GetPostThreadID(postId uint32, ctx context.Context) (uint32, error) {
 	row := s.pool.QueryRow(ctx, `
-		SELECT thread_id FROM posts WHERE id=$1
+		SELECT thread_id FROM posts WHERE id=$1 AND deleted=FALSE
 		`, postId)
 	var tid uint32
 	err := row.Scan(&tid)

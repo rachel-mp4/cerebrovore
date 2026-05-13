@@ -173,9 +173,11 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 		LEFT JOIN text_posts tp ON tp.post_id = p.id
 		LEFT JOIN image_posts ip ON ip.post_id = p.id
 		LEFT JOIN (
-			SELECT to_id, array_agg(from_id) AS replies
-			FROM post_replies
-			GROUP BY to_id
+			SELECT pr.to_id, array_agg(pr.from_id) AS replies
+			FROM post_replies pr
+			JOIN posts rp ON rp.id = pr.from_id
+			WHERE rp.deleted = FALSE
+			GROUP BY pr.to_id
 		) pr ON pr.to_id = p.id
 		ORDER BY t.id DESC, p.id ASC
 	`
@@ -339,7 +341,7 @@ func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error
 			id,
 			topic
 		FROM threads
-		WHERE deleted = FALSE AND dead = FALSE
+		WHERE deleted = FALSE
 		AND reply_count + 1 < $1
 		ORDER BY bumped_at DESC
 		LIMIT 5
@@ -408,9 +410,11 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 		LEFT JOIN text_posts tp ON tp.post_id = p.id
 		LEFT JOIN image_posts ip ON ip.post_id = p.id
 		LEFT JOIN (
-			SELECT to_id, array_agg(from_id) AS replies
-			FROM post_replies
-			GROUP BY to_id
+			SELECT pr.to_id, array_agg(pr.from_id) AS replies
+			FROM post_replies pr
+			JOIN posts rp ON rp.id = pr.from_id
+			WHERE rp.deleted = FALSE
+			GROUP BY pr.to_id
 		) pr ON pr.to_id = p.id
 		ORDER BY bumped_at DESC, p.id ASC
 	`
@@ -751,9 +755,11 @@ func (s *Store) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ct
 	LEFT JOIN text_posts t ON t.post_id = p.id
 	LEFT JOIN image_posts i ON i.post_id = p.id
 	LEFT JOIN (
-		SELECT to_id, array_agg(from_id) AS replies
-		FROM post_replies
-		GROUP BY to_id
+		SELECT pr.to_id, array_agg(pr.from_id) AS replies
+		FROM post_replies pr
+		JOIN posts rp ON rp.id = pr.from_id
+		WHERE rp.deleted = FALSE
+		GROUP BY pr.to_id
 	) pr ON pr.to_id = p.id
 	WHERE p.thread_id = $1 AND p.deleted = FALSE
 	ORDER BY p.id ASC
@@ -819,9 +825,11 @@ func (s *Store) GetDeadThread(id uint32, viewerIsMod bool, viewerUsername string
 	LEFT JOIN text_posts t ON t.post_id = p.id
 	LEFT JOIN image_posts i ON i.post_id = p.id
 	LEFT JOIN (
-		SELECT to_id, array_agg(from_id) AS replies
-		FROM post_replies
-		GROUP BY to_id
+		SELECT pr.to_id, array_agg(pr.from_id) AS replies
+		FROM post_replies pr
+		JOIN posts rp ON rp.id = pr.from_id
+		WHERE rp.deleted = FALSE
+		GROUP BY pr.to_id
 	) pr ON pr.to_id = p.id
 	LEFT JOIN profiles pro ON pro.username = p.username
 	WHERE p.thread_id = $1 AND p.deleted = FALSE

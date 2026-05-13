@@ -27,7 +27,6 @@ func (h *Handler) profile(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if profile.Banned {
-		clog.Info("%s", err)
 		http.Error(w, "user is banned", http.StatusForbidden)
 		return
 	}

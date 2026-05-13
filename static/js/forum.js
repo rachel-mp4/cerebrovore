@@ -42,6 +42,9 @@ document.addEventListener("cbv:thread", (e) => {
   }
 })
 
+// the idea here is that once we obtain a new forum post, we need to client side render
+// some aspects of it that are a bit harder to server side render, & we're using trigger 
+// after settle to do this
 document.addEventListener("cbv:htmxForumPost", (e) => {
   const npid = e.detail.value.toString(36)
   const newfp = document.getElementById(npid)

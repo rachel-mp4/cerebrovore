@@ -126,11 +126,11 @@ func Tmpl(err error) {
 	writeLog("TMPL", formatted)
 }
 
-func LogE(err error) {
+func LogE(err error, in string) {
 	if err == nil {
 		return
 	}
-	formatted := fmt.Sprintf("error: %s", err.Error())
+	formatted := fmt.Sprintf("error in %s: %s", in, err.Error())
 	fmt.Printf("[E] %s\n", formatted)
 	writeLog("LOGE", formatted)
 }

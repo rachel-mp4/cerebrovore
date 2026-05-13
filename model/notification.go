@@ -22,9 +22,9 @@ func (m *Model) DispatchReplyNotifications(umap map[string]int) {
 	}
 }
 
-func (m *Model) BulkDispatch(usernames []string) {
+func (m *Model) BulkDispatch(usernames []string, count *int) {
 	for _, username := range usernames {
-		m.dispatch(username, notificationEvent{})
+		m.dispatch(username, notificationEvent{Count: count})
 	}
 }
 

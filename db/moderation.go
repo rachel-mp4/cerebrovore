@@ -388,25 +388,28 @@ func (m *MockStore) GetModerators(ctx context.Context) ([]string, error) {
 	return nil, nil
 }
 
-func (s *Store) Report(report *types.Report, ctx context.Context) error {
-	_, err := s.pool.Exec(ctx, `INSERT INTO reports (
+func (s *Store) Report(report *types.Report, ctx context.Context) (int, error) {
+	row := s.pool.QueryRow(ctx, `INSERT INTO reports (
 		reporter,
 		reported,
 		post_id,
 		for_profile,
 		reason)
 		VALUES ($1, $2, $3, $4, $5)
+		RETURNING id
 		`,
 		report.Reporter,
 		report.Reported,
 		report.PostId,
 		report.ForProfile,
 		report.Reason)
-	return err
+	var id int
+	err := row.Scan(&id)
+	return id, err
 }
 
-func (m *MockStore) Report(report *types.Report, ctx context.Context) error {
-	return nil
+func (m *MockStore) Report(report *types.Report, ctx context.Context) (int, error) {
+	return 0, nil
 }
 
 func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports []types.Report, cursor *int, err error) {
@@ -468,6 +471,7 @@ func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports 
 		if r.PostId != nil {
 			p := types.Post{
 				Nick:       nick,
+				Username:   r.Reported,
 				Color:      color,
 				CanSeeAnon: true,
 			}
@@ -499,6 +503,74 @@ func (s *Store) GetReports(limit int, after *int, ctx context.Context) (reports 
 
 func (m *MockStore) GetReports(limit int, after *int, ctx context.Context) ([]types.Report, *int, error) {
 	return nil, nil, nil
+}
+
+func (m *MockStore) GetReport(id int, ctx context.Context) (types.Report, error) {
+	return types.Report{}, nil
+}
+func (s *Store) GetReport(id int, ctx context.Context) (types.Report, error) {
+	row := s.pool.QueryRow(ctx, `
+	SELECT
+		r.id,
+		r.reporter,
+		r.reported,
+		r.post_id,
+		r.for_profile,
+		r.reason,
+		r.reviewed_by,
+		p.anon,
+		p.nick,
+		p.color,
+		p.posted_at,
+		p.deleted,
+		t.body,
+		i.cid,
+		i.alt
+	FROM reports r
+	LEFT JOIN posts p ON r.post_id = p.id
+	LEFT JOIN text_posts t ON p.id = t.post_id
+	LEFT JOIN image_posts i ON p.id = i.post_id
+	WHERE r.id = $1
+	`, id)
+	var r types.Report
+	var anon *bool
+	var nick *string
+	var color *uint32
+	var postedat *time.Time
+	var deleted *bool
+	var body *string
+	var cid *string
+	var alt *string
+	err := row.Scan(&r.Id, &r.Reporter, &r.Reported, &r.PostId, &r.ForProfile, &r.Reason, &r.ReviewedBy, &anon, &nick, &color, &postedat, &deleted, &body, &cid, &alt)
+	if err != nil {
+		return r, err
+	}
+	if r.PostId != nil {
+		p := types.Post{
+			Username:   r.Reported,
+			Nick:       nick,
+			Color:      color,
+			CanSeeAnon: true,
+		}
+		if anon != nil {
+			p.Anon = *anon
+		}
+		if postedat != nil {
+			p.PostedAt = *postedat
+		}
+		if deleted != nil {
+			p.Deleted = *deleted
+		}
+		if body != nil {
+			p.TextContent = &types.TextContent{Body: *body}
+		}
+		if cid != nil {
+			p.ImageContent = &types.ImageContent{CID: *cid, Alt: alt}
+		}
+		p.ID = *r.PostId
+		r.Post = &p
+	}
+	return r, nil
 }
 
 func (s *Store) GetReportersFor(username string, ctx context.Context) (reporters []string, err error) {

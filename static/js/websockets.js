@@ -28,7 +28,7 @@ setTimeout(() => {
       const ic = document.getElementById("inbox-counter")
       const newCount = jed.data.clear ? 0 : Number(ic.getAttribute("data-count")) + (jed.data.count ?? 1)
       ic.setAttribute("data-count", newCount)
-      ic.textContent = newCount !== 0 ? `${newCount.toString(36)} w-mail${newCount !== 1 ? "s" : ''
+      ic.textContent = newCount !== 0 ? `${newCount.toString(36)} wMAIL${newCount !== 1 ? "s" : ''
         } ` : ""
     }
   }

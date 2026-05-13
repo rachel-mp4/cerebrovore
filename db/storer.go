@@ -123,8 +123,9 @@ type Storer interface {
 	GetFullProfile(username string, ctx context.Context) (*types.Profile, error)
 
 	// report methods
-	Report(report *types.Report, ctx context.Context) error
+	Report(report *types.Report, ctx context.Context) (int, error)
 	GetReports(limit int, after *int, ctx context.Context) (reports []types.Report, cursor *int, err error)
+	GetReport(id int, ctx context.Context) (types.Report, error)
 	GetReportersFor(username string, ctx context.Context) (reporters []string, err error)
 	ReviewReport(id int, reviewer string, ctx context.Context) error
 	ReviewAllReportsBy(reporter string, reviewer string, ctx context.Context) error
@@ -147,6 +148,7 @@ type Storer interface {
 	CreateModNotification(username string, reason string, ctx context.Context) error
 	CreateModNotifications(usernames []string, reason string, ctx context.Context) error
 	CreateGetNotification(username string, postid uint32, value int, ctx context.Context) error
+	CreateReportNotifications(usernames []string, id int, ctx context.Context) error
 }
 
 type Backlink struct {
