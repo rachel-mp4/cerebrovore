@@ -825,3 +825,7 @@ a:hover {
 form .close {
   display: none;
 }
+
+.content-tuple:has(:first-child :placeholder-shown) + .content-tuple {
+  display: none;
+}
