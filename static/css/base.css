@@ -829,3 +829,7 @@ form .close {
 .content-tuple:has(:first-child :placeholder-shown) + .content-tuple {
   display: none;
 }
+
+.content-tuple:has(input:not([type="checkbox"],[type="hidden"]):not(:placeholder-shown)) {
+  display: block !important;
+}
