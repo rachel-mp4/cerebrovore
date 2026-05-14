@@ -9,11 +9,13 @@
       {{template "watch" .Thread}}
     {{end}}
   {{end}}
+  <a id="the-start" href="#the-end">jump to bottom</a>
   <div id="brains-ur-eat">
     {{range .Thread.Posts}}
       {{template "forum-post" .}}
     {{end}}
   </div>
+  <a id="the-end" href="#the-start">jump to top</a>
   {{if .Archived}}
     <div>[reply limit hit; thread archived]</div>
   {{else}}
@@ -36,7 +38,7 @@
 {{end}}
 
 {{define "forum-transmitter"}}
-  <form class="forum-transmitter" hx-swap="outerHTML" hx-post="/ft/{{idtoa .TID}}" hx-encoding="multipart/form-data">
+  <form class="forum-transmitter" method="POST" action="/ft/{{idtoa .TID}}" enctype="multipart/form-data">
     <div class="wrapper">
       <input type="color" name="color" value="{{colorToA .Color}}" />
       <input type="text" class="nick" name="nick" size="16" placeholder="alice!" {{with .Nick}}value="{{.}}"{{end}} />

@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gorilla/sessions"
@@ -46,6 +47,11 @@ type Handler struct {
 	commit     string
 	moderators []string
 	admin      string
+
+	// blobsToDelete is a list of all blobs that have been uploaded but have yet to be attached
+	// to a post
+	blobsToDelete map[string]string
+	btdmu         sync.Mutex
 }
 
 type CompiledAssets struct {
@@ -61,7 +67,7 @@ type CompiledAssets struct {
 	SettingsCss  []string
 }
 
-func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider, reqcode bool) Handler {
+func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider, reqcode bool) *Handler {
 	h := Handler{}
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /", h.AM(h.home))
@@ -152,7 +158,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 		h.moderators = append(h.moderators, h.admin)
 	}
 
-	return h
+	h.blobsToDelete = make(map[string]string, 10)
+	return &h
 }
 
 func (h *Handler) gencode(c *Client, w http.ResponseWriter, r *http.Request) {

@@ -151,12 +151,15 @@ func (h *Handler) postAvatar(c *Client, w http.ResponseWriter, r *http.Request) 
 	p.Username = c.Username
 	avatar, _, err := r.FormFile("avatar")
 	if err == nil {
-		cid, err, code := saveFileToContentAddress(avatar)
+		cid, err, code, _ := saveFileToContentAddress(avatar)
 		if err != nil {
 			clog.Warn("image save: %s", err)
 			http.Error(w, "some error apropos image", code)
 			return
 		}
+		h.btdmu.Lock()
+		delete(h.blobsToDelete, cid)
+		h.btdmu.Unlock()
 		var isPixel bool
 		pixel, ok := r.MultipartForm.Value["pixel"]
 		if ok && len(pixel) != 0 {

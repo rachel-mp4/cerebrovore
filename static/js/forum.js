@@ -1,3 +1,7 @@
+(() => {
+  window.history.replaceState({}, document.title, window.location.pathname)
+})()
+
 document.addEventListener("paste", (e) => {
   const items = e.clipboardData?.items;
   if (items === undefined) {

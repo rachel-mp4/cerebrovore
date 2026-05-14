@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"net/url"
 	"strings"
 
 	"github.com/disintegration/imaging"
@@ -74,12 +75,15 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	}
 	img, _, err := r.FormFile("image")
 	if err == nil {
-		cid, err, code := saveFileToContentAddress(img)
+		cid, err, code, _ := saveFileToContentAddress(img)
 		if err != nil {
 			clog.Warn("image save: %s", err)
 			http.Error(w, "some error apropos image", code)
 			return
 		}
+		h.btdmu.Lock()
+		delete(h.blobsToDelete, cid)
+		h.btdmu.Unlock()
 		err = genThumbnail(cid)
 		if err != nil {
 			clog.Warn("thumbnail: %s", err)
@@ -196,11 +200,34 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "requires file", http.StatusBadRequest)
 		return
 	}
-	cid, err, code := saveFileToContentAddress(file)
+	cid, err, code, isNew := saveFileToContentAddress(file)
 	if err != nil {
 		clog.Warn("blob save: %s", err)
 		http.Error(w, "encountered an error", code)
 		return
+	}
+	if isNew {
+		h.btdmu.Lock()
+		h.blobsToDelete[cid] = c.Username
+		h.btdmu.Unlock()
+		time.AfterFunc(5*time.Minute, func() {
+			h.btdmu.Lock()
+			defer h.btdmu.Unlock()
+			username, ok := h.blobsToDelete[cid]
+			if !ok {
+				return
+			}
+			delete(h.blobsToDelete, cid)
+			err := deleteFileFromContentAddress(cid)
+			if err != nil {
+				clog.Warn("failed to delete file: %s", err)
+				return
+			}
+			err = logToFile(username)
+			if err != nil {
+				clog.Warn("failed to log to file: %s", err)
+			}
+		})
 	}
 	err = genThumbnail(cid)
 	if err != nil {
@@ -269,7 +296,37 @@ func genPFPThumb(cid string) error {
 	return nil
 }
 
-func saveFileToContentAddress(file multipart.File) (cid string, err error, code int) {
+func deleteFileFromContentAddress(cid string) error {
+	fp := filepath.Join("uploads", cid[:3], cid[3:])
+	err := os.Remove(fp)
+	if err != nil {
+		return err
+	}
+	// one of these is almost certainly guaranteed to fail, so we don't care abt errors
+	png := fp + ".png"
+	jpg := fp + ".jpg"
+	os.Remove(png)
+	os.Remove(jpg)
+	return nil
+}
+
+func logToFile(username string) error {
+	file, err := os.OpenFile(".alinkers", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	_, err = fmt.Fprintf(file, "%s\n", username)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// isNew tells you if the file is new, which only matters if we're talking about the postblob
+// handler; in that case we need to add it to the blobsToDelete map, which if after 5 minutes
+// of starting to post a blob, it gets deleted if it's not referenced anywhere
+func saveFileToContentAddress(file multipart.File) (cid string, err error, code int, isNew bool) {
 	defer file.Close()
 	// read first 512 byte into a buffer, so we can detect content type
 	buf := make([]byte, 512)
@@ -347,6 +404,7 @@ func saveFileToContentAddress(file multipart.File) (cid string, err error, code 
 		code = http.StatusInternalServerError
 		return
 	}
+	isNew = true
 	err = os.Rename(out.Name(), path)
 	if err != nil {
 		if os.IsExist(err) {
@@ -399,12 +457,13 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 			http.Error(w, "requires file", http.StatusBadRequest)
 			return
 		}
-		cid, err, code := saveFileToContentAddress(file)
+		cid, err, code, _ := saveFileToContentAddress(file)
 		if err != nil {
 			clog.Warn("blob save: %s", err)
 			http.Error(w, "encountered an error", code)
 			return
 		}
+		delete(h.blobsToDelete, cid)
 		err = genThumbnail(cid)
 		if err != nil {
 			clog.Warn("blob thumbnail: %s", err)
@@ -440,7 +499,24 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	forumT.ftx(w, ForumTransmitter{tid, post.Anon, post.Nick, post.Color})
+	path := "/ft/%s"
+	v := url.Values{}
+	if post.Anon {
+		v.Add("anon", "yes")
+	}
+	if post.Nick != nil {
+		v.Add("nick", *post.Nick)
+	}
+	if post.Color != nil {
+		v.Add("color", utils.ColorToA(*post.Color)[1:7])
+	}
+	ve := v.Encode()
+	if ve != "" {
+		path += "?" + ve
+	}
+	path += "#the-end"
+
+	http.Redirect(w, r, fmt.Sprintf(path, ntid), http.StatusFound)
 	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), extras)
 }
 
@@ -537,6 +613,11 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 // postPostPostFunFunc is a func that runs post postpost, does assorted fun we want
 // like informing lrc clients of parsed backlinks, and sending events to watchers
 func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
+	if post.ImageContent != nil {
+		h.btdmu.Lock()
+		delete(h.blobsToDelete, post.ImageContent.CID)
+		h.btdmu.Unlock()
+	}
 	if len(backlinks) != 0 {
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
 		umap := make(map[string]int, len(backlinks))
@@ -749,6 +830,7 @@ func (h *Handler) getForumThread(c *Client, w http.ResponseWriter, r *http.Reque
 	profilehead, err := h.db.GetProfile(c.Username, r.Context())
 	var ftx ForumTransmitter
 	ftx.TID = tid
+
 	if err != nil {
 		n := "wanderer"
 		ftx.Nick = &n
@@ -756,6 +838,21 @@ func (h *Handler) getForumThread(c *Client, w http.ResponseWriter, r *http.Reque
 	} else {
 		ftx.Nick = profilehead.DisplayName
 		ftx.Color = profilehead.Color
+	}
+	anons := r.URL.Query().Get("anon")
+	if anons != "" {
+		ftx.Anon = true
+	}
+	nicks := r.URL.Query().Get("nick")
+	if nicks != "" {
+		ftx.Nick = &nicks
+	}
+	colors := r.URL.Query().Get("color")
+	if colors != "" {
+		c, err := utils.AToColor("#" + colors)
+		if err == nil {
+			ftx.Color = &c
+		}
 	}
 	gftr := forumresp{
 		baseresp: br,

@@ -2,6 +2,7 @@ frontend/dist
 .env
 uploads
 .fileStore
+.alinkers
 migrate
 cerebrovore.log
 /cerebrovore

@@ -786,10 +786,6 @@ func (t *forumTemplate) forumpost(w io.Writer, post *types.Post) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "forum-post", post))
 }
 
-func (t *forumTemplate) ftx(w io.Writer, ftx ForumTransmitter) {
-	clog.Tmpl(t.template.ExecuteTemplate(w, "forum-transmitter", ftx))
-}
-
 func (t *forumTemplate) error(w io.Writer, msg string) {
 	type errorresp struct {
 		Message string

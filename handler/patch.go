@@ -10,8 +10,22 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.4.2",
+			Timestamp: "2026-05-14",
+			Notes: []types.Note{
+				{
+					Type: "fix",
+					Name: "delete images that don't get linked to a post",
+				},
+				{
+					Type: "upgrade",
+					Name: "reload forum on post & scroll to bottom",
+				},
+			},
+		},
+		{
 			Release:   "β.4.1",
-			Timestamp: "2026-05-08",
+			Timestamp: "2026-05-13",
 			Notes: []types.Note{
 				{
 					Type: "upgrade",

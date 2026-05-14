@@ -155,7 +155,7 @@ func (s *ServiceProvider) generateCode(username string, ctx context.Context, end
 			return
 		}
 		d := strings.TrimSpace(string(data))
-		clog.Info(d)
+		clog.Info("%s", d)
 		switch d {
 		case "account does not exist":
 			err = fmt.Errorf("%s: %w", d, ErrUserDNE)
