@@ -925,7 +925,7 @@ func (s *Store) WatchThread(username string, id uint32, ctx context.Context) (ch
 		return
 	}
 	tag, err := s.pool.Exec(ctx, `
-		INSERT INTO watched_threads (username, thread_id) VALUES ($1, $2) ON CONFLICT DO NOTHING
+		INSERT INTO watched_threads (username, thread_id, notified) VALUES ($1, $2, true) ON CONFLICT DO NOTHING
 		`, username, id)
 	if err != nil {
 		return

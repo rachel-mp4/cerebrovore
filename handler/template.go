@@ -248,6 +248,7 @@ func newTemplate(files ...string) *template.Template {
 				"forumTopicOrIdtoa": types.ForumTopicOrIdtoa,
 				"percentRemaining":  utils.PercentRemaining,
 				"boolPtrIsTrue":     boolPtrIsTrue,
+				"strPtrIsntEmpty":   strPtrIsntEmpty,
 				"dict":              dictify,
 				"intptoint":         intptoint,
 			}).ParseFiles(files...),
@@ -276,6 +277,13 @@ func boolPtrIsTrue(ptr *bool) bool {
 		return false
 	}
 	return *ptr
+}
+
+func strPtrIsntEmpty(ptr *string) bool {
+	if ptr == nil || *ptr == "" {
+		return false
+	}
+	return true
 }
 
 // maybe this is not ideal, it's a lot of boilerplate, however i want to give

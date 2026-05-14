@@ -22,7 +22,7 @@
       </li>
     {{else if .ThreadId}}
       <li class="thread-notification">
-        there's been activity in <a href="/t/{{idtoa .ThreadId}}"><span class="topic">{{with .Topic}}{{.}}{{else}}#{{idtoa .ThreadId}}{{end}}</span></a>
+        there's been activity in <a href="/t/{{idtoa .ThreadId}}"><span class="topic">{{if (strPtrIsntEmpty .Topic)}}{{.Topic}}{{else}}#{{idtoa .ThreadId}}{{end}}</span></a>
       </li>
     {{else if .Poker}}
       <li class="poke-notification">
