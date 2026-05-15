@@ -64,5 +64,27 @@ started (or will start) playing at (type "start"). if the queue is ever paused,
 it will send an event (type "pause") to all clients. when the final video in
 queue finishes, server sends an event letting clients know (type "clear")
 
+# websocket stuff
+
+if you wanna grab something from a websocket, we buffer any events set on the 
+initial load. since an island might run after the websocket inital load, we
+want to grab stuff the from the buffer before we handle any events. this is
+the pattern that we use. btw `cbvWSBuffer` is the object that holds the buffers
+for each scope, defined globally in static/js/websockets.js
 
 
+```javascript
+//ex: for wormwatch
+
+// @ts-ignore
+const wws = cbvWSBuffer?.wormwatch //the name of the key will be the type sent
+if (wws !== undefined) {
+   wws.forEach(handleWormwatchEvent) // key is an array of the data, which gets
+}                                    // sent as detail of CustomEvent that we
+                                     // wanna listen for
+document.addEventListener("cbv:wormwatch", (e) => {
+   const ev = e as CustomEvent
+   const wwe = ev.detail
+   handleWormwatchEvent(wwe)
+})
+```
