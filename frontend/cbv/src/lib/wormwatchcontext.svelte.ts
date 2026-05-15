@@ -1,4 +1,8 @@
 import type * as cbv from "./types"
+// i made this an event target prior to consolidating all the websockets
+// perhaps this is a bit silly for it to be consuming and emitting events
+// but i think it's nice for conceptualization, though keep in mind this
+// is lowkey jank trash now that should be simplified may 15 2026
 export class WormWatchContext extends EventTarget {
   wwqueue: Array<cbv.WormWatchEntry> = $state([])
   // if the server's timestamp is much higher than my timestamp,
@@ -13,11 +17,9 @@ export class WormWatchContext extends EventTarget {
   start: number | undefined = $state()
   pause: number | undefined = $state()
 
-  constructor(url: string) {
+  constructor() {
     super()
-    document.addEventListener("cbv:wormwatch", (e) => {
-      const ev = e as CustomEvent
-      const wwe = ev.detail
+    const handleWormwatchEvent = (wwe: any) => {
       console.log(wwe)
       switch (wwe.type) {
         case "timeS": {
@@ -59,6 +61,18 @@ export class WormWatchContext extends EventTarget {
           break
         }
       }
+    }
+
+    // @ts-ignore
+    const wws = cbvWSBuffer?.wormwatch
+    if (wws !== undefined) {
+      wws.forEach(handleWormwatchEvent)
+    }
+
+    document.addEventListener("cbv:wormwatch", (e) => {
+      const ev = e as CustomEvent
+      const wwe = ev.detail
+      handleWormwatchEvent(wwe)
     })
   }
 

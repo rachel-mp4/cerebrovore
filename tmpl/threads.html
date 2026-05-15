@@ -9,7 +9,7 @@
     </div>
     <div class="pair">
       <a href="/profile/{{.Username}}">PROFILE</a>
-      <a href="/t">INDEX</a>
+      <a href="/t">{{if eq .Username "recima"}}INDEGGS{{else}}INDEX{{end}}</a>
     </div>
     <div class="pair">
       <a href="/inbox">INBOX</a>

@@ -90,6 +90,9 @@
       window.removeEventListener("pointerdown", interact);
     };
     const initplay = window.addEventListener("pointerdown", interact);
+    if (ctx.isPlaying()) {
+      startHandler();
+    }
     ctx.addEventListener("start", startHandler);
     ctx.addEventListener("pause", pauseHandler);
     ctx.addEventListener("clear", clearHandler);

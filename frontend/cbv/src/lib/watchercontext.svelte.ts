@@ -70,9 +70,7 @@ export class WatcherContext {
       this.lastfocus = true
     })
 
-    document.addEventListener("cbv:watcher", (e) => {
-      const ev = e as CustomEvent
-      const twe = ev.detail
+    const handleWatcherEvent = (twe: any) => {
       const npid = b36encodenumber(twe.pid)
       const ntid = b36encodenumber(twe.tid)
       // don't show that there's a reply if we're currently looking at this thread!
@@ -124,6 +122,18 @@ export class WatcherContext {
         }
         this.watchthreads = [...this.watchthreads, newwt]
       }
+    }
+
+    // @ts-ignore
+    const wes = cbvWSBuffer?.watcher
+    if (wes !== undefined) {
+      wes.forEach(handleWatcherEvent)
+    }
+
+    document.addEventListener("cbv:watcher", (e) => {
+      const ev = e as CustomEvent
+      const twe = ev.detail
+      handleWatcherEvent(twe)
     })
   }
 

@@ -1,4 +1,5 @@
-setTimeout(() => {
+const cbvWSBuffer = {};
+(() => {
   const wantsNewThreads = localStorage.getItem("new-threads")
   const baseurl = window.location.hostname
   const port = window.location.port
@@ -19,17 +20,33 @@ setTimeout(() => {
     }
   }
   const ws = new WebSocket(wsurl)
+  const startT = Date.now()
   ws.onopen = () => { console.log("hello ws") }
   ws.onmessage = (e) => {
     const jed = JSON.parse(e.data)
-    const ev = new CustomEvent(`cbv:${jed.type}`, { detail: jed.data })
+    const etype = jed.type
+    const data = jed.data
+    const ev = new CustomEvent(`cbv:${etype}`, { detail: data })
     document.dispatchEvent(ev)
-    if (jed.type === "notification") {
+    if (etype === "notification") {
       const ic = document.getElementById("inbox-counter")
-      const newCount = jed.data.clear ? 0 : Number(ic.getAttribute("data-count")) + (jed.data.count ?? 1)
+      const newCount = data.clear ? 0 : Number(ic.getAttribute("data-count")) + (data.count ?? 1)
       ic.setAttribute("data-count", newCount)
       ic.textContent = newCount !== 0 ? `${newCount.toString(36)} wMAIL${newCount !== 1 ? "s" : ''
         } ` : ""
+    }
+    // only buffer messages for first 100 seconds
+    if (Date.now() - 100000 > startT) {
+      return
+    }
+    const buffer = cbvWSBuffer[etype]
+    if (buffer === undefined) {
+      cbvWSBuffer[etype] = [data]
+    } else {
+      console.log("pushing")
+      buffer.push(data)
+      console.log("pushed ", data)
+      cbvWSBuffer[etype] = buffer
     }
   }
   ws.onerror = (e) => {
@@ -41,4 +58,4 @@ setTimeout(() => {
   if (wantsNewThreads === null) {
     localStorage.setItem("new-threads", "yes")
   }
-}, 1500)
+})()

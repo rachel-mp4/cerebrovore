@@ -1,7 +1,7 @@
 (() => {
   const nh = document.getElementById("notification-header")
-  document.addEventListener("cbv:notification", (e) => {
-    if (e.detail.clear !== undefined) {
+  const handleNotificationEvent = (data) => {
+    if (data.clear !== undefined) {
       return
     }
     if (nh.classList.contains("mail")) {
@@ -12,6 +12,15 @@
     a.href = "/inbox"
     a.innerText = "you've got mail! click to refresh"
     nh.append(a)
+  }
+
+  const nes = cbvWSBuffer?.notification
+  if (nes !== undefined) {
+    nes.forEach(handleNotificationEvent)
+  }
+
+  document.addEventListener("cbv:notification", (e) => {
+    handleNotificationEvent(e.detail)
   })
   const ra = document.getElementById("read-all")
   ra.addEventListener("click", () => {

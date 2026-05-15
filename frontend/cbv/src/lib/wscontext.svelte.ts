@@ -585,9 +585,8 @@ export const connectTo = (url: string, ctx: WSContext) => {
       ctx.pingServer()
     }, 3000)
   }
-  document.addEventListener('cbv:thread', (e) => {
-    const ev = e as CustomEvent
-    const tse = ev.detail
+
+  const handleThreadEvent = (tse: any) => {
     if (tse.remaining !== undefined) {
       const ls = document.getElementById("left-sidebar")
       if (ls !== null) {
@@ -611,6 +610,18 @@ export const connectTo = (url: string, ctx: WSContext) => {
       ctx.replyLimit = true
       ctx.systemMessage = "reply limit reached; thread archived. you can continue messaging, but everything will be lost to history"
     }
+  }
+
+  // @ts-ignore
+  const tes = cbvWSBuffer?.thread
+  if (tes !== undefined) {
+    tes.forEach(handleThreadEvent)
+  }
+
+  document.addEventListener('cbv:thread', (e) => {
+    const ev = e as CustomEvent
+    const tse = ev.detail
+    handleThreadEvent(tse)
   })
 }
 
