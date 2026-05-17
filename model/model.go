@@ -87,16 +87,48 @@ func (m *Model) AddDeadThread(topic *string) uint32 {
 // DeleteThread deletes a thread after destroying it's server
 func (m *Model) DeleteThread(threadID uint32) error {
 	m.tmapmu.Lock()
-	defer m.tmapmu.Unlock()
-	thread, ok := m.tmap[threadID]
+	tm, ok := m.tmap[threadID]
 	if !ok {
 		return ErrThreadDNE
 	}
-	err := thread.destroyServer()
+	err := tm.destroyServer()
 	if err != nil {
 		return fmt.Errorf("destroy server: %w", err)
 	}
 	delete(m.tmap, threadID)
+	m.tmapmu.Unlock()
+
+	sm := "thread has been deleted"
+	e := socketMessage{"thread", socketEvent{SystemMessage: &sm}}
+	tm.subsmu.Lock()
+	for conn := range tm.subs {
+		select {
+		case conn.ch <- e:
+		default:
+		}
+	}
+	tm.subs = nil
+	tm.subsmu.Unlock()
+
+	m.watchersmu.RLock()
+	for username := range tm.watchers {
+		uwctx, ok := m.watchers[username]
+		if !ok {
+			continue
+		}
+		uwctx.twmu.Lock()
+		delete(uwctx.threadsWatched, threadID)
+		uwctx.twmu.Unlock()
+	}
+	m.watchersmu.RUnlock()
+	tm.watchers = nil
+
+	tm.wormwatchersmu.Lock()
+	if tm.wormwatchdata != nil && tm.wormwatchdata.cancel != nil {
+		tm.wormwatchdata.cancel(deleted)
+	}
+	tm.wormwatchersmu.Unlock()
+
 	return nil
 }
 

@@ -833,3 +833,22 @@ form .close {
 .content-tuple:has(input:not([type="checkbox"],[type="hidden"]):not(:placeholder-shown)) {
   display: block !important;
 }
+
+.quote {
+  color: var(--accentl);
+  background: var(--gfg);
+  background-clip: text;
+}
+
+.up.quote {
+  filter: hue-rotate(90deg);
+}
+
+.left.quote {
+  filter: hue-rotate(180deg);
+}
+
+.down.quote {
+  filter: hue-rotate(270deg);
+}
+

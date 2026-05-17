@@ -22,8 +22,8 @@ type threadModel struct {
 	dead   bool
 	mu     sync.Mutex
 
-	subs   map[*clientConn]bool
-	subsmu sync.RWMutex
+	subs   map[*clientConn]bool // these are connections who are currently in the thread
+	subsmu sync.RWMutex         // fka thread socket
 
 	watchers   map[string]bool // keys are usernames
 	bumplimit  bool

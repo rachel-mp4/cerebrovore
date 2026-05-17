@@ -43,7 +43,7 @@
     {{end}}
   {{end}}
   {{if .Cursor}}
-    <button hx-GET="/inbox?cursor={{.Cursor}}" hx-swap="outerHTML">load more notifications</button>
+    <button hx-GET="/inbox?cursor={{.Cursor}}" hx-swap="outerHTML" hx-trigger="intersect once">load more notifications</button>
   {{end}}
 {{end}}
 

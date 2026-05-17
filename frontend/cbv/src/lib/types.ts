@@ -37,6 +37,7 @@ export type Message = {
   lrcdata: LrcMessage
   replies: Array<number>
   pubAt?: number
+  renderedHTML?: string
 }
 
 export type Media = Image

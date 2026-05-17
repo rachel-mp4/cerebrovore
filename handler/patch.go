@@ -10,6 +10,25 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.0",
+			Timestamp: "2026-05-17",
+			Notes: []types.Note{
+				{
+					Type:        "feature",
+					Name:        "new system for parsing messages",
+					Description: "*toggles on and off italic, **toggles on and off bold, `toggles on and off code. additionally, >^<v at the start of a line quote text in various colors",
+				},
+				{
+					Type: "upgrade",
+					Name: "you can now delete your threads without mod intervention",
+				},
+				{
+					Type: "upgrade",
+					Name: "infinite scrolling in your inbox",
+				},
+			},
+		},
+		{
 			Release:   "β.4.2",
 			Timestamp: "2026-05-14",
 			Notes: []types.Note{

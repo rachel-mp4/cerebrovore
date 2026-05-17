@@ -613,6 +613,16 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 // postPostPostFunFunc is a func that runs post postpost, does assorted fun we want
 // like informing lrc clients of parsed backlinks, and sending events to watchers
 func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
+	var rdrdhtml *string
+	if post.TextContent != nil {
+		rdrd := utils.Render(utils.Parse(post.TextContent.Body))
+		rdrdhtml = &rdrd
+	}
+	if post.Anon {
+		h.m.NotifyReply(post.ThreadID, post.ID, nil, post.Color, replyCount, rdrdhtml)
+	} else {
+		h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, post.Color, replyCount, rdrdhtml)
+	}
 	if post.ImageContent != nil {
 		h.btdmu.Lock()
 		delete(h.blobsToDelete, post.ImageContent.CID)
@@ -653,11 +663,6 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			clog.LogE(h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx), "create get note")
 		}
 		h.m.DispatchReplyNotifications(umap)
-	}
-	if post.Anon {
-		h.m.NotifyReply(post.ThreadID, post.ID, nil, post.Color, replyCount)
-	} else {
-		h.m.NotifyReply(post.ThreadID, post.ID, &c.Username, post.Color, replyCount)
 	}
 	if replyCount < utils.BUMP_LIMIT {
 		h.m.NotifyWatchers(post.ThreadID, post.ID)
@@ -1201,7 +1206,7 @@ func (h *Handler) deletePost(c *Client, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if p.ID != p.ThreadID {
-		err = h.db.DeletePost(pid, r.Context())
+		err = h.db.DeletePost(p.ID, r.Context())
 		if err != nil {
 			clog.Info("%s", err.Error())
 			moderateT.error(w, "failed to delete post")
@@ -1209,7 +1214,19 @@ func (h *Handler) deletePost(c *Client, w http.ResponseWriter, r *http.Request) 
 		}
 		moderateT.deleted(w, c.IsMod)
 	} else {
-		moderateT.error(w, fmt.Sprintf("sorry %s, i'm not 100%% confident in thread deletion yet, so i'm not letting you do that. if you really need thread deleted, report it and a moderator can take action!", c.Username))
+		err := h.db.DeleteThread(p.ThreadID, r.Context())
+		if err != nil {
+			clog.Info("%s", err.Error())
+			moderateT.error(w, "failed to delete thread")
+			return
+		}
+		err = h.m.DeleteThread(p.ThreadID)
+		if err != nil {
+			clog.Warn("%s", err.Error())
+			moderateT.error(w, "failed to delete thread")
+			return
+		}
+		moderateT.deleted(w, c.IsMod)
 	}
 }
 

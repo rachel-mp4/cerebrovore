@@ -118,6 +118,8 @@ func (tm *threadModel) handleQueue() {
 		tm.nextVideo()
 	case paused:
 		tm.pauseVideo()
+	case deleted:
+		return
 	}
 }
 

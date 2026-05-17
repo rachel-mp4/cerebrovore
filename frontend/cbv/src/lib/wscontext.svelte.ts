@@ -596,7 +596,11 @@ export const connectTo = (url: string, ctx: WSContext) => {
     if (tse.id !== undefined) {
       ctx.items = ctx.items.map((item) => {
         return (item.id === tse.id)
-          ? { ...item, ...(tse.username && { username: tse.username }) }
+          ? {
+            ...item,
+            ...(tse.username && { username: tse.username }),
+            ...(tse.renderedHTML && { renderedHTML: tse.renderedHTML })
+          }
           : item
       })
     }

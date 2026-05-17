@@ -19,9 +19,10 @@ type socketEvent struct {
 	Remaining     *string `json:"remaining,omitempty"`
 	BumpLimit     *bool   `json:"bumpLimit,omitempty"`
 	ReplyLimit    *bool   `json:"replyLimit,omitempty"`
+	RenderedHTML  *string `json:"renderedHTML,omitempty"`
 }
 
-func (m *Model) NotifyReply(tid uint32, id uint32, username *string, color *uint32, replyCount int) {
+func (m *Model) NotifyReply(tid uint32, id uint32, username *string, color *uint32, replyCount int, renderedHTML *string) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[tid]
 	m.tmapmu.RUnlock()
@@ -29,7 +30,7 @@ func (m *Model) NotifyReply(tid uint32, id uint32, username *string, color *uint
 		return
 	}
 	rem := utils.PercentRemaining(&replyCount)
-	e := socketMessage{"thread", socketEvent{ID: &id, Username: username, Color: color, Remaining: &rem}}
+	e := socketMessage{"thread", socketEvent{ID: &id, Username: username, Color: color, Remaining: &rem, RenderedHTML: renderedHTML}}
 	go func() {
 		tm.subsmu.RLock()
 		defer tm.subsmu.RUnlock()
