@@ -58,6 +58,7 @@ func (s *limitStore) sweep() {
 }
 
 // completely sane programming language that is great and I love
+// what if instead of writing code we just glued The Gadget to the bin
 func rateLimit(
 	store *limitStore,
 	keyFn func(c *Client, r *http.Request) string,
@@ -84,6 +85,7 @@ func rateLimitIP(
 			key = r.RemoteAddr // should always be behind nginx but :zany:
 		}
 		if !store.allow(key) {
+			clog.Warn("IP rate limit hit (%s)", key)
 			http.Error(w, "slow down", http.StatusTooManyRequests)
 			return
 		}
