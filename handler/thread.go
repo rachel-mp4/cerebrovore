@@ -39,7 +39,10 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	r.ParseMultipartForm(10 << 20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "bad multipart body", http.StatusBadRequest)
+		return
+	}
 	var thread types.Thread
 	topic, ok := r.MultipartForm.Value["topic"]
 	// len probably should always be non nil, but form is map to slice of string
@@ -194,7 +197,10 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	r.ParseMultipartForm(10 << 20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "bad multipart body", http.StatusBadRequest)
+		return
+	}
 	file, _, err := r.FormFile("file")
 	if err != nil {
 		http.Error(w, "requires file", http.StatusBadRequest)
@@ -425,7 +431,10 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	r.ParseMultipartForm(10 << 20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "bad multipart body", http.StatusBadRequest)
+		return
+	}
 	var post types.Post
 	post.Username = c.Username
 	_, ok := r.MultipartForm.Value["anon"]
@@ -525,7 +534,10 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	r.ParseMultipartForm(10 << 20)
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Error(w, "bad multipart body", http.StatusBadRequest)
+		return
+	}
 	var post types.Post
 	post.Username = c.Username
 	_, ok := r.MultipartForm.Value["anon"]
@@ -550,12 +562,33 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	cid, ok := r.MultipartForm.Value["cid"]
 	if ok && len(cid) > 0 {
-		c := cid[0]
+		uCid := cid[0]
+		// h.btdmu.Lock()
+		// owner, pending := h.blobsToDelete[uCid]
+		// h.btdmu.Unlock()
+		// if pending && owner != c.Username {
+		// 	http.Error(w, "unknown or unowned cid", http.StatusBadRequest)
+		// 	return
+		// }
+		if len(uCid) < 4 {
+			http.Error(w, "cid too short", http.StatusBadRequest)
+			return
+		}
+		if strings.ContainsAny(uCid, "\\/") {
+			http.Error(w, "not 2day hackr", http.StatusBadRequest)
+			return
+		}
+		path := filepath.Join("uploads", uCid[:3], uCid[3:])
+		_, err := os.Stat(path)
+		if err != nil {
+			http.Error(w, "you gotta UPLOAD it first dummy", http.StatusBadRequest)
+			return
+		}
 		alt, ok := r.MultipartForm.Value["alt"]
 		if ok && len(alt) > 0 {
-			post.ImageContent = &types.ImageContent{CID: c, Alt: &alt[0]}
+			post.ImageContent = &types.ImageContent{CID: uCid, Alt: &alt[0]}
 		} else {
-			post.ImageContent = &types.ImageContent{CID: c}
+			post.ImageContent = &types.ImageContent{CID: uCid}
 		}
 	}
 

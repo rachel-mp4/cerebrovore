@@ -6,4 +6,5 @@ uploads
 migrate
 cerebrovore.log
 /cerebrovore
+/backups
 .DS_Store

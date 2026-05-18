@@ -405,8 +405,6 @@ if [[ "$DEPLOY" == false ]]; then
     go run ./cmd/main.go $GO_FLAGS || true
 else
     # deploy, build binary + systemd
-    # seriously this isnt tested so probably dont do this yet
-
     # check git status
     log_step "checking git"
     git fetch --quiet origin
@@ -483,17 +481,34 @@ else
     chown -R "$SVC_USER":"$SVC_USER" "$INSTALL_DIR"
     log_ok "files deployed to $INSTALL_DIR"
 
-    # docker/postgres in install dir
-    log_step "production database"
-    (cd "$INSTALL_DIR" && docker compose up -d --wait db)
-    log_ok "postgres container is up"
+    # prod database
+    log_step "prod db"
 
-    # migrations against prod db
+    # source prod .env for credentials
+    set -a
+    source "$INSTALL_DIR/.env"
+    set +a
+
+    # check if postgres is already running
+    if docker compose -f "$INSTALL_DIR/docker-compose.yml" ps db --status running 2>/dev/null | grep -q db; then
+        log_ok "postgres already running"
+    else
+        log_info "starting postgres"
+        (cd "$INSTALL_DIR" && docker compose up -d --wait db)
+        log_ok "postgres started"
+    fi
+
+    # back up database before migrations
+    log_step "database backup"
+    BACKUP_DIR="$INSTALL_DIR/backups"
+    mkdir -p "$BACKUP_DIR"
+    BACKUP_FILE="$BACKUP_DIR/cbvdb-$(date +%Y%m%d-%H%M%S).sql"
+    PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$POSTGRES_DB" > "$BACKUP_FILE" 2>/dev/null && \
+        log_ok "backup: $BACKUP_FILE" || \
+        log_warn "backup failed (first deploy? continuing...)"
+
+    # migrations
     log_step "production migrations"
-
-    # source the prod .env for connection string oh my godd
-    PROD_ENV=$(grep -v '^#' "$INSTALL_DIR/.env" | xargs)
-    eval "$PROD_ENV"
     PROD_DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
 
     MIGRATE_VERSION=$(migrate -path "$INSTALL_DIR/migrations/" -database "$PROD_DB_URL" version 2>&1) || true
@@ -523,7 +538,7 @@ Requires=docker.service
 Type=simple
 User=${SVC_USER}
 WorkingDirectory=${INSTALL_DIR}
-ExecStart=${INSTALL_DIR}/cerebrovore -cold -db -midp
+ExecStart=${INSTALL_DIR}/cerebrovore -cold -db -port 9000
 Restart=on-failure
 RestartSec=5
 

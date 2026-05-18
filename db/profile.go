@@ -73,7 +73,7 @@ func (s *Store) UpdateProfileContents(username string, profile *types.ProfileExt
 	if err != nil {
 		return err
 	}
-	defer tx.Commit(ctx)
+	defer tx.Rollback(ctx)
 	_, err = tx.Exec(ctx, `UPDATE profiles SET friends_header = $1, posts_header = $2, links_header = $3 WHERE username = $4`, profile.FriendsHeader, profile.PostsHeader, profile.LinksHeader, username)
 	if err != nil {
 		return err
@@ -132,7 +132,8 @@ func (s *Store) UpdateProfileContents(username string, profile *types.ProfileExt
 	if err != nil {
 		return err
 	}
-	return nil
+	// return nil
+	return tx.Commit(ctx)
 }
 
 func (m *MockStore) UpdateProfileContents(username string, profile *types.ProfileExtras, ctx context.Context) error {
