@@ -52,6 +52,13 @@ type Handler struct {
 	// to a post
 	blobsToDelete map[string]string
 	btdmu         sync.Mutex
+
+	// ratelimit stuff
+	pokeLimiter    *limitStore
+	loginLimiter   *limitStore
+	accountLimiter *limitStore
+	blobLimiter    *limitStore
+	reportLimiter  *limitStore
 }
 
 type CompiledAssets struct {
@@ -70,6 +77,13 @@ type CompiledAssets struct {
 func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provider, reqcode bool) *Handler {
 	h := Handler{}
 	mux := http.NewServeMux()
+	// rate limit keys
+	// general
+	srcKey := func(c *Client, r *http.Request) string { return c.Username }
+	// specific to poke (e.g. user1 pokes user2)
+	pokeKey := func(c *Client, r *http.Request) string {
+		return c.Username + "->" + r.PathValue("username")
+	}
 	mux.HandleFunc("GET /", h.AM(h.home))
 	mux.HandleFunc("GET /debug/pprof/", h.AM(h.AllowAdmin(pprof.Index)))
 	mux.HandleFunc("POST /notify-all", h.AM(h.notifyAll))
@@ -83,7 +97,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /profile", h.AM(h.editProfile))
 	mux.HandleFunc("POST /avatar", h.AM(h.postAvatar))
 	mux.HandleFunc("POST /profile-contents", h.AM(h.postContents))
-	mux.HandleFunc("POST /poke/{username}", h.AM(h.poke))
+	// mux.HandleFunc("POST /poke/{username}", h.AM(h.poke))
+	mux.HandleFunc("POST /poke/{username}", h.AM(rateLimit(h.pokeLimiter, pokeKey, h.poke)))
 	mux.HandleFunc("GET /moderate", h.AM(h.moderate))
 	mux.HandleFunc("GET /administrate", h.AM(h.administrate))
 	mux.HandleFunc("POST /add-moderator", h.AM(h.addModerator))
@@ -92,22 +107,26 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /cancel-action", h.AM(h.cancelAction))
 	mux.HandleFunc("GET /inspect-post", h.AM(h.inspectPost))
 	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
-	mux.HandleFunc("POST /report", h.AM(h.postReport))
+	// mux.HandleFunc("POST /report", h.AM(h.postReport))
+	mux.HandleFunc("POST /report", h.AM(rateLimit(h.reportLimiter, srcKey, h.postReport)))
 	mux.HandleFunc("POST /review-report", h.AM(h.reviewReport))
 	mux.HandleFunc("GET /reports", h.AM(h.getReports))
 	mux.HandleFunc("GET /report", h.AM(h.getReport))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
-	mux.HandleFunc("POST /login", h.postLogin)
+	// mux.HandleFunc("POST /login", h.postLogin)
+	mux.HandleFunc("POST /login", rateLimitIP(h.loginLimiter, h.postLogin))
 	mux.HandleFunc("GET /account", h.account)
-	mux.HandleFunc("POST /account", h.postAccount)
+	// mux.HandleFunc("POST /account", h.postAccount)
+	mux.HandleFunc("POST /account", rateLimitIP(h.accountLimiter, h.postAccount))
 	mux.HandleFunc("POST /appeal", h.postAppeal)
 	mux.HandleFunc("GET /beep", h.AM(h.beep))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
 	mux.HandleFunc("GET /t", h.AM(h.threads))
 	mux.HandleFunc("GET /ft", h.AM(h.forumthreads))
-	mux.HandleFunc("POST /blob", h.AM(h.postBlob))
+	// mux.HandleFunc("POST /blob", h.AM(h.postBlob))
+	mux.HandleFunc("POST /blob", h.AM(rateLimit(h.blobLimiter, srcKey, h.postBlob)))
 	mux.HandleFunc("GET /blob", h.AM(h.getBlob))
 	mux.HandleFunc("POST /t/{ntid}", h.AM(h.postPost))
 	mux.HandleFunc("POST /ft/{ntid}", h.AM(h.postForumPost))
@@ -157,6 +176,15 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	if !slices.Contains(h.moderators, h.admin) {
 		h.moderators = append(h.moderators, h.admin)
 	}
+
+	// RATE LIMIT TUNING
+	// 60s limit bucket, 3 pokes to same user in a minute
+	// Same setup for others
+	h.pokeLimiter = newLimitStore(1.0/60.0, 3)
+	h.reportLimiter = newLimitStore(1.0/30.0, 5)
+	h.loginLimiter = newLimitStore(1.0/10.0, 5)
+	h.accountLimiter = newLimitStore(1.0/300.0, 2)
+	h.blobLimiter = newLimitStore(1.0/2.5, 10)
 
 	h.blobsToDelete = make(map[string]string, 10)
 	return &h
@@ -284,6 +312,8 @@ func (h *Handler) postAccount(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   86400 * 14,
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	}
 	session.Values = map[any]any{}
 	session.Values["username"] = username
@@ -326,6 +356,8 @@ func (h *Handler) postLogin(w http.ResponseWriter, r *http.Request) {
 		Path:     "/",
 		MaxAge:   86400 * 14,
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 	}
 	session.Values = map[any]any{}
 	session.Values["username"] = username
@@ -391,6 +423,7 @@ func (h *Handler) AllowAdmin(f func(w http.ResponseWriter, r *http.Request)) fun
 	return func(c *Client, w http.ResponseWriter, r *http.Request) {
 		if c.Username != h.admin {
 			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
 		}
 		f(w, r)
 	}
@@ -399,6 +432,7 @@ func (h *Handler) AllowAdmin(f func(w http.ResponseWriter, r *http.Request)) fun
 func (h *Handler) notifyAll(c *Client, w http.ResponseWriter, r *http.Request) {
 	if c.Username != h.admin {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
 	}
 	msg := r.FormValue("message")
 	usernames, err := h.db.GetAllUsernames(r.Context())
@@ -438,6 +472,8 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			Path:     "/",
 			MaxAge:   86400 * 14,
 			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteLaxMode,
 		}
 		s.Save(r, w)
 		isadmin := h.admin == username

@@ -9,13 +9,14 @@ import (
 	"html/template"
 	"net/http"
 
-	"github.com/rachel-mp4/cerebrovore/clog"
 	"net/url"
 	"os"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/rachel-mp4/cerebrovore/clog"
 )
 
 var hashtagRE = regexp.MustCompile(`#([0-9A-Za-z]+)`)
@@ -375,7 +376,7 @@ func Render(ll []line) string {
 				out.WriteString(ibcstart(isitalic, isbold, iscode))
 			case link:
 				out.WriteString(ibcend(isitalic, isbold, iscode))
-				out.WriteString(`<a target="_blank" ref="noopener noreferrer" href="`)
+				out.WriteString(`<a target="_blank" rel="noopener noreferrer" href="`)
 				out.WriteString(t.link.String())
 				out.WriteString(`">`)
 				out.WriteString(ibcstart(isitalic, isbold, iscode))

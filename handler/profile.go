@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/rachel-mp4/cerebrovore/clog"
 	"github.com/rachel-mp4/cerebrovore/types"
@@ -81,7 +82,7 @@ func (h *Handler) postProfile(c *Client, w http.ResponseWriter, r *http.Request)
 		if len(trimmedBio) > 1000 {
 			trimmedBio = trimmedBio[:1000]
 		}
-		p.Bio = &bio[0]
+		p.Bio = &trimmedBio
 		mono := r.Form.Get("mono")
 		bim := mono != ""
 		if bim {
@@ -111,7 +112,23 @@ func (h *Handler) postProfile(c *Client, w http.ResponseWriter, r *http.Request)
 					http.Error(w, "errors with atproto id", http.StatusBadRequest)
 					return
 				}
-				resp, err2 := http.DefaultClient.Do(req)
+				ips, err2 := net.DefaultResolver.LookupIP(r.Context(), "ip", atid)
+				if err2 != nil || len(ips) == 0 {
+					http.Error(w, "errors with atproto id", http.StatusBadRequest)
+					return
+				}
+				for _, ip := range ips {
+					if ip.IsPrivate() || ip.IsLoopback() || ip.IsLinkLocalUnicast() || ip.IsUnspecified() {
+						clog.Warn("@%s attempted SSRF - resolved to %s", c.Username, ip)
+						http.Error(w, "clever, huh?", http.StatusBadRequest)
+						return
+					}
+				}
+				cli := &http.Client{
+					Timeout:       10 * time.Second,
+					CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+				}
+				resp, err2 := cli.Do(req)
 				if err2 != nil {
 					clog.Warn("err1: %s err2: %s", err, err2)
 					http.Error(w, "errors with atproto id", http.StatusBadRequest)
