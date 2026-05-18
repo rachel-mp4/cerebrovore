@@ -852,3 +852,10 @@ form .close {
   filter: hue-rotate(270deg);
 }
 
+.tx:has(.reply:hover) {
+  background: var(--accentl);
+}
+
+.notifications {
+  overflow-x: clip
+}
