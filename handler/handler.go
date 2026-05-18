@@ -83,7 +83,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 
 	mux.HandleFunc("GET /", h.AM(h.home))
 	mux.HandleFunc("GET /debug/pprof/", h.AM(h.AllowAdmin(pprof.Index)))
-	mux.HandleFunc("POST /notify-all", h.AM(h.notifyAll))
+	mux.HandleFunc("GET /debug/pprof/profile", h.AM(h.AllowAdmin(pprof.Profile)))
+	mux.HandleFunc("POST /notify-all", h.AM(h.AdminOnly(h.notifyAll)))
 	mux.HandleFunc("GET /catalog", h.AM(h.catalog))
 	mux.HandleFunc("GET /patch-notes", h.AM(h.patchnotes))
 	mux.HandleFunc("GET /settings", h.AM(h.me))
@@ -95,18 +96,18 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("POST /avatar", h.AM(h.postAvatar))
 	mux.HandleFunc("POST /profile-contents", h.AM(h.postContents))
 	mux.HandleFunc("POST /poke/{username}", h.AM(h.poke))
-	mux.HandleFunc("GET /moderate", h.AM(h.moderate))
-	mux.HandleFunc("GET /administrate", h.AM(h.administrate))
-	mux.HandleFunc("POST /add-moderator", h.AM(h.addModerator))
-	mux.HandleFunc("POST /take-action", h.AM(h.takeAction))
-	mux.HandleFunc("POST /ban/{username}", h.AM(h.postBan))
-	mux.HandleFunc("GET /cancel-action", h.AM(h.cancelAction))
-	mux.HandleFunc("GET /inspect-post", h.AM(h.inspectPost))
-	mux.HandleFunc("POST /appeal-verdict", h.AM(h.postAppealVerdict))
+	mux.HandleFunc("GET /moderate", h.AM(h.ModOnly(h.moderate)))
+	mux.HandleFunc("GET /administrate", h.AM(h.AdminOnly(h.administrate)))
+	mux.HandleFunc("POST /add-moderator", h.AM(h.AdminOnly(h.addModerator)))
+	mux.HandleFunc("POST /take-action", h.AM(h.ModOnly(h.takeAction)))
+	mux.HandleFunc("POST /ban/{username}", h.AM(h.ModOnly(h.postBan)))
+	mux.HandleFunc("GET /cancel-action", h.AM(h.ModOnly(h.cancelAction)))
+	mux.HandleFunc("GET /inspect-post", h.AM(h.ModOnly(h.inspectPost)))
+	mux.HandleFunc("POST /appeal-verdict", h.AM(h.ModOnly(h.postAppealVerdict)))
 	mux.HandleFunc("POST /report", h.AM(rateLimit(reportLimiter, srcKey, h.postReport)))
-	mux.HandleFunc("POST /review-report", h.AM(h.reviewReport))
-	mux.HandleFunc("GET /reports", h.AM(h.getReports))
-	mux.HandleFunc("GET /report", h.AM(h.getReport))
+	mux.HandleFunc("POST /review-report", h.AM(h.ModOnly(h.reviewReport)))
+	mux.HandleFunc("GET /reports", h.AM(h.ModOnly(h.getReports)))
+	mux.HandleFunc("GET /report", h.AM(h.ModOnly(h.getReport)))
 	mux.HandleFunc("POST /logout", h.logout)
 	mux.HandleFunc("GET /login", h.login)
 	mux.HandleFunc("POST /login", rateLimitIP(loginLimiter, h.postLogin))
@@ -126,7 +127,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /t/{ntid}", h.AM(h.getThread))
 	mux.HandleFunc("GET /ft/{ntid}", h.AM(h.getForumThread))
 	mux.HandleFunc("GET /p/{npid}", h.AM(h.getPost))
-	mux.HandleFunc("DELETE /p/{npid}", h.AM(h.deletePost))
+	mux.HandleFunc("DELETE /p/{npid}", h.AM(h.deletePost)) // perhaps should split up delete post into delete my post and mod delete
 	mux.HandleFunc("POST /w/{ntid}", h.AM(h.watchThread))
 	mux.HandleFunc("POST /u/{ntid}", h.AM(h.unwatchThread))
 	mux.HandleFunc("GET /t/{ntid}/ws", h.AM(h.getThreadWS))
@@ -426,6 +427,7 @@ func (h *Handler) notifyAll(c *Client, w http.ResponseWriter, r *http.Request) {
 	err = h.db.CreateModNotifications(usernames, msg, r.Context())
 	if err != nil {
 		adminT.error(w, err.Error())
+		return
 	}
 	adminT.notified(w, len(usernames))
 	h.m.BULKDispatch()
@@ -480,6 +482,26 @@ func (h *Handler) AM(f func(c *Client, w http.ResponseWriter, r *http.Request)) 
 			return
 		}
 		c := &Client{ID: id, Username: username, IsMod: ismod}
+		f(c, w, r)
+	}
+}
+
+func (h *Handler) ModOnly(f func(c *Client, w http.ResponseWriter, r *http.Request)) func(c *Client, w http.ResponseWriter, r *http.Request) {
+	return func(c *Client, w http.ResponseWriter, r *http.Request) {
+		if c == nil || !c.IsMod {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
+		f(c, w, r)
+	}
+}
+
+func (h *Handler) AdminOnly(f func(c *Client, w http.ResponseWriter, r *http.Request)) func(c *Client, w http.ResponseWriter, r *http.Request) {
+	return func(c *Client, w http.ResponseWriter, r *http.Request) {
+		if c == nil || c.Username != h.admin {
+			http.Redirect(w, r, "/", http.StatusSeeOther)
+			return
+		}
 		f(c, w, r)
 	}
 }
