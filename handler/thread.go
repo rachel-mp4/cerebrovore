@@ -39,7 +39,6 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	// r.ParseMultipartForm(10 << 20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "bad multipart body", http.StatusBadRequest)
 		return
@@ -198,7 +197,6 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	// r.ParseMultipartForm(10 << 20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "bad multipart body", http.StatusBadRequest)
 		return
@@ -433,7 +431,6 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	// r.ParseMultipartForm(10 << 20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "bad multipart body", http.StatusBadRequest)
 		return
@@ -537,7 +534,6 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "not authorized", http.StatusUnauthorized)
 		return
 	}
-	// r.ParseMultipartForm(10 << 20)
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Error(w, "bad multipart body", http.StatusBadRequest)
 		return
@@ -567,13 +563,13 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	cid, ok := r.MultipartForm.Value["cid"]
 	if ok && len(cid) > 0 {
 		uCid := cid[0]
-		h.btdmu.Lock()
-		owner, pending := h.blobsToDelete[uCid]
-		h.btdmu.Unlock()
-		if !pending || owner != c.Username {
-			http.Error(w, "unknown or unowned cid", http.StatusBadRequest)
-			return
-		}
+		// h.btdmu.Lock()
+		// owner, pending := h.blobsToDelete[uCid]
+		// h.btdmu.Unlock()
+		// if pending && owner != c.Username {
+		// 	http.Error(w, "unknown or unowned cid", http.StatusBadRequest)
+		// 	return
+		// }
 		alt, ok := r.MultipartForm.Value["alt"]
 		if ok && len(alt) > 0 {
 			post.ImageContent = &types.ImageContent{CID: uCid, Alt: &alt[0]}

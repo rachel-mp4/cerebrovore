@@ -12,9 +12,9 @@ import (
 // bucket of buckets
 type limitStore struct {
 	mu       sync.Mutex
-	limiters map[string]*limitEntry
-	r        rate.Limit
-	b        int // burst (b/<~1sec>)
+	limiters map[string]*limitEntry // think one spell = 1 mana
+	r        rate.Limit             // this is like everyone's mana regen rate
+	b        int                    // think this is like everyone's max mana pool
 }
 
 type limitEntry struct {
@@ -22,10 +22,12 @@ type limitEntry struct {
 	lastSeen time.Time
 }
 
-func newLimitStore(perSecond float64, burst int) *limitStore {
+// the way how ratelimits are represented is we have a buffer of burst
+// that regenerates x tokens per second.
+func newLimitStore(regenPeriod time.Duration, burst int) *limitStore {
 	s := &limitStore{
 		limiters: make(map[string]*limitEntry),
-		r:        rate.Limit(perSecond),
+		r:        rate.Every(regenPeriod),
 		b:        burst,
 	}
 	go s.sweep() // clean
@@ -59,6 +61,7 @@ func (s *limitStore) sweep() {
 
 // completely sane programming language that is great and I love
 // what if instead of writing code we just glued The Gadget to the bin
+// I LVOE ERR = NIL RETURN ERR :3
 func rateLimit(
 	store *limitStore,
 	keyFn func(c *Client, r *http.Request) string,
