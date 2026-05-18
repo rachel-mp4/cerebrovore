@@ -1245,6 +1245,7 @@ func (h *Handler) deletePost(c *Client, w http.ResponseWriter, r *http.Request) 
 			moderateT.error(w, "failed to delete post")
 			return
 		}
+		h.m.NotifyDelete(p.ThreadID, p.ID)
 		moderateT.deleted(w, c.IsMod)
 	} else {
 		err := h.db.DeleteThread(p.ThreadID, r.Context())

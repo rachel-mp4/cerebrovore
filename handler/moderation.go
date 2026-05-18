@@ -292,6 +292,7 @@ func (h *Handler) takeAction(c *Client, w http.ResponseWriter, r *http.Request) 
 				moderateT.error(w, err.Error())
 				return
 			}
+			h.m.NotifyDelete(action.Post.ThreadID, action.Post.ID)
 		}
 		if action.Ban != nil {
 			err = h.db.Ban(action.Ban, r.Context())

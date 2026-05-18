@@ -594,6 +594,15 @@ export const connectTo = (url: string, ctx: WSContext) => {
       }
     }
     if (tse.id !== undefined) {
+      if (tse.deleted === true) {
+        console.log("hi BEEPBEPGBEPFGA")
+        if (ctx.existingindices.get(tse.id)) {
+          ctx.items = ctx.items.filter((item) => !(item.id === tse.id))
+        } else {
+          document.getElementById(b36encodenumber(tse.id))?.remove()
+        }
+        return
+      }
       ctx.items = ctx.items.map((item) => {
         return (item.id === tse.id)
           ? {

@@ -52,6 +52,10 @@
       }
     }
     if (tse.id) {
+      if (tse.deleted === true) {
+        document.getElementById(tse.id.toString(36)).remove()
+        return
+      }
       const newid = tse.id
       const npid = newid.toString(36)
       const bue = document.getElementById("brains-ur-eat")
