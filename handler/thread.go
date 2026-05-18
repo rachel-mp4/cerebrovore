@@ -570,6 +570,20 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		// 	http.Error(w, "unknown or unowned cid", http.StatusBadRequest)
 		// 	return
 		// }
+		if len(uCid) < 4 {
+			http.Error(w, "cid too short", http.StatusBadRequest)
+			return
+		}
+		if strings.ContainsAny(uCid, "\\/") {
+			http.Error(w, "not 2day hackr", http.StatusBadRequest)
+			return
+		}
+		path := filepath.Join("uploads", uCid[:3], uCid[3:])
+		_, err := os.Stat(path)
+		if err != nil {
+			http.Error(w, "you gotta UPLOAD it first dummy", http.StatusBadRequest)
+			return
+		}
 		alt, ok := r.MultipartForm.Value["alt"]
 		if ok && len(alt) > 0 {
 			post.ImageContent = &types.ImageContent{CID: uCid, Alt: &alt[0]}
