@@ -534,6 +534,10 @@ lineloop:
 						if idx+1 != len(rr) && rr[idx+1] == '*' {
 							p.tokens = append(p.tokens, token{t: bold})
 							skipme = true
+							if idx+2 == len(rr) {
+								res = append(res, p)
+								continue
+							}
 						} else {
 							p.tokens = append(p.tokens, token{t: italic})
 						}

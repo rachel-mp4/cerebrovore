@@ -60,11 +60,16 @@ every possible that's just numbers and letters unless it starts with a 0 is NOT
 ok for use as an ID, because html ID should be unique, and this has the
 potential for a collision! for this reason, prefer html IDs with a dash
 
-hashtag parser in linkifyjs doesn't like it when the hashtag is just numbers.
+~hashtag parser in linkifyjs doesn't like it when the hashtag is just numbers.
 want to create a custom parser here, but be careful because performance here
 matters, and it's nice to maintain flexibility. likely we don't care for any
 commands, and in general as length of post id grows, probability that a post id
-is just numbers approaches 0, so this is very low priority
+is just numbers approaches 0, so this is very low priority~ custom parser has
+been implemented on backend, linkifyjs removed as dependency, still would be
+nice to add a parser on frontend, but it seems moderately hard to do well.
+perhaps it would make sense to just parse styles, @mention, #postid, but not
+urls; can't really mess those up
+
 
 i believe the bug in wormwatch where a video appears to be unavailable is a
 result of adblockers in firefox. refreshing the page a few times seems to fix
