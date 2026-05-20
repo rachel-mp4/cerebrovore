@@ -26,132 +26,214 @@ export enum state {
   italic
 }
 
-export function parse(s: string): line[] {
-  const res: line[] = []
-  let l: line = { tokens: [], start: 0 }
-  let tokenstart = 0
-  let currentstate: undefined | state = undefined
-  let word = ""
-  let skip = false
-  let first = true
-  for (let i = 0; i < s.length; i++) {
-    const char = s.charAt(i)
-    if (first) {
-      first = false
-      switch (char) {
-        case "^": {
-          l.quote = quote.up
+export function render(ll: line[]): string {
+  console.log(ll)
+  var res = ""
+  var i = false
+  var b = false
+  var c = false
+  const div = document.createElement("div")
+
+  for (let j = 0; j < ll.length; j++) {
+    if (j !== 0) {
+      res += "\n"
+    }
+    const l = ll[j]
+    if (l.quote !== undefined) {
+      res += '<span class="'
+      switch (l.quote) {
+        case quote.left: {
+          res += 'left'
           break
         }
-        case ">": {
-          l.quote = quote.right
+        case quote.up: {
+          res += 'up'
           break
         }
-        case "v": {
-          l.quote = quote.down
+        case quote.right: {
+          res += 'right'
           break
         }
-        case "V": {
-          l.quote = quote.down
+        case quote.down: {
+          res += 'down'
           break
         }
-        case "<": {
-          l.quote = quote.left
+      }
+      res += ' quote">'
+    }
+    for (let k = 0; k < l.tokens.length; k++) {
+      const t = l.tokens[k]
+      switch (t.state) {
+        case state.hashtag: {
+          res += `<a href="/p/${t.text.slice(1)}">${ibcstart(i, b, c)}${t.text}${ibcend(i, b, c)}</a>`
+          break
+        }
+        case state.mention: {
+          res += `<a href="/profile/${t.text.slice(1)}">${ibcstart(i, b, c)}${t.text}${ibcend(i, b, c)}</a>`
+          break
+        }
+        case state.text: {
+          div.textContent = t.text
+          res += `${ibcstart(i, b, c)}${div.innerHTML}${ibcend(i, b, c)}`
+          break
+        }
+        case state.italic: {
+          res += `${ibcstart(true, b, c)}*${ibcend(true, b, c)}`
+          i = !i
+          break
+        }
+        case state.bold: {
+          res += `${ibcstart(i, true, c)}**${ibcend(i, true, c)}`
+          b = !b
+          break
+        }
+        case state.code: {
+          res += `${ibcstart(i, b, true)}\`${ibcend(i, b, true)}`
+          c = !c
           break
         }
       }
     }
-    if (skip) {
-      skip = false
-      continue
+    if (l.quote !== undefined) {
+      res += "</span>"
     }
-    switch (char) {
-      case "*": {
-        if (currentstate !== undefined) {
-          l.tokens.push({ state: currentstate, start: tokenstart, text: word })
-          tokenstart += word.length
-          currentstate = undefined
-          word = ""
-        }
-        if (s.charAt(i + 1) === "*") {
-          l.tokens.push({ state: state.bold, start: tokenstart, text: "**" })
-          tokenstart += 2
-          skip = true
-        } else {
-          l.tokens.push({ state: state.italic, start: tokenstart, text: "*" })
-          tokenstart += 1
-        }
-        continue;
-      }
-      case "`": {
-        if (currentstate !== undefined) {
-          l.tokens.push({ state: currentstate, start: tokenstart, text: word })
-          tokenstart += word.length
-          currentstate = undefined
-          word = ""
-        }
-        l.tokens.push({ state: state.code, start: tokenstart, text: "`" })
-        tokenstart += 1
-        continue;
-      }
-      case "\n": {
-        if (currentstate !== undefined) {
-          l.tokens.push({ state: currentstate, start: tokenstart, text: word })
-          currentstate = undefined
-          word = ""
-        }
-        res.push(l)
-        l = { tokens: [], start: i + 1 }
-        first = true
-        tokenstart = 0
-        continue
-      }
-    }
-    switch (currentstate) {
-      case undefined: {
-        tokenstart = i
-        switch (char) {
-          case "#": {
-            if (isAlphanumericNonzero(s.charAt(i + 1))) {
-              currentstate = state.hashtag
-            } else {
-              currentstate = state.text
-              word = "#"
-            }
-            continue
-          }
-          case "@": {
-            if (isAlphanumeric(s.charAt(i + 1))) {
-              currentstate = state.mention
-            } else {
-              currentstate = state.text
-              word = "@"
-            }
-            continue
-          }
-          default: {
-            word = char
-            continue
-          }
-        }
-      }
-      case state.hashtag: {
-        if (isAlphanumeric(char)) {
-          word += char
-        } else {
-          l.tokens.push({ state: currentstate, start: tokenstart, text: word })
-          tokenstart = i
-          if (char === )
-        }
-
-      }
-
-    }
-
-
-
   }
   return res
+}
+
+function ibcstart(italic: boolean, bold: boolean, code: boolean): string {
+  return `${code ? "<code>" : ""}${bold ? "<b>" : ""}${italic ? "<em>" : ""}`
+}
+
+function ibcend(italic: boolean, bold: boolean, code: boolean): string {
+  return `${italic ? "</em>" : ""}${bold ? "</b>" : ""}${code ? "</code>" : ""}`
+}
+
+type statemachine = {
+  lines: line[]
+  line: line
+  tokenstart: number
+  state: undefined | state
+  word: string
+  skip: boolean
+  first: boolean
+}
+
+function eat(sm: statemachine, char: string, nchar: string, idx: number): statemachine {
+  if (sm.first) {
+    sm.first = false
+    sm.line.quote = checkquote(char)
+  }
+  if (sm.skip) {
+    sm.skip = false
+    return sm
+  }
+  switch (char) {
+    case "*":
+      sm = flush(sm)
+      sm.state = (nchar === "*") ? state.bold : state.italic
+      return flush(sm)
+    case "`":
+      sm = flush(sm)
+      sm.state = state.code
+      return flush(sm)
+    case "\n":
+      sm = flush(sm)
+      sm.lines.push(sm.line)
+      sm.line = { tokens: [], start: idx + 1 }
+      sm.first = true
+      sm.tokenstart = 0
+      return sm
+  }
+  switch (sm.state) {
+    case state.hashtag:
+    case state.mention:
+      if (isAlphanumeric(char)) {
+        sm.word += char
+        return sm
+      } else {
+        sm = flush(sm)
+      }
+  }
+  switch (char) {
+    case "#": {
+      if (isAlphanumericNonzero(nchar)) {
+        sm = flush(sm)
+        sm.state = state.hashtag
+        break
+      }
+    }
+    case "@": {
+      if (isAlphanumeric(nchar)) {
+        sm = flush(sm)
+        sm.state = state.mention
+        break
+      }
+    }
+    default: {
+      sm.state = state.text
+    }
+  }
+  sm.word += char
+  return sm
+}
+
+function flush(sm: statemachine): statemachine {
+  if (sm.state !== undefined) {
+    sm.line.tokens.push({ state: sm.state, start: sm.tokenstart, text: sm.word })
+    sm.tokenstart += sm.word.length
+    switch (sm.state) {
+      case state.bold:
+        sm.tokenstart += 2
+        sm.skip = true
+        break
+      case state.hashtag:
+      case state.mention:
+      case state.italic:
+      case state.code:
+        sm.tokenstart += 1
+    }
+    sm.word = ""
+    sm.state = undefined
+  }
+  return sm
+}
+
+function checkquote(char: string): quote | undefined {
+  switch (char) {
+    case "^":
+      return quote.up
+    case ">":
+      return quote.right
+    case "<":
+      return quote.left
+    case "v":
+    case "V":
+      return quote.down
+    default:
+      return undefined
+  }
+}
+
+
+export function parse(s: string): line[] {
+  var sm: statemachine = {
+    lines: [],
+    line: { tokens: [], start: 0 },
+    tokenstart: 0,
+    state: undefined,
+    word: "",
+    skip: false,
+    first: true
+  }
+  for (let i = 0; i < s.length; i++) {
+    const char = s.charAt(i)
+    const nchar = s.charAt(i + 1)
+    sm = eat(sm, char, nchar, i)
+  }
+  sm = flush(sm)
+  sm.lines.push(sm.line)
+  return sm.lines
 }
 
 // possible cases:
@@ -161,7 +243,9 @@ export function parse(s: string): line[] {
 export function insert(s: string, into: line[], at: number): line[] {
   const lineNum = find(into, at)
   const tokenNum = find(into[lineNum].tokens, at - into[lineNum].start)
+  const newlines = parse(s)
   return into
+
 }
 
 function isAlphanumeric(char: string): boolean {

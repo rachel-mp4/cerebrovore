@@ -108,6 +108,10 @@
           <time class="time" datetime={new Date(item.pubAt).toISOString()}
             >{newAbsoluteTimestamp(item.pubAt)}</time
           >
+        {:else if isMessage(item) && item.lrcdata.mine}
+          <time class="time"
+            >{item.lrcdata.body === mylocaltext ? "there" : "here"}</time
+          >
         {/if}
       </div>
       <div class="body">
