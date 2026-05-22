@@ -10,6 +10,17 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.1",
+			Timestamp: "2026-05-22",
+			Notes: []types.Note{
+				{
+					Type:        "fix",
+					Name:        "frontend optimizations!",
+					Description: "please let me know if frontend still sucks for long threads, optimized scrolling the background text, and some css selectors",
+				},
+			},
+		},
+		{
 			Release:   "β.5.0",
 			Timestamp: "2026-05-17",
 			Notes: []types.Note{
