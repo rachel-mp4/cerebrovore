@@ -33,7 +33,7 @@ func generateVal(i int) float64 {
 }
 
 func generateCss(i int, f float64) string {
-	return fmt.Sprintf("#eats-ur-brain .tx:nth-last-of-type(%d) {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * %f));}", i, f)
+	return fmt.Sprintf(`#eats-ur-brain .tx[data-from-end="%d"] {font-size:calc(var(--fs-min) + calc(var(--fs-pmax) * %f));}`, i, f)
 }
 
 func generateDelays(i int) string {

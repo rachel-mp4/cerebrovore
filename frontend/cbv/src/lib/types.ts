@@ -108,5 +108,6 @@ export type LogItem = {
   time: number
   type: string
   key: number
+  ignore: boolean
 }
 

@@ -98,8 +98,17 @@
   color: var(--fl);
 }
 
-
 /* log styles */
+.log {
+  position: fixed;
+  top:0;
+  bottom:0;
+  left:0;
+  right:0;
+  filter: blur(1rem);
+  pointer-events: none;
+}
+
 .logitem {
   font-size: 2rem;
   font-weight: 900;
@@ -111,7 +120,7 @@
   line-height: 0.7;
   opacity: 0;
   animation: 3.35s ease-out fadeout;
-  filter: blur(1rem);
+  mix-blend-mode: plus-lighter;
 }
 
 @keyframes fadeout {

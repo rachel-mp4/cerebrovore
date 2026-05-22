@@ -18,12 +18,16 @@
   };
 </script>
 
-{#each log as logitem (logitem.key)}
-  <span
-    style={randPosition(logitem)}
-    style:--accent={numToHex(logitem.color ?? 0)}
-    class="logitem {logitem.type}"
-  >
-    0x{logitem.binary}
-  </span>
-{/each}
+<div class="log">
+  {#each log as logitem (logitem.key)}
+    {#if !logitem.ignore}
+      <span
+        style={randPosition(logitem)}
+        style:--accent={numToHex(logitem.color ?? 0)}
+        class="logitem {logitem.type}"
+      >
+        0x{logitem.binary}
+      </span>
+    {/if}
+  {/each}
+</div>

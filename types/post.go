@@ -24,6 +24,7 @@ type Post struct {
 	CanSeeAnon     bool
 	LinkToModerate bool
 	ProfileHead    *ProfileHead
+	FromEnd        *int
 }
 
 func (p *Post) String() string {

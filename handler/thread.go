@@ -927,6 +927,16 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to get thread", http.StatusNotFound)
 		return
 	}
+	lent := len(t.Posts)
+	for i := range 40 {
+		if i == 0 {
+			continue
+		}
+		if lent-i < 0 {
+			break
+		}
+		t.Posts[lent-i].FromEnd = &i
+	}
 	title := ntid
 	if t.Topic != nil {
 		title = *t.Topic

@@ -27,7 +27,6 @@ export enum state {
 }
 
 export function render(ll: line[]): string {
-  console.log(ll)
   var res = ""
   var i = false
   var b = false

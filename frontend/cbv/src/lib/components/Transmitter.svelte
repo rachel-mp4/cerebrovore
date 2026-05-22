@@ -14,6 +14,9 @@
   let anon = $state(ctx.anon);
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
+  onMount(() => {
+    document.dispatchEvent(new CustomEvent("lrc:scroll"));
+  });
   $effect(() => {
     if (ctx) {
       ctx.setNick(nick);
@@ -137,20 +140,14 @@
     imageAlt = "";
     imageURL = undefined;
   };
+  let lines = $state(1);
   let inputEl: HTMLTextAreaElement;
   function adjustHeight() {
     if (inputEl) {
-      const init = inputEl.style.height;
-      inputEl.style.height = inputEl.scrollHeight + "px";
-      if (inputEl.style.height !== init) {
-        const el: HTMLElement | null = document.getElementById("main-content");
-        if (el) {
-          console.log("scrolling here!");
-          setTimeout(() => {
-            el.scrollTo(0, el.scrollHeight + 1000);
-          }, 0);
-        }
-      }
+      inputEl.style.height = "auto";
+      const pheight = Math.min(inputEl.scrollHeight, 24 * 4.5);
+      lines = Math.round(pheight / 12) / 2; // presumably 9 / 2 always equals 4.5 in floating point >_>
+      inputEl.style.height = `${pheight}px`;
     }
   }
   function adjust(event: Event) {
@@ -189,7 +186,7 @@
 {#if ctx.systemMessage}
   <div class="system-message">{ctx.systemMessage}</div>
 {/if}
-<div class="transmitter">
+<div id="transmitter-thingy" data-lines={lines} class="transmitter">
   <div class="wrapper" style:--accent={color}>
     <input
       type="range"

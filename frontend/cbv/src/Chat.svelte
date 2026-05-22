@@ -30,6 +30,7 @@
 {#if ctx.connected}
   <Receiver
     items={ctx.items}
+    mylocalid={ctx.curMsgId}
     mylocaltext={ctx.curMsg}
     mylocalimage={ctx.curImageBlobURL}
     onmute={ctx.mute}

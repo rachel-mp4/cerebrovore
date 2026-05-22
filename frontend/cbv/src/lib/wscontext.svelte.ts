@@ -9,6 +9,7 @@ export class WSContext {
   existingindices: Map<number, boolean> = new Map()
   items: Array<cbv.Item> = $state(new Array())
   log: Array<cbv.LogItem> = $state(new Array())
+  logidx: number = 0
   topic: string = $state("")
   connected: boolean = $state(false)
   conncount = $state(0)
@@ -25,6 +26,7 @@ export class WSContext {
   nick: string = "wanderer"
   anon: boolean = false
   curMsg: string = $state("")
+  curMsgId: string | undefined = $state()
   curImageBlobURL: string | undefined = $state()
   myMessage: cbv.Message | undefined
   messageactive: boolean = false
@@ -67,6 +69,11 @@ export class WSContext {
     })
     this.anon = localStorage.getItem("anon") !== null
     this.shouldCalcPing = localStorage.getItem("displayPing") !== null
+    const log = new Array<cbv.LogItem>(200)
+    for (let i = 0; i < 200; i++) {
+      log[i] = { type: "init", id: 0, binary: "", time: 0, key: Math.random(), ignore: true }
+    }
+    this.log = log
   }
 
   connect(url: string) {
@@ -137,14 +144,21 @@ export class WSContext {
       this.myMessage = undefined
       this.messageactive = false
       this.curMsg = ""
+      this.curMsgId = undefined
     } else if (this.messageactive) {
       // i believe this is the case where we just started typing and we haven't recieved the response from the initial
       // message yet. this potentially is not ideal because we may have myMessage defined and not set back to undefined
       // i'm just putting a note here to remind me about this possible race. i don't think it should have any issues...
+      // edited may 22 when i introduced the below race: shouldn't it be thus possible to try and double post a message?
+      // honestly, i'm not sure what the backend does right now if you try and double post a message, honestly. reasoning
+      // for the concerns is that if myMessage is defined while message is not active because the init came late, them
+      // we can press enter a second time and it should go through the rigamarole. i think that i just validate for if the
+      // nonce works. presumably here it should refuse on add to database since the primary key would be duplicated
       this.starttransmit()
       pubMessage(this)
       this.messageactive = false
       this.curMsg = ""
+      this.curMsgId = undefined // ATTENTION THIS IS A RACE! ITS NOT THAT BIG A DEAL BUT THIS IS A RACE
     }
   }
 
@@ -316,10 +330,14 @@ export class WSContext {
       }
     }
     this.items.push(item)
+    document.dispatchEvent(new CustomEvent("lrc:append"))
     this.existingindices.set(item.id, true)
   }
 
   initMessage = (id: number, init: cbv.LrcInit, mine: boolean) => {
+    if (mine) {
+      this.curMsgId = b36encodenumber(id)
+    }
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
         return item.id === id && isMessage(item)
@@ -480,15 +498,17 @@ export class WSContext {
   }
 
   pushToLog = (id: number, ba: Uint8Array, type: string) => {
-    return
-    // const bstring = Array.from(ba).map(byte => byte.toString(16).padStart(2, "0")).join('')
-    // const time = Date.now()
-    // var color: number | undefined
-    // if (type == "init" || type == "pub") {
-    //   const item = this.items.find((item) => item.id === id)
-    //   color = item?.lrcdata.init?.color
-    // }
-    // this.log = [...this.log.filter(li => li.time > Date.now() - 3000), { id: id, color: color, binary: bstring, time: time, type: type, key: Math.random() }]
+    const bstring = Array.from(ba).map(byte => byte.toString(16).padStart(2, "0")).join('')
+    const time = Date.now()
+    var color: number | undefined
+    if (type == "init" || type == "pub") {
+      const item = this.items.find((item) => item.id === id)
+      color = item?.lrcdata.init?.color
+    }
+    this.log = this.log.map((li, idx) => idx === this.logidx
+      ? { id: id, color: color, binary: bstring, time: time, type: type, key: Math.random(), ignore: false }
+      : li)
+    this.logidx = (this.logidx + 1) % 200
   }
 }
 
@@ -527,27 +547,15 @@ export const connectTo = (url: string, ctx: WSContext) => {
     setNick(ctx.nick, ctx)
     setColor(ctx.color, ctx)
   };
-  const el: HTMLElement | null = document.getElementById("main-content")
   ws.onmessage = (event) => {
-    // parseEvent(event, ctx)
-    console.log(event)
-    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 1) {
-      const shouldScroll = parseEvent(event, ctx)
-      if (shouldScroll !== 0) {
-        setTimeout(() => {
-          el.scrollTo(0, el.scrollHeight)
-        }, 0)
-      }
-    } else {
-      const shouldScroll = parseEvent(event, ctx)
-      if (shouldScroll === 2) {
-        setTimeout(() => {
-          if (el) el.scrollTo(0, el.scrollHeight)
-        }, 0)
-
-      }
+    switch (parseEvent(event, ctx)) {
+      case 1:
+        document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"))
+        break;
+      case 2:
+        document.dispatchEvent(new CustomEvent("lrc:scroll"))
     }
-  };
+  }
   ws.onclose = (e) => {
     console.log(e)
     if (ws === ctx.ws) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import { b36encodenumber } from "../utils";
   import EnbyTransmission from "./EnbyTransmission.svelte";
   import MessageTransmission from "./MessageTransmission.svelte";
@@ -7,8 +8,10 @@
   import { newAbsoluteTimestamp } from "../utils";
   import { isMessage, isImage, isEnby } from "../types";
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
+  import { tick } from "svelte";
   interface Props {
     items: Array<Item>;
+    mylocalid?: string;
     mylocaltext?: string;
     mylocalimage?: string | undefined;
     onmute?: (id: number) => void;
@@ -17,12 +20,19 @@
   }
   let {
     items,
+    mylocalid,
     mylocaltext,
     mylocalimage,
     onmute,
     onunmute,
     ismoderator,
   }: Props = $props();
+  let bottomEl: HTMLDivElement;
+  let pinnedToBottomone = true;
+  let pinnedToBottomtwo = true;
+  let pinnedToBottomthree = true;
+  let pinnedToBottomfour = true;
+  let pinnedToBottomfourpfive = true;
   const isActive = (item: Item): boolean => {
     if (isEnby(item)) {
       return true;
@@ -34,21 +44,148 @@
       return false;
     }
   };
-  let el = document.getElementById("main-content");
-  $effect(() => {
-    if (mylocaltext) {
-      checknscroll();
+
+  document.addEventListener("lrc:append", async () => {
+    await tick();
+    const el = document.getElementById("eats-ur-brain");
+    if (el === null) {
+      return;
+    }
+    var child: Element | null = el.lastElementChild;
+    if (child === null) {
+      return;
+    }
+    if (child !== null) {
+      while (!child.classList.contains("tx")) {
+        const prevchild: Element | null = child.previousElementSibling;
+        if (prevchild === null) {
+          return;
+        }
+        child = prevchild;
+      }
+      for (let i = 1; i < 40; i++) {
+        child.setAttribute("data-from-end", i.toString());
+        const prevchild: Element | null = child.previousElementSibling;
+        if (prevchild === null) {
+          return;
+        }
+        child = prevchild;
+      }
     }
   });
-  const checknscroll = () => {
-    // i just use a big value here (100) because i can't figure it out...
-    // besides, if you're typing, you probably want to be at bottom
-    if (el && el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-      setTimeout(() => {
-        if (el) el.scrollTo(0, el.scrollHeight);
-      }, 0);
+
+  let pendingscroll = false;
+  let canceledscroll = false;
+  const scrollIfPinned = () => {
+    const lines = document
+      .getElementById("transmitter-thingy")
+      ?.getAttribute("data-lines");
+    switch (lines) {
+      case "1":
+        if (pinnedToBottomone) scroll();
+        break;
+      case "2":
+        if (pinnedToBottomtwo) scroll();
+        break;
+      case "3":
+        if (pinnedToBottomthree) scroll();
+        break;
+      case "4":
+        if (pinnedToBottomfour) scroll();
+        break;
+      case "4.5":
+        if (pinnedToBottomfourpfive) scroll();
+        break;
+      default:
+        console.log("i wanna die");
     }
   };
+
+  const scroll = () => {
+    if (pendingscroll) return;
+    pendingscroll = true;
+    requestAnimationFrame(() => {
+      pendingscroll = false;
+      if (canceledscroll) {
+        return;
+      }
+      bottomEl.scrollIntoView();
+    });
+  };
+
+  const scrollToMe = (id: string) => {
+    canceledscroll = true;
+    requestAnimationFrame(() => {
+      canceledscroll = false;
+      document.getElementById(id)?.scrollIntoView();
+    });
+  };
+
+  onMount(() => {
+    const observerone = new IntersectionObserver(
+      ([entry]) => {
+        pinnedToBottomone = entry.isIntersecting;
+      },
+      {
+        rootMargin: `0px 0px -${24 + 24 * 1}px 0px`,
+      },
+    );
+    const observertwo = new IntersectionObserver(
+      ([entry]) => {
+        pinnedToBottomtwo = entry.isIntersecting;
+      },
+      {
+        rootMargin: `0px 0px -${24 + 24 * 2}px 0px`,
+      },
+    );
+    const observerthree = new IntersectionObserver(
+      ([entry]) => {
+        pinnedToBottomthree = entry.isIntersecting;
+      },
+      {
+        rootMargin: `0px 0px -${24 + 24 * 3}px 0px`,
+      },
+    );
+    const observerfour = new IntersectionObserver(
+      ([entry]) => {
+        pinnedToBottomfour = entry.isIntersecting;
+      },
+      {
+        rootMargin: `0px 0px -${24 + 24 * 4}px 0px`,
+      },
+    );
+    const observerfourpfive = new IntersectionObserver(
+      ([entry]) => {
+        pinnedToBottomfourpfive = entry.isIntersecting;
+      },
+      {
+        rootMargin: `0px 0px -${24 + 24 * 4.5}px 0px`,
+      },
+    );
+    observerone.observe(bottomEl);
+    observertwo.observe(bottomEl);
+    observerthree.observe(bottomEl);
+    observerfour.observe(bottomEl);
+    observerfourpfive.observe(bottomEl);
+    document.addEventListener("lrc:scroll", scroll);
+    document.addEventListener("lrc:scrollIfAttached", scrollIfPinned);
+    scroll();
+
+    return () => {
+      observerone.disconnect();
+      observertwo.disconnect();
+      observerthree.disconnect();
+      observerfour.disconnect();
+      observerfourpfive.disconnect();
+      document.removeEventListener("lrc:scroll", scroll);
+      document.removeEventListener("lrc:scrollIfAttached", scrollIfPinned);
+    };
+  });
+  $effect(() => {
+    if (mylocaltext && mylocalid) {
+      scrollToMe(mylocalid);
+    }
+  });
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
@@ -164,3 +301,4 @@
     </button>
   {/if}
 {/each}
+<div bind:this={bottomEl} style="height:1px"></div>
