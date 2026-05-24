@@ -94,3 +94,5 @@ export function dumbAbsoluteTimestamp(then: number): string {
 export function b36encodenumber(n: number): string {
   return n.toString(36)
 }
+
+export const maxItemIdx = 4_294_967_295

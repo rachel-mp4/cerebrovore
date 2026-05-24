@@ -5,7 +5,7 @@
   import MessageTransmission from "./MessageTransmission.svelte";
   import ImageTransmission from "./ImageTransmission.svelte";
   import type { Item } from "../types";
-  import { newAbsoluteTimestamp } from "../utils";
+  import { newAbsoluteTimestamp, maxItemIdx } from "../utils";
   import { isMessage, isImage, isEnby } from "../types";
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
   import { tick } from "svelte";
@@ -189,9 +189,10 @@
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
+  {@const id = item.id < maxItemIdx ? b36encodenumber(item.id) : "???"}
   {#if item.lrcdata.muted === false}
     <div
-      id={b36encodenumber(item.id)}
+      {id}
       style:--accent={numToHex(item.lrcdata?.init?.color ?? 0)}
       style:--accentl={hexToTransparent(
         numToHex(item.lrcdata?.init?.color ?? 0),
@@ -215,7 +216,7 @@
             >
           {/if}
         {/if}
-        <button class="reply">{` #${b36encodenumber(item.id)}`}</button>
+        <button class="reply">{` #${id}`}</button>
         {#if item.lrcdata.mine !== true}
           <button class="report clickable">{" report"}</button>
           <button
@@ -227,17 +228,15 @@
           >
           {#if ismoderator}
             <button class="delete clickable">{" delete"}</button>
-            <a
-              class="moderate clickable"
-              href={`/moderate?id=${b36encodenumber(item.id)}`}>{" moderate"}</a
+            <a class="moderate clickable" href={`/moderate?id=${id}`}
+              >{" moderate"}</a
             >
           {/if}
         {:else}
           <button class="delete clickable">{" delete"}</button>
           {#if ismoderator}
-            <a
-              class="moderate clickable"
-              href={`/moderate?id=${b36encodenumber(item.id)}`}>{" moderate"}</a
+            <a class="moderate clickable" href={`/moderate?id=${id}`}
+              >{" moderate"}</a
             >
           {/if}
         {/if}

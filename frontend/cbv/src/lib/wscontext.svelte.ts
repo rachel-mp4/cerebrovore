@@ -5,6 +5,51 @@ import * as lrc from '@rachel-mp4/lrcproto/gen/ts/lrc'
 import { numToHex } from "./colors"
 import { getFocusPingVolume, getPingVolume, getVolume, onVolumeChange, onVolumeFocusPingChange, onVolumePingChange } from "./volume"
 
+
+// the basic idea is that we start out in the ready state, and when we insert we transition into the started state
+// at which point either we will recieve our init from the server and enter the normal happy state, or we can send
+// in which case we enter the sentWithoutReceiving state. from the sentWithoutReceiving state, we can initialize a
+// second message, which will appear to us just as the first one did, however the critical thing here is that we
+// can no longer send it, and in fact it won't even send its lrc init event until we recieve our response from the
+// first one. the idea here is that in all likelihood, a user should be able to spam message a lil bit, & they should
+// be able to send one message fast even with high ping, and they should even be able to seamlessly start their next
+// message with high ping, but the response from the first one should arrive by the time they have both sent the first
+// message, started the second, and finished the second. in order to have a truly robust system, we'd need to up the
+// complexity here a ton and track every message i send & recieve individually, which sucks, so this hopefully should
+// be a middleground that's only moderate complexity but which handles 99.99% of legitimate cases
+type lrcState = ready | sent | received | pubbedWithoutReceiving
+type mediaUploadState = ready | uploading | uploaded
+
+type ready = {
+  kind: "ready"
+}
+const ready: ready = {
+  kind: "ready"
+}
+type uploading = {
+  kind: "uploading"
+  nonce: string
+}
+type uploaded = {
+  kind: "uploaded"
+  cid: string
+}
+
+type sent = {
+  kind: "sent"
+  fakeId: number  // i know i will hate me for this in the future, but i think Date.now() is an easy enough solution 
+}                 // because no collisions, and it's guaranteed to be above uint32 max
+
+type received = {
+  kind: "recieved"
+  init: lrc.Init
+}
+
+type pubbedWithoutReceiving = {
+  kind: "pubbedWithoutReceiving"
+  fakeId: number
+}
+
 export class WSContext {
   existingindices: Map<number, boolean> = new Map()
   items: Array<cbv.Item> = $state(new Array())
@@ -27,13 +72,11 @@ export class WSContext {
   anon: boolean = false
   curMsg: string = $state("")
   curMsgId: string | undefined = $state()
+  myMessageState: lrcState = ready
   curImageBlobURL: string | undefined = $state()
-  myMessage: cbv.Message | undefined
-  messageactive: boolean = false
-  myImageRef: string | undefined = $state()
-  myImageNonce: string | undefined
-  myMedia: cbv.Media | undefined
-  mediaactive: boolean = false
+  myMediaState: lrcState = $state(ready)
+  myMediaUploadState: mediaUploadState = $state(ready)
+
   cc: BroadcastChannel
 
   volume: number
@@ -42,7 +85,6 @@ export class WSContext {
   focusping: HTMLAudioElement = new Audio('/wav/shortnotif.wav')
   focuspingvolume: number
 
-  shouldTransmit: boolean = $state(true)
   lrceventqueue: Array<lrc.Edit> = []
 
   constructor(defaultNick: string, defaultColor: number) {
@@ -113,131 +155,141 @@ export class WSContext {
     }
   }
 
-  insertLineBreak = () => {
-    if (this.myMessage) {
-      this.starttransmit()
-      pubMessage(this)
-      let body = this.curMsg
-      const fd = new FormData()
-      fd.append("id", b36encodenumber(this.myMessage.id))
-      fd.append("color", numToHex(this.color))
-      fd.append("nick", this.nick)
-      fd.append("body", body)
-      if (this.anon) {
-        fd.append("anon", "yes")
+  insertLineBreak = (): number => {
+    switch (this.myMessageState.kind) {
+      case "ready": {
+        return 0 // do nothing
       }
-      if (this.myMessage.lrcdata?.init?.nonce) {
-        fd.append("nonce", b64encodebytearray(this.myMessage.lrcdata.init.nonce))
+
+      case "pubbedWithoutReceiving": {
+        return 2 // wiggle (not allowed)
       }
-      const endpoint = window.location.href
-      console.log("endpoint: ", endpoint)
-      fetch(endpoint, {
-        method: "POST",
-        body: fd,
-      }).then((response) => {
-        if (response.ok) {
-          console.log(response)
-        } else {
-          throw new Error(`HTTP ${response.status}`)
-        }
-      }).catch(console.error)
-      this.myMessage = undefined
-      this.messageactive = false
-      this.curMsg = ""
-      this.curMsgId = undefined
-    } else if (this.messageactive) {
-      // i believe this is the case where we just started typing and we haven't recieved the response from the initial
-      // message yet. this potentially is not ideal because we may have myMessage defined and not set back to undefined
-      // i'm just putting a note here to remind me about this possible race. i don't think it should have any issues...
-      // edited may 22 when i introduced the below race: shouldn't it be thus possible to try and double post a message?
-      // honestly, i'm not sure what the backend does right now if you try and double post a message, honestly. reasoning
-      // for the concerns is that if myMessage is defined while message is not active because the init came late, them
-      // we can press enter a second time and it should go through the rigamarole. i think that i just validate for if the
-      // nonce works. presumably here it should refuse on add to database since the primary key would be duplicated
-      this.starttransmit()
-      pubMessage(this)
-      this.messageactive = false
-      this.curMsg = ""
-      this.curMsgId = undefined // ATTENTION THIS IS A RACE! ITS NOT THAT BIG A DEAL BUT THIS IS A RACE
+
+      case "sent": {
+        pubMessage(this)
+        const fake = this.myMessageState.fakeId
+        this.items = this.items.map((item) =>
+          item.id === fake && isMessage(item)
+            ? { ...item, ignore: true, lrcdata: { ...item.lrcdata, body: this.curMsg + "WARNING: YOU MAY BE DISCONNECTED // don't submit message so fast", pub: true } }
+            : item)
+        this.myMessageState = { kind: "pubbedWithoutReceiving", fakeId: this.myMessageState.fakeId }
+        this.curMsg = ""
+        this.curMsgId = undefined
+        return 1 // send
+      }
+
+      case "recieved": {
+        pubMessage(this)
+        const id = postMessage(this.myMessageState.init, this.curMsg)
+        this.items = this.items.map((item) => item.id === id
+          && isMessage(item)
+          ? { ...item, ignore: true, lrcdata: { ...item.lrcdata, body: this.curMsg, pub: true } }
+          : item)
+        this.myMessageState = ready
+        this.curMsg = ""
+        this.curMsgId = undefined
+        return 1 // send
+      }
     }
   }
+
 
   pubImage = (alt: string) => {
     this.curImageBlobURL = undefined
-    if (this.myMedia) {
-      if (this.myImageRef) {
-        const contentAddress = `/blob?cid=${this.myImageRef}`
-        pubImage(alt, contentAddress, this)
-        const fd = new FormData()
-        fd.append("id", b36encodenumber(this.myMedia.id))
-        fd.append("color", numToHex(this.color))
-        fd.append("nick", this.nick)
-        fd.append("cid", this.myImageRef)
-        fd.append("alt", alt)
-        if (this.anon) {
-          fd.append("anon", "yes")
-        }
-        if (this.myMedia.lrcdata?.init?.nonce) {
-          fd.append("nonce", b64encodebytearray(this.myMedia.lrcdata.init.nonce))
-        }
-        const endpoint = window.location.href
-        console.log("endpoint: ", endpoint)
-        fetch(endpoint, {
-          method: "POST",
-          body: fd,
-        }).then((response) => {
-          if (response.ok) {
-            console.log(response)
-          } else {
-            throw new Error(`HTTP ${response.status}`)
-          }
-        }).catch(console.error)
-      } else {
-        pubImage(alt, undefined, this)
+    switch (this.myMediaState.kind) {
+      case "ready":
+      case "pubbedWithoutReceiving": {
+        return
       }
-      this.myMedia = undefined
-      this.myImageRef = undefined
-      this.mediaactive = false
-    } else if (this.mediaactive) {
-      if (this.myImageRef) {
-        console.error("myImageRef should be undefined in this case") // why?
-        this.myImageRef = undefined                                  // perhaps i assumed this because it should take a
-      }                                                              // while to upload the image, and the round trip for
-      pubImage(alt, undefined, this)                                 // both lrc and image upload should be the same?
-      this.mediaactive = false
+
+      case "sent": {
+        switch (this.myMediaUploadState.kind) {
+          case "ready":
+          case "uploading": {
+            pubImage(alt, undefined, this)
+            break
+          }
+
+          case "uploaded": {
+            const contentAddress = `/blob?cid=${this.myMediaUploadState.cid}`
+            pubImage(alt, contentAddress, this)
+            break
+          }
+        }
+        this.myMediaState = { kind: "pubbedWithoutReceiving", fakeId: this.myMediaState.fakeId }
+        this.myMediaUploadState = ready
+        return
+      }
+
+      case "recieved": {
+        switch (this.myMediaUploadState.kind) {
+          case "ready":
+          case "uploading": {
+            pubImage(alt, undefined, this)
+            break
+          }
+
+          case "uploaded": {
+            const contentAddress = `/blob?cid=${this.myMediaUploadState.cid}`
+            pubImage(alt, contentAddress, this)
+            postImage(this.myMediaState.init, this.myMediaUploadState.cid, alt)
+            break
+          }
+        }
+        this.myMediaState = ready
+        this.myMediaUploadState = ready
+      }
     }
   }
 
+
   cancelImage = () => {
-    if (this.mediaactive) {
-      pubImage(undefined, undefined, this)
-      this.curImageBlobURL = undefined
-      this.myMedia = undefined
-      this.myImageRef = undefined
-      this.mediaactive = false
+    this.curImageBlobURL = undefined
+    this.myMediaUploadState = ready
+    switch (this.myMediaState.kind) {
+      case "ready":
+      case "pubbedWithoutReceiving": {
+        return
+      }
+
+      case "sent":
+      case "recieved": {
+        pubImage(undefined, undefined, this)
+        this.myMediaState = ready
+        return
+      }
     }
   }
 
   initImage = (blob: File, blobUrl: string) => {
-    if (!this.myMedia) {
-      initImage(this)
+    if (this.myMediaState.kind === "ready" && this.myMediaUploadState.kind === "ready") {
       this.curImageBlobURL = blobUrl
-      this.mediaactive = true
+      initImage(this)
+      const fake = Date.now()
+      this.pushMyItem({ type: 'image', id: fake, lrcdata: { mine: true, muted: false }, replies: [], })
+      this.myMediaState = {
+        kind: "sent",
+        fakeId: fake
+      }
       const uuid = crypto.randomUUID()
       const formData = new FormData()
       formData.append("file", blob)
       formData.append("uuid", uuid)
-      this.myImageNonce = uuid
+      this.myMediaUploadState = {
+        kind: "uploading",
+        nonce: uuid
+      }
       fetch(`/blob`, {
         method: "POST",
         body: formData
       }).then((response) => {
         if (response.ok) {
           response.json().then((data) => {
-            if (this.myImageNonce === data.uuid) {
-              this.myImageRef = data.cid
-              this.myImageNonce = undefined
-              console.log("here's myImageRef", this.myImageRef)
+            if (this.myMediaUploadState.kind === "uploading" && this.myMediaUploadState.nonce === data.uuid) {
+              this.myMediaUploadState = {
+                kind: "uploaded",
+                cid: data.cid
+              }
             } else {
               console.error("nonce mismatch!!!")
             }
@@ -250,19 +302,22 @@ export class WSContext {
   }
 
   insert = (idx: number, s: string) => {
-    if (!this.messageactive) {
-      initMessage(this)
-      this.messageactive = true
+    if (this.myMessageState.kind === "ready") {
+      const init = initMessage(this)
+      const fake = Date.now()
+      this.pushMyItem({ type: 'message', id: fake, lrcdata: { mine: true, muted: false, body: "", init: init }, replies: [], })
+      this.myMessageState = {
+        kind: "sent",
+        fakeId: fake
+      }
+      document.dispatchEvent(new CustomEvent("lrc:scroll"))
     }
-    // commented out delay to mock up high ping
-    // setTimeout(() => {
     insertMessage(idx, s, this)
-    // }, 100)
     this.curMsg = insertSIntoAStringAtIdx(s, this.curMsg, idx)
   }
 
   delete = (idx: number, idx2: number) => {
-    if (!this.messageactive) {
+    if (this.myMessageState.kind === "ready") {
       return
     }
     deleteMessage(idx, idx2, this)
@@ -309,7 +364,7 @@ export class WSContext {
     pingServer(this)
   }
 
-  pushItem = (item: cbv.Item) => {
+  pushItem = (item: cbv.Item, init?: lrc.Init) => {
     if (this.existingindices.get(item.id)) {
       console.log("you tried to push an item who exists!")
       return
@@ -324,9 +379,84 @@ export class WSContext {
     }
     if (item.lrcdata.mine) {
       if (isMessage(item)) {
-        this.myMessage = item
+        switch (this.myMessageState.kind) {
+          case "ready": {
+            console.error("your item was pushed while you were ready (didn't request init). i'm not sure how to proceed")
+            return
+          }
+
+          case "recieved": {
+            console.error("your item was pushed again after you already recieved it. i'm not sure how to proceed")
+            return
+          }
+
+          case "sent": {
+            const fake = this.myMessageState.fakeId
+            this.items = this.items.filter((item) =>
+              item.id !== fake
+            )
+            this.myMessageState = {
+              kind: "recieved",
+              init: init! // init should be set since we only know if it's mine if we're coming from an init
+            }
+            break
+          }
+
+          case "pubbedWithoutReceiving": {
+            const fake = this.myMessageState.fakeId
+            this.items = this.items.filter((item) =>
+              item.id !== fake
+            )
+            this.myMessageState = ready
+            if (this.lrceventqueue.length !== 0) {
+              const init = initMessage(this)
+              const fake = Date.now()
+              this.pushMyItem({ type: 'message', id: fake, lrcdata: { mine: true, muted: false, body: "", init: init }, replies: [], })
+              this.myMessageState = {
+                kind: "sent",
+                fakeId: fake
+              }
+              document.dispatchEvent(new CustomEvent("lrc:scroll"))
+              this.starttransmit()
+            }
+            break
+          }
+        }
       } else if (isMedia(item)) {
-        this.myMedia = item
+        switch (this.myMediaState.kind) {
+          case "ready": {
+            console.error("your item was pushed while you were ready (didn't request init). i'm not sure how to proceed")
+            return
+          }
+
+          case "recieved": {
+            console.error("your item was pushed again after you already recieved it. i'm not sure how to proceed")
+            return
+          }
+
+          case "sent": {
+            const fake = this.myMediaState.fakeId
+            this.items = this.items.filter((item) =>
+              item.id !== fake
+            )
+            this.myMediaState = {
+              kind: "recieved",
+              init: init!
+            }
+            break
+          }
+
+          case "pubbedWithoutReceiving": {
+            const fake = this.myMediaState.fakeId
+            this.items = this.items.filter((item) =>
+              item.id !== fake
+            )
+            this.myMediaState = ready
+            break
+          }
+        }
+      } else {
+        console.error("what's happening? recieved non message non media from me", item)
       }
     }
     this.items.push(item)
@@ -334,7 +464,12 @@ export class WSContext {
     this.existingindices.set(item.id, true)
   }
 
-  initMessage = (id: number, init: cbv.LrcInit, mine: boolean) => {
+  pushMyItem = (item: cbv.Item) => {
+    this.items.push(item)
+    document.dispatchEvent(new CustomEvent("lrc:append"))
+  }
+
+  initMessage = (id: number, init: cbv.LrcInit, mine?: lrc.Init) => {
     if (mine) {
       this.curMsgId = b36encodenumber(id)
     }
@@ -350,16 +485,16 @@ export class WSContext {
         id: id,
         lrcdata: {
           body: '',
-          mine: mine,
+          mine: mine !== undefined,
           muted: false,
           init: init,
         },
         replies: []
-      })
+      }, mine)
     }
   }
 
-  initMedia = (id: number, init: cbv.LrcInit, mine: boolean) => {
+  initMedia = (id: number, init: cbv.LrcInit, mine?: lrc.MediaInit) => {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
         return item.id === id && isImage(item)
@@ -371,12 +506,12 @@ export class WSContext {
         type: 'image',
         id: id,
         lrcdata: {
-          mine: mine,
+          mine: mine !== undefined,
           muted: false,
           init: init,
         },
         replies: []
-      })
+      }, mine)
     }
   }
 
@@ -454,7 +589,7 @@ export class WSContext {
   insertMessage = (id: number, idx: number, s: string) => {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
-        return item.id === id && isMessage(item)
+        return item.id === id && isMessage(item) && !item.ignore
           ? { ...item, type: "message", lrcdata: { ...item.lrcdata, body: insertSIntoAStringAtIdx(s, item.lrcdata.body, idx) } }
           : item
       })
@@ -477,7 +612,7 @@ export class WSContext {
   deleteMessage = (id: number, idx1: number, idx2: number) => {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
-        return item.id === id && isMessage(item)
+        return item.id === id && isMessage(item) && !item.ignore
           ? { ...item, type: "message", lrcdata: { ...item.lrcdata, body: deleteFromAStringBetweenIdxs(item.lrcdata.body, idx1, idx2) } }
           : item
       })
@@ -512,6 +647,61 @@ export class WSContext {
   }
 }
 
+const postMessage = (init: lrc.Init, msg: string): number => {
+  const fd = new FormData()
+  const id = init.id ?? 0
+  fd.append("id", b36encodenumber(id))
+  fd.append("color", numToHex(init.color ?? 0))
+  fd.append("nick", init.nick ?? "")
+  fd.append("body", msg)
+  if (init.externalID === undefined) {
+    fd.append("anon", "yes")
+  }
+  if (init.nonce) {
+    fd.append("nonce", b64encodebytearray(init.nonce))
+  }
+  const endpoint = window.location.href
+  fetch(endpoint, {
+    method: "POST",
+    body: fd,
+  }).then((response) => {
+    if (response.ok) {
+      console.log(response)
+    } else {
+      throw new Error(`HTTP ${response.status}`)
+    }
+  }).catch(console.error)
+  return id
+}
+
+const postImage = (mediainit: lrc.MediaInit, cid: string, alt: string): number => {
+  const fd = new FormData()
+  const id = mediainit.id ?? 0
+  fd.append("id", b36encodenumber(id))
+  fd.append("color", numToHex(mediainit.color ?? 0))
+  fd.append("nick", mediainit.nick ?? "")
+  fd.append("cid", cid)
+  fd.append("alt", alt)
+  if (mediainit.externalID === undefined) {
+    fd.append("anon", "yes")
+  }
+  if (mediainit.nonce) {
+    fd.append("nonce", b64encodebytearray(mediainit.nonce))
+  }
+  const endpoint = window.location.href
+  console.log("endpoint: ", endpoint)
+  fetch(endpoint, {
+    method: "POST",
+    body: fd,
+  }).then((response) => {
+    if (response.ok) {
+      console.log(response)
+    } else {
+      throw new Error(`HTTP ${response.status}`)
+    }
+  }).catch(console.error)
+  return id
+}
 
 const b64encodebytearray = (u8: Uint8Array): string => {
   return btoa(String.fromCharCode(...u8))
@@ -605,7 +795,6 @@ export const connectTo = (url: string, ctx: WSContext) => {
     }
     if (tse.id !== undefined) {
       if (tse.deleted === true) {
-        console.log("hi BEEPBEPGBEPFGA")
         if (ctx.existingindices.get(tse.id)) {
           ctx.items = ctx.items.filter((item) => !(item.id === tse.id))
         } else {
@@ -648,23 +837,25 @@ export const connectTo = (url: string, ctx: WSContext) => {
   })
 }
 
-export const initMessage = (ctx: WSContext) => {
+export const initMessage = (ctx: WSContext): lrc.Init => {
+  const init: lrc.Init = {
+    nick: ctx.nick,
+    ...(ctx.anon && { externalID: "" }),
+    color: ctx.color,
+
+  }
   const evt: lrc.Event = {
     msg: {
       oneofKind: "init",
-      init: {
-        nick: ctx.nick,
-        ...(ctx.anon && { externalID: "" }),
-        color: ctx.color,
-      }
+      init: init
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
   ctx.ws?.send(byteArray)
+  return init
 }
 
 export const initImage = (ctx: WSContext) => {
-  console.log("send media init!!!")
   const evt: lrc.Event = {
     msg: {
       oneofKind: "mediainit",
@@ -694,29 +885,41 @@ export const pubImage = (alt: string | undefined, contentAddress: string | undef
 }
 
 export const insertMessage = (idx: number, s: string, ctx: WSContext) => {
-  if (ctx.shouldTransmit) {
-    const evt: lrc.Event = {
-      msg: {
-        oneofKind: "insert",
-        insert: {
-          utf16Index: idx,
-          body: s
+  switch (ctx.myMessageState.kind) {
+    case "ready": {
+      console.error("called insert while message is ready! (hasn't been initialized)")
+      return
+    }
+
+    case "sent":
+    case "recieved": {
+      const evt: lrc.Event = {
+        msg: {
+          oneofKind: "insert",
+          insert: {
+            utf16Index: idx,
+            body: s
+          }
         }
       }
+      const byteArray = lrc.Event.toBinary(evt)
+      ctx.ws?.send(byteArray)
+      return
     }
-    const byteArray = lrc.Event.toBinary(evt)
-    ctx.ws?.send(byteArray)
-  } else {
-    const edit: lrc.Edit = {
-      edit: {
-        oneofKind: "insert",
-        insert: {
-          utf16Index: idx,
-          body: s
+
+    case "pubbedWithoutReceiving": {
+      const edit: lrc.Edit = {
+        edit: {
+          oneofKind: "insert",
+          insert: {
+            utf16Index: idx,
+            body: s
+          }
         }
       }
+      ctx.lrceventqueue.push(edit)
+      return
     }
-    ctx.lrceventqueue.push(edit)
   }
 }
 
@@ -733,30 +936,41 @@ export const pubMessage = (ctx: WSContext) => {
 }
 
 export const deleteMessage = (idx: number, idx2: number, ctx: WSContext) => {
-  if (ctx.shouldTransmit) {
+  switch (ctx.myMessageState.kind) {
+    case "ready": {
+      console.error("called delete while message is ready! (hasn't been initialized)")
+      return
+    }
 
-    const evt: lrc.Event = {
-      msg: {
-        oneofKind: "delete",
-        delete: {
-          utf16Start: idx,
-          utf16End: idx2
+    case "sent":
+    case "recieved": {
+      const evt: lrc.Event = {
+        msg: {
+          oneofKind: "delete",
+          delete: {
+            utf16Start: idx,
+            utf16End: idx2
+          }
         }
       }
+      const byteArray = lrc.Event.toBinary(evt)
+      ctx.ws?.send(byteArray)
+      return
     }
-    const byteArray = lrc.Event.toBinary(evt)
-    ctx.ws?.send(byteArray)
-  } else {
-    const edit: lrc.Edit = {
-      edit: {
-        oneofKind: "delete",
-        delete: {
-          utf16Start: idx,
-          utf16End: idx2
+
+    case "pubbedWithoutReceiving": {
+      const edit: lrc.Edit = {
+        edit: {
+          oneofKind: "delete",
+          delete: {
+            utf16Start: idx,
+            utf16End: idx2
+          }
         }
       }
+      ctx.lrceventqueue.push(edit)
+      return
     }
-    ctx.lrceventqueue.push(edit)
   }
 }
 
@@ -864,12 +1078,13 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       const nonce = event.msg.init.nonce
       const mine = event.msg.init.echoed ?? false
       const init: cbv.LrcInit = {
+        ...(id && { id: id }),
         ...(color && { color: color }),
         ...(nick && { nick: nick }),
         ...(handle && { handle: handle }),
         ...(nonce && { nonce: nonce }),
       }
-      ctx.initMessage(id, init, mine)
+      ctx.initMessage(id, init, mine ? event.msg.init : undefined)
       ctx.pushToLog(id, byteArray, "init")
       return mine ? 2 : 1
     }
@@ -883,12 +1098,13 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       const nonce = event.msg.mediainit.nonce
       const mine = event.msg.mediainit.echoed ?? false
       const init: cbv.LrcInit = {
+        ...(id && { id: id }),
         ...(color && { color: color }),
         ...(nick && { nick: nick }),
         ...(handle && { handle: handle }),
         ...(nonce && { nonce: nonce }),
       }
-      ctx.initMedia(id, init, mine)
+      ctx.initMedia(id, init, mine ? event.msg.mediainit : undefined)
       ctx.pushToLog(id, byteArray, "init")
       return mine ? 2 : 1
     }

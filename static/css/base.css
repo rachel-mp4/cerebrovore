@@ -744,6 +744,10 @@ a:hover {
   animation: biggly-anim 0.34s 0.067s linear infinite;
 }
 
+.dzzzt {
+  animation: squiggly-anim 0.34s linear infinite;
+}
+
 @keyframes squiggly-anim {
   0% {
     filter: url("/svg/squiggly.svg#0-0");

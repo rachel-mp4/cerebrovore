@@ -38,6 +38,7 @@ export type Message = {
   replies: Array<number>
   pubAt?: number
   renderedHTML?: string
+  ignore?: boolean
 }
 
 export type Media = Image

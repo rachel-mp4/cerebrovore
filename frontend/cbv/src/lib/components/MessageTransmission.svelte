@@ -37,7 +37,7 @@
   <!--   {/each} -->
   {#if message.renderedHTML}
     {@html message.renderedHTML}
-  {:else if mylocaltext}
+  {:else if mylocaltext !== undefined}
     {@html zizzify(mylocaltext)}
   {:else}
     {@html zizzify(message.lrcdata.body)}

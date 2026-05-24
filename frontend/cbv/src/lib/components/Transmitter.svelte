@@ -105,18 +105,30 @@
       if (event.shiftKey) {
         return;
       }
-      inputEl.style.height = "auto";
-      if (ctx.myMessage === undefined) {
-        event.preventDefault();
-        return;
-      }
-      ctx.insertLineBreak();
-      message = "";
       event.preventDefault();
-      sentmessage = "";
-      return;
+      const sent = ctx.insertLineBreak();
+      switch (sent) {
+        case 1: {
+          // normal case
+          message = "";
+          sentmessage = "";
+          return;
+        }
+        case 2: {
+          // pubbedWithoutRecieving case
+          inputEl.classList.add("dzzzt");
+          dezzzt += 1;
+          setTimeout(() => {
+            dezzzt -= 1;
+            if (dezzzt === 0) {
+              inputEl.classList.remove("dzzzt");
+            }
+          }, 340);
+        }
+      }
     }
   };
+  var dezzzt = 0;
 
   const convertFileToImageItem = (blob: File) => {
     cancelimagepost();
@@ -248,10 +260,12 @@
         bold={false}
       />
       <button onclick={cancelimagepost}> cancel </button>
-      {#if ctx.myImageRef !== undefined}
-        <button onclick={uploadimage}> confirm </button>
-      {:else}
+      {#if ctx.myMediaUploadState.kind === "ready"}
+        something went wrong if you can see me tbh
+      {:else if ctx.myMediaUploadState.kind === "uploading"}
         uploading...
+      {:else}
+        <button onclick={uploadimage}> confirm </button>
       {/if}
     </div>
   {/if}
