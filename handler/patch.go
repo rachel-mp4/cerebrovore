@@ -10,6 +10,22 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.2",
+			Timestamp: "2026-05-24",
+			Notes: []types.Note{
+				{
+					Type:        "fix",
+					Name:        "more frontend optimizations",
+					Description: "in particular it should now immediately, regardless of ping, show your post. if you can avoid it, don't send it before you get an id number - it works! spent maybe too much time making a nice system! but there's not enough info at that point in time to add it to database. if you have a post id, it's all good!",
+				},
+				{
+					Type:        "fix",
+					Name:        "initial setting for wormwatch now is enable, even if you open settings menu",
+					Description: "i hope",
+				},
+			},
+		},
+		{
 			Release:   "β.5.1",
 			Timestamp: "2026-05-22",
 			Notes: []types.Note{
