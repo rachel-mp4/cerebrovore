@@ -2,7 +2,11 @@
   import VolumeSettings from "./lib/components/VolumeSettings.svelte";
   const ntv = localStorage.getItem("new-threads");
   let wantsNewThreads = $state(ntv !== "");
-  const nww = localStorage.getItem("nowormwatch");
+  var nww = localStorage.getItem("nonewormwatch");
+  if (nww === null) {
+    nww = "";
+    localStorage.setItem("nonewormwatch", "");
+  }
   let noWormWatch = $state(nww !== "");
   const dp = localStorage.getItem("displayPing");
   let displayPing = $state(dp !== null);
@@ -13,7 +17,7 @@
     localStorage.setItem("new-threads", wantsNewThreads ? "yes" : "");
   });
   $effect(() => {
-    localStorage.setItem("nowormwatch", noWormWatch ? "yes" : "");
+    localStorage.setItem("nonewormwatch", noWormWatch ? "yes" : "");
   });
   $effect(() => {
     if (displayPing) {

@@ -2,7 +2,7 @@
   import { WormWatchContext } from "./lib/wormwatchcontext.svelte";
   import WormWatch from "./lib/components/WormWatch.svelte";
   const ctx = new WormWatchContext();
-  const nww = localStorage.getItem("nowormwatch");
+  const nww = localStorage.getItem("nonewormwatch");
 </script>
 
 {#if nww === null || nww === ""}
