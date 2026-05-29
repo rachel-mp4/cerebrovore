@@ -137,6 +137,8 @@
 <h2>debug</h2>
 <textarea bind:value={local}></textarea>
 <textarea bind:value={echo}></textarea>
-<span style="font-size:{`${fsmin + fspmax}rem`}; white-space: pre-wrap">
+<span
+  style="font-size:{`${fsmin + fspmax}rem`}; white-space: pre-wrap; --accentl:#ff000080;"
+>
   {@html diffzizz(local, echo)}
 </span>
