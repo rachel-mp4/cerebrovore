@@ -91,11 +91,12 @@
 
 /* diff styles */
 .removed {
-  text-decoration: line-through var(--fl);
+  text-decoration: line-through var(--accentl);
+  text-decoration-thickness: 0.4rem;
 }
 
 .appended {
-  color: var(--fl);
+  opacity: 0.5
 }
 
 /* log styles */

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Message } from "../types";
-  import { parse, render } from "../liveparse";
+  import { parse, renderprocessed, preprocess, diffzizz } from "../liveparse";
   interface Props {
     message: Message;
     mylocaltext?: string;
@@ -16,7 +16,7 @@
   const div = document.createElement("div");
   const zizzify = (s: string): string => {
     if (s.length < 2222) {
-      return render(parse(s));
+      return renderprocessed(preprocess(parse(s)));
     } else {
       div.textContent = s;
       return div.innerHTML;
@@ -38,7 +38,7 @@
   {#if message.renderedHTML}
     {@html message.renderedHTML}
   {:else if mylocaltext !== undefined}
-    {@html zizzify(mylocaltext)}
+    {@html diffzizz(mylocaltext, message.lrcdata.body)}
   {:else}
     {@html zizzify(message.lrcdata.body)}
   {/if}

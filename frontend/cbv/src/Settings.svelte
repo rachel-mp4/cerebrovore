@@ -1,5 +1,6 @@
 <script lang="ts">
   import VolumeSettings from "./lib/components/VolumeSettings.svelte";
+  import { diffzizz } from "./lib/liveparse";
   const ntv = localStorage.getItem("new-threads");
   let wantsNewThreads = $state(ntv !== "");
   var nww = localStorage.getItem("nonewormwatch");
@@ -42,6 +43,8 @@
     }
   }
   let fspmax = $state(initfspmax);
+  let local: string = $state("");
+  let echo: string = $state("");
 </script>
 
 <h2>font size</h2>
@@ -131,3 +134,9 @@
 >
 <input type="checkbox" bind:checked={noWormWatch} id="no-worm-watch" />
 <label for="no-worm-watch">disable worm watch</label>
+<h2>debug</h2>
+<textarea bind:value={local}></textarea>
+<textarea bind:value={echo}></textarea>
+<span style="font-size:{`${fsmin + fspmax}rem`}; white-space: pre-wrap">
+  {@html diffzizz(local, echo)}
+</span>

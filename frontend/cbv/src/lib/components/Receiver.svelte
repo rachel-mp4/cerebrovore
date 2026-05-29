@@ -189,7 +189,8 @@
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
-  {@const id = item.id < maxItemIdx ? b36encodenumber(item.id) : "???"}
+  {@const id = b36encodenumber(item.id)}
+  {@const showid = item.id < maxItemIdx}
   {#if item.lrcdata.muted === false}
     <div
       {id}
@@ -216,28 +217,30 @@
             >
           {/if}
         {/if}
-        <button class="reply">{` #${id}`}</button>
-        {#if item.lrcdata.mine !== true}
-          <button class="report clickable">{" report"}</button>
-          <button
-            class="mute clickable"
-            onclick={() => {
-              item.lrcdata.muted = true;
-              onmute?.(item.id);
-            }}>{" mute"}</button
-          >
-          {#if ismoderator}
+        {#if showid}
+          <button class="reply">{` #${id}`}</button>
+          {#if item.lrcdata.mine !== true}
+            <button class="report clickable">{" report"}</button>
+            <button
+              class="mute clickable"
+              onclick={() => {
+                item.lrcdata.muted = true;
+                onmute?.(item.id);
+              }}>{" mute"}</button
+            >
+            {#if ismoderator}
+              <button class="delete clickable">{" delete"}</button>
+              <a class="moderate clickable" href={`/moderate?id=${id}`}
+                >{" moderate"}</a
+              >
+            {/if}
+          {:else}
             <button class="delete clickable">{" delete"}</button>
-            <a class="moderate clickable" href={`/moderate?id=${id}`}
-              >{" moderate"}</a
-            >
-          {/if}
-        {:else}
-          <button class="delete clickable">{" delete"}</button>
-          {#if ismoderator}
-            <a class="moderate clickable" href={`/moderate?id=${id}`}
-              >{" moderate"}</a
-            >
+            {#if ismoderator}
+              <a class="moderate clickable" href={`/moderate?id=${id}`}
+                >{" moderate"}</a
+              >
+            {/if}
           {/if}
         {/if}
         {#if item.pubAt !== undefined}
