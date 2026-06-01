@@ -181,6 +181,8 @@ func RenderImageBody(cid string, alt *string) template.HTML {
 	if alt != nil {
 		out.WriteString(`" alt="`)
 		out.WriteString(html.EscapeString(*alt))
+		out.WriteString(`" title="`)
+		out.WriteString(html.EscapeString(*alt))
 	}
 	out.WriteString(`" /><img class="fg-img" src="/blob?cid=`)
 	out.WriteString(html.EscapeString(cid))
@@ -189,6 +191,8 @@ func RenderImageBody(cid string, alt *string) template.HTML {
 	}
 	if alt != nil {
 		out.WriteString(`" alt="`)
+		out.WriteString(html.EscapeString(*alt))
+		out.WriteString(`" title="`)
 		out.WriteString(html.EscapeString(*alt))
 	}
 	out.WriteString(`" /></div>`)

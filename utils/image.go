@@ -36,6 +36,8 @@ func RenderAvatarPFP(cidp *string, alt *string, isPixelArt *bool) template.HTML 
 	if alt != nil {
 		out.WriteString(`" alt="`)
 		out.WriteString(html.EscapeString(*alt))
+		out.WriteString(`" title="`)
+		out.WriteString(html.EscapeString(*alt))
 	}
 	out.WriteString(`" /><img class="fg-img" src="/blob?cid=`)
 	out.WriteString(html.EscapeString(cid))
@@ -45,6 +47,8 @@ func RenderAvatarPFP(cidp *string, alt *string, isPixelArt *bool) template.HTML 
 	}
 	if alt != nil {
 		out.WriteString(`" alt="`)
+		out.WriteString(html.EscapeString(*alt))
+		out.WriteString(`" title="`)
 		out.WriteString(html.EscapeString(*alt))
 	}
 	out.WriteString(`" /></div>`)

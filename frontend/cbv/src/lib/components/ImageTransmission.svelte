@@ -10,14 +10,20 @@
 
 {#if isgif}
   <div class="image-wrapper thumb">
-    <img class="bg-img" {src} {alt} /><img class="fg-img" {src} {alt} />
+    <img class="bg-img" {src} {alt} title={alt} /><img
+      class="fg-img"
+      {src}
+      {alt}
+      title={alt}
+    />
   </div>
 {:else}
   <div class="image-wrapper thumb" data-thumb="{src}&thumb=yes" data-full={src}>
-    <img class="bg-img" src="{src}&thumb=yes" {alt} /><img
+    <img class="bg-img" src="{src}&thumb=yes" {alt} title={alt} /><img
       class="fg-img"
       src="{src}&thumb=yes"
       {alt}
+      title={alt}
     />
   </div>
 {/if}

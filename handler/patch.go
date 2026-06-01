@@ -10,6 +10,28 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.4",
+			Timestamp: "2026-06-01",
+			Notes: []types.Note{
+				{
+					Type: "upgrade",
+					Name: "don't send notifications if you have a thread open",
+				},
+				{
+					Type: "upgrade",
+					Name: "paste images to new thread form",
+				},
+				{
+					Type: "upgrade",
+					Name: "alt text also rendered as title (xkcd-style hover) text",
+				},
+				{
+					Type: "fix",
+					Name: "(you)s within a thread should always render now",
+				},
+			},
+		},
+		{
 			Release:   "β.5.3",
 			Timestamp: "2026-05-31",
 			Notes: []types.Note{
