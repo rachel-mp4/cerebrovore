@@ -26,6 +26,10 @@ func getNotes() []types.Patch {
 					Name: "alt text also rendered as title (xkcd-style hover) text",
 				},
 				{
+					Type: "upgrade",
+					Name: "empty posts don't get saved to database and disappear for anyone who's connected",
+				},
+				{
 					Type: "fix",
 					Name: "(you)s within a thread should always render now",
 				},

@@ -637,6 +637,12 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if post.ImageContent == nil && (post.TextContent == nil || post.TextContent.Body == "") {
+		h.m.NotifyDelete(tid, post.ID)
+		http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
+		return
+	}
+
 	rc, backlinks, err := h.db.CreatePost(&post, r.Context())
 	if err != nil {
 		clog.Warn("%s", err)
