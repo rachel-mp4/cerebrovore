@@ -1,6 +1,12 @@
 {{define "content"}}
-  <img src="/svg/logotype.svg"/>
+  <img src="/svg/logotype.svg{{.Crack}}"/>
   <h1 class="home-title">digital coffee-house and forum</h1>
+  <p>
+    happy pride!
+  </p>
+  <p>
+    tbh i kinda prefer the favicon, maybe i'm not gonna change it back. was struggling with the logotype tho, and i didn't wanna overthink it so maybe i'll have a better idea about things in the future. well i think the branding maybe wants a bit more care in general but who cares brands are dumb. but this brand cares about gay people. it might even be led by one......
+  </p>
   <p>
     <a href="/t">view index</a>
   </p>
@@ -11,7 +17,10 @@
     <a href="/catalog">view catalog</a>
   </p>
   <p>
-    hi there! slowly working on ux stuff for mobile etc... well i'm just about to get started on that. at the very least i think it should be helpful to not have to memorize the urls, so here they are on the homepage....
+    <a href="/settings">view settings</a>
+  </p>
+  <p>
+    still starting to think about working on ux stuff for mobile etc... well i'm just about to get started on that. at the very least i think it should be helpful to not have to memorize the urls, so here they are on the homepage....
   </p>
   {{with .Link}}
     <p>
@@ -22,9 +31,6 @@
     -rachel
   </p>
   <p>
-    <a href="/patch-notes">view patch notes</a>
-  </p>
-  <p>
-    this site runs <a href="https://github.com/rachel-mp4/cerebrovore/commit/{{.Commit}}">cerebrovore#{{.Commit}}</a> release {{.Version}}. <span>it was last restarted <time class="time" timestamp="{{formatTime .Time}}">{{timeSince .Time}}</time> ago</span>
+    this site runs <a href="https://github.com/rachel-mp4/cerebrovore">cerebrovore</a><a href="https://github.com/rachel-mp4/cerebrovore/commit/{{.Commit}}">#{{.Commit}}</a> release <a href="/patch-notes">{{.Version}}</a>. <span>it was last restarted <time class="time" timestamp="{{formatTime .Time}}">{{timeSince .Time}}</time> ago</span>
   </p>
 {{end}}
