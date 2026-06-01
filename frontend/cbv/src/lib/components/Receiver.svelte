@@ -169,7 +169,6 @@
     observerfourpfive.observe(bottomEl);
     document.addEventListener("lrc:scroll", scroll);
     document.addEventListener("lrc:scrollIfAttached", scrollIfPinned);
-    scroll();
 
     return () => {
       observerone.disconnect();
@@ -246,10 +245,6 @@
         {#if item.pubAt !== undefined}
           <time class="time" datetime={new Date(item.pubAt).toISOString()}
             >{newAbsoluteTimestamp(item.pubAt)}</time
-          >
-        {:else if isMessage(item) && item.lrcdata.mine}
-          <time class="time"
-            >{item.lrcdata.body === mylocaltext ? "there" : "here"}</time
           >
         {/if}
       </div>

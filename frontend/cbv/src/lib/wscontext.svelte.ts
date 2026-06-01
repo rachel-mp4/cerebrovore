@@ -738,15 +738,13 @@ export const connectTo = (url: string, ctx: WSContext) => {
     setColor(ctx.color, ctx)
   };
   ws.onmessage = (event) => {
-    setTimeout(() => {
-      switch (parseEvent(event, ctx)) {
-        case 1:
-          document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"))
-          break;
-        case 2:
-          document.dispatchEvent(new CustomEvent("lrc:scroll"))
-      }
-    }, 300)
+    switch (parseEvent(event, ctx)) {
+      case 1:
+        document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"))
+        break;
+      case 2:
+        document.dispatchEvent(new CustomEvent("lrc:scroll"))
+    }
   }
   ws.onclose = (e) => {
     console.log(e)

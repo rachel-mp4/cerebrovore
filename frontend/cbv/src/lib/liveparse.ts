@@ -257,15 +257,15 @@ function renderdiffs(diffs: diff.Diff[]): string {
     div.textContent = diff[1]
     switch (diff[0]) {
       case -1: {
-        res += `<span class="removed">${div.innerHTML.replace("\n", "")}</span>`
+        res += `<span class="removed">${div.innerHTML.replaceAll("\n", "")}</span>`
         break
       }
       case 0: {
-        res += div.innerHTML.replace("\n", "")
+        res += div.innerHTML.replaceAll("\n", "")
         break
       }
       case 1: {
-        res += `<span class="appended">${div.innerHTML.replace("\n", "")}</span>`
+        res += `<span class="appended">${div.innerHTML.replaceAll("\n", "")}</span>`
         break
       }
     }
@@ -293,16 +293,6 @@ export function diffzizz(local: string, echo: string): string {
   const s = rendercombined(combine(ppp, diffs))
   console.log(s)
   return s
-}
-
-type diffmachine = {
-  add: boolean
-  adddiff: diff.Diff
-  addstyles: styles
-  diffs: diff.Diff
-  diffcursor: number
-  diffeaten: number
-  cumdiffidx: number
 }
 
 function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
@@ -356,6 +346,7 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
 
   for (let i = 0; i < ppp.length; i++) {
     const nl = ppp[i]
+    console.log(nl)
     const dl: diffline = { quote: nl.quote, tokens: [] }
 
     for (let j = 0; j < nl.tokens.length; j++) {
@@ -368,12 +359,8 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
       }
       if (add) {
         add = false
-        if (sequal(addstyles, nt.styles)) {
-          if (nt.state === nodestate.text) {
-            dt.diffs.push(adddiff!)
-          } else {
-            dl.tokens.push({ state: nodestate.text, text: "", diffs: [adddiff!], styles: { ...addstyles } })
-          }
+        if (sequal(addstyles, nt.styles) && nt.state === nodestate.text) {
+          dt.diffs.push(adddiff!)
         } else {
           dl.tokens.push({ state: nodestate.text, text: "", diffs: [adddiff!], styles: { ...addstyles } })
         }
@@ -435,6 +422,14 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
               dl.tokens.push(tk)
             }
             res.push(dl)
+            // we know all remaining lines are empty, but they may still exist
+            while (++i < ppp.length) {
+              // prefix operator increments then returns, which is what we want to
+              // quickly loop through all remaining lines
+              const nl = ppp[i]
+              const dl: diffline = { quote: nl.quote, tokens: [] }
+              res.push(dl)
+            }
             return res
           }
 
@@ -443,6 +438,9 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
           while (nextnt === undefined) {
             if (i + idx >= ppp.length) {
               console.error("we failed to add a sentinel")
+              // since our current token has undefined sentinelstyles 
+              // (otherwise we would have early returned) and we couldn't find
+              // a token in any remaining line
               break
             }
             nextnt = ppp[i + idx].tokens[0]
@@ -457,6 +455,9 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
               addstyles = { ...nt.styles }
             }
           } else {
+            // styles changed between this token and next token, so the styles
+            // for the subtract diff that we wanna add should be the ones in common
+            // which is sand (style and) function
             addstyles = sand(nt.styles, nextnt.styles)
             if (nt.state === nodestate.text && sequal(addstyles, nt.styles)) {
               dt.diffs.push(diff)
@@ -468,6 +469,12 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
           dcursor += 1
           diff = diffs[dcursor]
           if (diff === undefined) {
+            // this case seems bad, since we know we have a next token, but there
+            // is no next diff (if there's a token, then there should be a corresponding
+            // add or equal diff)
+            // additionally, suppose we set add = true, this early flush means
+            // that we dropped this subtract diff
+            console.error("bad state detected, here's what i've got so far")
             dl.tokens.push(dt)
             res.push(dl)
             return res
@@ -476,6 +483,7 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
         }
 
       } else {
+        //case diff crossover token boundary
         const word = d1sdi.slice(0, nl.start + nt.start + nt.text.length - didx)
         dt.diffs.push([diff[0], word])
         dinto += word.length
@@ -544,6 +552,7 @@ export function preprocess(ll: line[]): nodeline[] {
                 skip = 1
                 continue
               }
+              break
             }
 
             case state.bold: {
@@ -553,6 +562,7 @@ export function preprocess(ll: line[]): nodeline[] {
                 skip = 1
                 continue
               }
+              break
             }
 
             case state.code: {
@@ -562,6 +572,7 @@ export function preprocess(ll: line[]): nodeline[] {
                 skip = 1
                 continue
               }
+              break
             }
           }
           // if we have a text token followed by a non closing thing, it's just the text token
@@ -820,15 +831,8 @@ function flush(sm: statemachine): statemachine {
   if (sm.state !== undefined) {
     sm.line.tokens.push({ state: sm.state, start: sm.tokenstart, text: sm.word })
     sm.tokenstart += sm.word.length
-    switch (sm.state) {
-      case state.bold:
-        sm.tokenstart += 2
-        sm.skip = true
-        break
-      case state.italic:
-      case state.code:
-        sm.tokenstart += 1
-        break
+    if (sm.state === state.bold) {
+      sm.skip = true
     }
     sm.word = ""
     sm.state = undefined

@@ -15,7 +15,9 @@
   let imageURL: string | undefined = $state();
   let imageAlt: string = $state("");
   onMount(() => {
-    document.dispatchEvent(new CustomEvent("lrc:scroll"));
+    if (window.location.hash === "") {
+      document.dispatchEvent(new CustomEvent("lrc:scroll"));
+    }
   });
   $effect(() => {
     if (ctx) {
