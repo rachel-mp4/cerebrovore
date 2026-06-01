@@ -11,58 +11,12 @@ import (
 
 	"net/url"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/rachel-mp4/cerebrovore/clog"
 )
-
-var hashtagRE = regexp.MustCompile(`#([0-9A-Za-z]+)`)
-
-func ParseBodyForBacklinks(s string) (backlinks []uint32, extras []uint64) {
-	matches := hashtagRE.FindAllStringSubmatch(s, -1)
-	blmap := make(map[string]bool)
-	backlinks = make([]uint32, 0)
-	extras = make([]uint64, 0)
-	for _, m := range matches {
-		b := m[1]
-		added := blmap[b]
-		if added {
-			continue
-		}
-		blmap[b] = true
-		bl, blerr, ex, exerr := AToEx(m[1])
-		if blerr == nil {
-			backlinks = append(backlinks, bl)
-			continue
-		}
-		if exerr == nil {
-			extras = append(extras, ex)
-			continue
-		}
-	}
-	return
-}
-
-var mentionRE = regexp.MustCompile(`@([0-9a-z]+)`)
-
-func ParseBodyForMentions(s string) []string {
-	matches := mentionRE.FindAllStringSubmatch(s, -1)
-	menmap := make(map[string]bool)
-	res := make([]string, 0)
-	for _, m := range matches {
-		men := m[1]
-		added := menmap[men]
-		if added {
-			continue
-		}
-		menmap[men] = true
-		res = append(res, m[1])
-	}
-	return res
-}
 
 type PlaySite int
 
@@ -200,59 +154,6 @@ func getDurationForYoutubeId(id string) (*PlayInput, error) {
 	}, nil
 }
 
-func RenderTextBody(s string) template.HTML {
-	var out strings.Builder
-	last := 0
-	matches := hashtagRE.FindAllStringSubmatchIndex(s, -1)
-	for _, m := range matches {
-		start, end := m[0], m[1]
-		capStart, capEnd := m[2], m[3]
-		out.WriteString(ExpandUrls(s[last:start]))
-		capture := s[capStart:capEnd]
-		out.WriteString(`<a href="/p/`)
-		out.WriteString(capture)
-		out.WriteString(`">#`)
-		out.WriteString(capture)
-		out.WriteString(`</a>`)
-		last = end
-	}
-
-	out.WriteString(ExpandUrls(s[last:]))
-	return template.HTML(out.String())
-}
-
-var urlRE = regexp.MustCompile(`https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&//=]*)`)
-
-func ExpandUrls(s string) string {
-	var out strings.Builder
-	last := 0
-	matches := urlRE.FindAllStringIndex(s, -1)
-	for _, m := range matches {
-		start, end := m[0], m[1]
-		out.WriteString(html.EscapeString(s[last:start]))
-		tryurl := s[start:end]
-		yesurl, err := url.Parse(tryurl)
-		if err != nil {
-			clog.Warn("url parse error")
-			out.WriteString(html.EscapeString(tryurl))
-			last = end
-			continue
-		}
-		q := yesurl.Query()
-		q.Del("si")
-		yesurl.RawQuery = q.Encode()
-		yesurlstr := yesurl.String()
-		out.WriteString(`<a href="`)
-		out.WriteString(yesurlstr)
-		out.WriteString(`" target="_blank" rel="noopener noreferrer">`)
-		out.WriteString(yesurlstr)
-		out.WriteString(`</a>`)
-		last = end
-	}
-	out.WriteString(html.EscapeString(s[last:]))
-	return out.String()
-}
-
 // for some reason i felt like this was stupid a few days ago...
 // btw the reason why images are duplicated is because we have one
 // with z-index negative something thats full opacity and the other
@@ -294,12 +195,13 @@ func RenderImageBody(cid string, alt *string) template.HTML {
 	return template.HTML(out.String())
 }
 
-func RenderTextBodyNew(s string) template.HTML {
-	rdr := Render(Parse(s))
+func RenderTextBody(s string) template.HTML {
+	ll, _ := Parse(s)
+	rdr := Render(ll)
 	return template.HTML(rdr)
 }
 
-type line struct {
+type Line struct {
 	isRightQuote bool
 	isUpQuote    bool
 	isLeftQuote  bool
@@ -328,7 +230,7 @@ const (
 	code
 )
 
-func Render(ll []line) string {
+func Render(ll []Line) string {
 	out := strings.Builder{}
 	isbold := false
 	isitalic := false
@@ -469,16 +371,53 @@ func ibcend(isitalic, isbold, iscode bool) string {
 	return out.String()
 }
 
-func Parse(str string) []line {
+type SpecialTokens struct {
+	Replies  []uint32
+	Extras   []uint64
+	hashmap  map[string]bool
+	Mentions []string
+	menmap   map[string]bool
+}
+
+func addHashtag(word string, st *SpecialTokens) {
+	if st == nil {
+		return
+	}
+	if st.hashmap[word] {
+		return
+	}
+	id, iderr, ex, exerr := AToEx(word)
+	if iderr == nil {
+		st.Replies = append(st.Replies, id)
+		return
+	}
+	if exerr == nil {
+		st.Extras = append(st.Extras, ex)
+		return
+	}
+}
+
+func addMention(word string, st *SpecialTokens) {
+	if st == nil {
+		return
+	}
+	if st.menmap[word] {
+		return
+	}
+	st.Mentions = append(st.Mentions, word)
+}
+
+func Parse(str string) ([]Line, SpecialTokens) {
 	s := bufio.NewScanner(strings.NewReader(str))
-	var res []line
+	var res []Line
+	var st SpecialTokens
 
 	bigword := make([]rune, 0)
 	word := make([]rune, 0)
 lineloop:
 	for s.Scan() {
 		l := s.Text()
-		p := line{}
+		p := Line{}
 		if l == "" {
 			res = append(res, p)
 			continue
@@ -507,10 +446,14 @@ lineloop:
 				if char == '*' || char == '`' {
 					switch curstate {
 					case hashtag:
-						p.tokens = append(p.tokens, token{t: hashtag, hashtag: string(word)})
+						w := string(word)
+						p.tokens = append(p.tokens, token{t: hashtag, hashtag: w})
+						addHashtag(w, &st)
 						word = word[:0]
 					case mention:
-						p.tokens = append(p.tokens, token{t: mention, mention: string(word)})
+						w := string(word)
+						p.tokens = append(p.tokens, token{t: mention, mention: w})
+						addMention(w, &st)
 						word = word[:0]
 					case normal:
 						if len(word) != 0 {
@@ -556,7 +499,9 @@ lineloop:
 					word = append(word, char)
 					continue
 				}
-				p.tokens = append(p.tokens, token{t: hashtag, hashtag: string(word)})
+				w := string(word)
+				p.tokens = append(p.tokens, token{t: hashtag, hashtag: w})
+				addHashtag(w, &st)
 				if idx+1 == len(rr) {
 					p.tokens = append(p.tokens, token{t: normal, text: string([]rune{char})})
 					res = append(res, p)
@@ -592,7 +537,9 @@ lineloop:
 					word = append(word, char)
 					continue
 				}
-				p.tokens = append(p.tokens, token{t: mention, mention: string(word)})
+				w := string(word)
+				p.tokens = append(p.tokens, token{t: mention, mention: w})
+				addMention(w, &st)
 				if idx+1 == len(rr) {
 					p.tokens = append(p.tokens, token{t: normal, text: string([]rune{char})})
 					res = append(res, p)
@@ -670,10 +617,14 @@ lineloop:
 
 		switch curstate {
 		case hashtag:
-			p.tokens = append(p.tokens, token{t: hashtag, hashtag: string(word)})
+			w := string(word)
+			p.tokens = append(p.tokens, token{t: hashtag, hashtag: w})
+			addHashtag(w, &st)
 			res = append(res, p)
 		case mention:
-			p.tokens = append(p.tokens, token{t: mention, mention: string(word)})
+			w := string(word)
+			p.tokens = append(p.tokens, token{t: mention, mention: w})
+			addMention(w, &st)
 			res = append(res, p)
 		case normal:
 			if len(word) != 0 {
@@ -693,7 +644,9 @@ lineloop:
 			}
 		}
 	}
-	return res
+	st.hashmap = nil // maybe too defensive who cares
+	st.menmap = nil
+	return res, st
 }
 
 func validURL(s string) (*url.URL, error) {

@@ -74,7 +74,8 @@ func (h *Handler) postThread(c *Client, w http.ResponseWriter, r *http.Request) 
 	if ok && len(body) > 0 {
 		b := body[0]
 		thread.OP.TextContent = &types.TextContent{Body: b}
-		thread.OP.Backlinks, _ = utils.ParseBodyForBacklinks(b)
+		_, st := utils.Parse(b)
+		thread.OP.Backlinks = st.Replies
 	}
 	img, _, err := r.FormFile("image")
 	if err == nil {
@@ -451,12 +452,14 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 		}
 	}
 	body, ok := r.MultipartForm.Value["body"]
-	var extras []uint64
+	var lines []utils.Line
+	var st utils.SpecialTokens
 	if ok && len(body) > 0 {
 		b := body[0]
 		if b != "" {
 			post.TextContent = &types.TextContent{Body: b}
-			post.Backlinks, extras = utils.ParseBodyForBacklinks(b)
+			lines, st = utils.Parse(b)
+			post.Backlinks = st.Replies
 		}
 	}
 	_, ok = r.MultipartForm.File["image"]
@@ -526,7 +529,7 @@ func (h *Handler) postForumPost(c *Client, w http.ResponseWriter, r *http.Reques
 	path += "#the-end"
 
 	http.Redirect(w, r, fmt.Sprintf(path, ntid), http.StatusFound)
-	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), extras)
+	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), lines, st)
 }
 
 func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
@@ -554,11 +557,13 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	body, ok := r.MultipartForm.Value["body"]
-	var extras []uint64
+	var st utils.SpecialTokens
+	var lines []utils.Line
 	if ok && len(body) > 0 {
 		b := body[0]
 		post.TextContent = &types.TextContent{Body: b}
-		post.Backlinks, extras = utils.ParseBodyForBacklinks(b)
+		lines, st = utils.Parse(b)
+		post.Backlinks = st.Replies
 	}
 	cid, ok := r.MultipartForm.Value["cid"]
 	if ok && len(cid) > 0 {
@@ -640,15 +645,15 @@ func (h *Handler) postPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 
 	http.Redirect(w, r, fmt.Sprintf("/t/%s", ntid), http.StatusSeeOther)
-	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), extras)
+	go h.postPostPostFunFunc(c, &post, rc, backlinks, context.Background(), lines, st)
 }
 
 // postPostPostFunFunc is a func that runs post postpost, does assorted fun we want
 // like informing lrc clients of parsed backlinks, and sending events to watchers
-func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, extras []uint64) {
+func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount int, backlinks []db.Backlink, ctx context.Context, lines []utils.Line, st utils.SpecialTokens) {
 	var rdrdhtml *string
 	if post.TextContent != nil {
-		rdrd := utils.Render(utils.Parse(post.TextContent.Body))
+		rdrd := utils.Render(lines)
 		rdrdhtml = &rdrd
 	}
 	if post.Anon {
@@ -737,7 +742,7 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			cmd.molt = true
 		}
 	}
-	for _, ex := range extras {
+	for _, ex := range st.Extras {
 		switch ex {
 		case utils.UNPAUSE_EX:
 			cmd.unpause = true
@@ -778,11 +783,10 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		clog.LogE(h.selfban(c.Username, &post.ID, "*debrainworms u*", time.Now().Add(5*time.Minute), ctx), "selfban debrainworm")
 	}
 	if post.TextContent != nil {
-		mentions := utils.ParseBodyForMentions(post.TextContent.Body)
-		if len(mentions) > 0 {
-			err := h.db.CreateMentionNotifications(mentions, post.ID, ctx)
+		if len(st.Mentions) > 0 {
+			err := h.db.CreateMentionNotifications(st.Mentions, post.ID, ctx)
 			if err == nil {
-				h.m.BulkDispatch(mentions, nil)
+				h.m.BulkDispatch(st.Mentions, nil)
 			} else {
 				clog.Fail("%s", err)
 			}

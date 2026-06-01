@@ -235,7 +235,7 @@ func newTemplate(files ...string) *template.Template {
 				"intto36a":          utils.IntTo36A,
 				"renderImageBody":   utils.RenderImageBody,
 				"renderAvatarPFP":   utils.RenderAvatarPFP,
-				"renderTextBody":    utils.RenderTextBodyNew,
+				"renderTextBody":    utils.RenderTextBody,
 				"colorIsDark":       utils.ColorIsDark,
 				"colorToA":          utils.ColorToAp,
 				"maxReplies":        utils.MaxReplies,
