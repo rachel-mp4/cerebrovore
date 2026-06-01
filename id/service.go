@@ -60,7 +60,7 @@ func (s *ServiceProvider) CreateAccount(username string, password string, invite
 		return err
 	}
 	if resp.StatusCode != 200 {
-		d := string(data)
+		d := strings.TrimSpace(string(data))
 		switch d {
 		case "invite does not exist":
 			return fmt.Errorf("%s: %w", d, ErrCodeDNE)
@@ -102,7 +102,7 @@ func (s *ServiceProvider) VerifyCredentials(username string, password string, ct
 		return err
 	}
 	if resp.StatusCode != 200 {
-		d := string(data)
+		d := strings.TrimSpace(string(data))
 		switch d {
 		case "account does not exist":
 			return fmt.Errorf("%s: %w", d, ErrUserDNE)
@@ -155,7 +155,6 @@ func (s *ServiceProvider) generateCode(username string, ctx context.Context, end
 			return
 		}
 		d := strings.TrimSpace(string(data))
-		clog.Info("%s", d)
 		switch d {
 		case "account does not exist":
 			err = fmt.Errorf("%s: %w", d, ErrUserDNE)
