@@ -361,6 +361,10 @@ export class WSContext {
   }
 
   pingServer = () => {
+    if (this.rttpingstart) {
+      return
+    }
+    this.rttpingstart = Date.now()
     pingServer(this)
   }
 
@@ -781,7 +785,6 @@ export const connectTo = (url: string, ctx: WSContext) => {
   ctx.ws = ws
   if (ctx.shouldCalcPing) {
     ctx.pinginterval = setInterval(() => {
-      ctx.rttpingstart = Date.now()
       ctx.pingServer()
     }, 3000)
   }
@@ -802,12 +805,28 @@ export const connectTo = (url: string, ctx: WSContext) => {
         }
         return
       }
+      const rh: string = tse.renderedHTML
+      const div = document.createElement("div")
+      // we already trust server and are going to swap in the renderedHTML anyway,
+      // so given that assumption, this is safe
+      div.innerHTML = rh
+      div.querySelectorAll("a").forEach((a) => {
+        // we use this ugly getAttribute instead of .href bc we want the raw (relative) value
+        // (.href adds in the base domain)
+        if (a.getAttribute("href")?.startsWith("/p/")) {
+          const id = a.getAttribute("href")?.slice("/p/".length)!
+          const el = document.getElementById(id)
+          if (el && el.classList.contains("you")) {
+            a.classList.add("you")
+          }
+        }
+      })
       ctx.items = ctx.items.map((item) => {
         return (item.id === tse.id)
           ? {
             ...item,
             ...(tse.username && { username: tse.username }),
-            ...(tse.renderedHTML && { renderedHTML: tse.renderedHTML })
+            ...(tse.renderedHTML && { renderedHTML: div.innerHTML })
           }
           : item
       })
