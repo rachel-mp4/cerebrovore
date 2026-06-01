@@ -169,11 +169,6 @@
   }
   $effect(() => {
     message;
-    // we want to adjust height always, unless both the user has a
-    // blank message and there is a hash in the url (in that case, )
-    if (message === "" && location.hash !== "") {
-      return;
-    }
     adjustHeight();
   });
   const pastifier = (event: ClipboardEvent) => {

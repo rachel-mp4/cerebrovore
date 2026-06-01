@@ -16,12 +16,6 @@ func (m *Model) DispatchNotification(username string, count *int) {
 	m.dispatch(username, notificationEvent{Count: count})
 }
 
-func (m *Model) DispatchReplyNotifications(umap map[string]int) {
-	for username, count := range umap {
-		m.dispatch(username, notificationEvent{Count: &count})
-	}
-}
-
 func (m *Model) BulkDispatch(usernames []string, count *int) {
 	for _, username := range usernames {
 		m.dispatch(username, notificationEvent{Count: count})

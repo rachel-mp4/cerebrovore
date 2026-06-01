@@ -668,17 +668,15 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 	}
 	if len(backlinks) != 0 {
 		replies := make([]*lrcpb.Reply, 0, len(backlinks))
-		umap := make(map[string]int, len(backlinks))
-		rslice := make([]string, 0, len(backlinks))
+		rmap := make(map[string]bool, len(backlinks))
 		gvalue := 0
 		for _, bl := range backlinks {
-			umap[bl.ToUsername] += 1
 			if bl.From == post.ID {
 				reply := lrcpb.Reply{
 					Reply: &lrcpb.Reply_Attachreply{Attachreply: &lrcpb.AttachReply{From: &post.ID, To: bl.To}},
 				}
 				replies = append(replies, &reply)
-				rslice = append(rslice, bl.ToUsername)
+				rmap[bl.ToUsername] = true
 			} else if bl.To == post.ID {
 				reply := lrcpb.Reply{
 					Reply: &lrcpb.Reply_Attachreply{Attachreply: &lrcpb.AttachReply{To: post.ID, From: &bl.From}},
@@ -696,11 +694,16 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			},
 		}
 		h.m.AddBacklinks(post.ThreadID, batch)
-		clog.LogE(h.db.CreateReplyNotifications(rslice, post.ID, ctx), "create reply note")
-		if gvalue != 0 {
-			clog.LogE(h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx), "create get note")
+		rslice := h.m.FilterOutOpen(rmap, post.ThreadID)
+		if rslice != nil {
+			clog.LogE(h.db.CreateReplyNotifications(rslice, post.ID, ctx), "create reply note")
+			h.m.BulkDispatch(rslice, nil)
+
 		}
-		h.m.DispatchReplyNotifications(umap)
+		if gvalue > 2 {
+			clog.LogE(h.db.CreateGetNotification(c.Username, post.ID, gvalue, ctx), "create get note")
+			h.m.DispatchNotification(c.Username, &gvalue)
+		}
 	}
 	if replyCount < utils.BUMP_LIMIT {
 		h.m.NotifyWatchers(post.ThreadID, post.ID)

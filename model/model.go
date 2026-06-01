@@ -360,11 +360,17 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 			go func() {
 				tm.subsmu.Lock()
 				tm.subs[client] = true
+				tm.users[username] += 1
 				tm.subsmu.Unlock()
 			}()
 			defer func() {
 				tm.subsmu.Lock()
 				delete(tm.subs, client)
+				if tm.users[username] <= 1 {
+					delete(tm.users, username)
+				} else {
+					tm.users[username] -= 1
+				}
 				tm.subsmu.Unlock()
 			}()
 		}

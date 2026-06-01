@@ -22,6 +22,7 @@ type threadModel struct {
 	dead   bool
 	mu     sync.Mutex
 
+	users  map[string]int       // keys are usernames, values are num connections
 	subs   map[*clientConn]bool // these are connections who are currently in the thread
 	subsmu sync.RWMutex         // fka thread socket
 
@@ -56,12 +57,49 @@ func (m *Model) GetMessageData(tid uint32, pid uint32) (username *string, curSta
 	return
 }
 
+func (m *Model) FilterOutOpen(usernames map[string]bool, tid uint32) (filtered []string) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[tid]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return
+	}
+
+	tm.subsmu.RLock()
+	defer tm.subsmu.RUnlock()
+	// probs don't need this hack, but if we change signature of db to accept a map instead of
+	// slice, if you reply to a lot of people in a message we can modify the usernames map
+	// looping whichever map is smaller, just writing this down bc its a bad idea but better
+	// big o
+	for user := range usernames {
+		count := tm.users[user]
+		if count == 0 {
+			filtered = append(filtered, user)
+		}
+	}
+	return
+}
+
+func (m *Model) HasOpen(username string, tid uint32) bool {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[tid]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return false
+	}
+	tm.subsmu.RLock()
+	count := tm.users[username]
+	tm.subsmu.RUnlock()
+	return count != 0
+}
+
 // newThreadModel creates a new thread model. it does not create or start
 // an lrc server
 func newThreadModel(id uint32, topic *string) *threadModel {
 	return &threadModel{
 		id:           id,
 		topic:        topic,
+		users:        make(map[string]int),
 		subs:         make(map[*clientConn]bool),
 		watchers:     make(map[string]bool),
 		wormwatchers: make(map[*clientConn]bool),
@@ -77,6 +115,7 @@ func newDeadThreadModel(id uint32, topic *string) *threadModel {
 		id:       id,
 		dead:     true,
 		topic:    topic,
+		users:    make(map[string]int),
 		subs:     make(map[*clientConn]bool),
 		watchers: make(map[string]bool),
 	}
