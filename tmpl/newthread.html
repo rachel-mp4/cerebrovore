@@ -22,7 +22,7 @@
     </div>
     <div class="form-field">
       <label for="image">image</label>
-      <input type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
+      <input id="nt-img" type="file" name="image" accept="image/png, image/jpeg, image/gif, image/webp"> 
     </div>
     <div class="form-field">
       <label for="alt">alt</label>
@@ -36,4 +36,5 @@
       <input type="submit" value="make thread"/>
     </div>
   </form>
+  <script src="/js/newthread.js{{.Crack}}"></script>
 {{end}}
