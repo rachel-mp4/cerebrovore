@@ -957,7 +957,8 @@ func (s *Store) IsWatched(username string, id uint32, ctx context.Context) bool 
 	row := s.pool.QueryRow(ctx, `
 		SELECT * FROM watched_threads WHERE username = $1 AND thread_id = $2
 		`, username, id)
-	err := row.Scan(&id, &username)
+	var notified bool
+	err := row.Scan(&id, &username, &notified)
 	return err == nil
 }
 
