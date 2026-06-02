@@ -955,10 +955,9 @@ func (m *MockStore) UnwatchThread(username string, id uint32, ctx context.Contex
 
 func (s *Store) IsWatched(username string, id uint32, ctx context.Context) bool {
 	row := s.pool.QueryRow(ctx, `
-		SELECT * FROM watched_threads WHERE username = $1 AND thread_id = $2
+		SELECT username FROM watched_threads WHERE username = $1 AND thread_id = $2
 		`, username, id)
-	var notified bool
-	err := row.Scan(&id, &username, &notified)
+	err := row.Scan(&username)
 	return err == nil
 }
 
