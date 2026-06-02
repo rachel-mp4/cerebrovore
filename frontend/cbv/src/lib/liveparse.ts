@@ -289,9 +289,7 @@ export function diffzizz(local: string, echo: string): string {
   }
   const ppp = preprocess(parse(local))
   const diffs = diff(echo, local)
-  console.log(diffs)
   const s = rendercombined(combine(ppp, diffs))
-  console.log(s)
   return s
 }
 
