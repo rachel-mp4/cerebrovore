@@ -10,6 +10,16 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.5",
+			Timestamp: "2026-06-02",
+			Notes: []types.Note{
+				{
+					Type: "upgrade",
+					Name: "new thread page now specifies if it's hrt or forum, and site adapts according to where you are when you navigate to new thread",
+				},
+			},
+		},
+		{
 			Release:   "β.5.4",
 			Timestamp: "2026-06-01",
 			Notes: []types.Note{

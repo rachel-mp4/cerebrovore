@@ -1,4 +1,5 @@
 {{define "content"}}
+  <h1>new {{if .NewThreadForum}}<a href="/new">forum</a>{{else}}<a href="/new?forum=yes">hyper-real-time</a>{{end}} thread</h1>
   <form action="/t" method="POST" enctype="multipart/form-data">
     <div class="form-field">
       <label for="topic">topic</label>
@@ -28,10 +29,9 @@
       <label for="alt">alt</label>
       <input type="text" name="alt">
     </div>
-    <div class="form-field">
-      <label for="dead">is a traditional forum thread (non hyper-real-time, no wormwatch)</label>
-      <input type="checkbox" name="dead">
-    </div>
+    {{if .NewThreadForum}}
+      <input type="hidden" name="dead" value="yes">
+    {{end}}
     <div class="form-submit">
       <input type="submit" value="make thread"/>
     </div>

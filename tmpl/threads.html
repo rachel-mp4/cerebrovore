@@ -1,7 +1,7 @@
 {{define "left-sidebar"}}
   <div class="sidebar-group">
     <div class="pair">
-      <a href="/new">NEW THREAD</a>
+      <a href="/new{{if .NewThreadForum}}?forum=yes{{end}}">NEW THREAD</a>
     </div>
     <div class="pair">
       <a href="/settings">SETTINGS</a>

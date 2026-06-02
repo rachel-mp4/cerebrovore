@@ -875,6 +875,7 @@ func (h *Handler) getForumThread(c *Client, w http.ResponseWriter, r *http.Reque
 		http.Error(w, "failed to get bumps", http.StatusInternalServerError)
 		return
 	}
+	br.NewThreadForum = true
 	br.Accent = utils.ColorToAp(t.OP.Color)
 	watched := h.db.IsWatched(c.Username, tid, r.Context())
 	br.justbaseresp.ReplyCount = &t.ReplyCount
@@ -1147,6 +1148,7 @@ func (h *Handler) forumthreads(c *Client, w http.ResponseWriter, r *http.Request
 	if err != nil {
 		clog.Warn("bumps %s", err)
 	}
+	base.NewThreadForum = true
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
 	tr := forumthreadsresp{

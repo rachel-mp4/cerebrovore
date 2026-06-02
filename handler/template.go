@@ -187,6 +187,7 @@ type baseresp struct {
 	Notifications  int
 	Username       string
 	IsMod          bool
+	NewThreadForum bool
 }
 
 func (h *Handler) makebase(title string, c *Client, ctx context.Context) (baseresp, error) {
@@ -206,6 +207,7 @@ func (h *Handler) makebase(title string, c *Client, ctx context.Context) (basere
 		n,
 		c.Username,
 		c.IsMod,
+		false,
 	}, err
 }
 

@@ -139,7 +139,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.Handle("GET /js/", h.StripCrack(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /font/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /wav/", Add1YCache(http.FileServer(http.Dir("./static"))))
-	mux.Handle("GET /svg/", h.StripCrack(http.FileServer(http.Dir("./static"))))
+	mux.Handle("GET /svg/", http.FileServer(http.Dir("./static")))
 	mux.Handle("GET /assets/", http.FileServer(http.Dir("./frontend/dist")))
 	h.mux = mux
 	h.ca = ca
@@ -228,6 +228,9 @@ func (h *Handler) newThread(c *Client, w http.ResponseWriter, r *http.Request) {
 	base, err := h.makebase("new thread", c, r.Context())
 	if err != nil {
 		clog.Warn("bumps %s", err)
+	}
+	if r.URL.Query().Get("forum") != "" {
+		base.NewThreadForum = true
 	}
 	pro, err := h.db.GetProfile(c.Username, r.Context())
 	if err != nil {
