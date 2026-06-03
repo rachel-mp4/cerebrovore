@@ -875,7 +875,7 @@ form .close {
   & button {
     line-height: 1;
   }
-  :hover .archive {
+  &:hover .archive {
     display: inline-block;
   }
 }
