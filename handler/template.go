@@ -12,6 +12,9 @@ import (
 )
 
 func init() {
+	htmxT = htmxTemplate{newTemplate(
+		"./tmpl/htmx.html",
+	)}
 	inboxT = inboxTemplate{newTemplate(
 		"./tmpl/base.html",
 		"./tmpl/threads.html",
@@ -101,8 +104,8 @@ func init() {
 		"./tmpl/bumped-threads.html",
 		"./tmpl/wormwatch.html",
 		"./tmpl/thread.html",
-		"./tmpl/partial/watch.html",
 		"./tmpl/partial/post.html",
+		"./tmpl/partial/thread.html",
 	)}
 	profileT = profileTemplate{newTemplate(
 		"./tmpl/base.html",
@@ -138,6 +141,7 @@ func init() {
 		"./tmpl/empty.html",
 		"./tmpl/index.html",
 		"./tmpl/partial/post.html",
+		"./tmpl/partial/sort.html",
 	)}
 	catalogT = catalogTemplate{newTemplate(
 		"./tmpl/base.html",
@@ -147,6 +151,7 @@ func init() {
 		"./tmpl/empty.html",
 		"./tmpl/catalog.html",
 		"./tmpl/partial/post.html",
+		"./tmpl/partial/sort.html",
 	)}
 	bumpedT = bumpedTemplate{newTemplate(
 		"./tmpl/bumped-threads.html",
@@ -164,9 +169,9 @@ func init() {
 		"./tmpl/partial/threadlink.html",
 		"./tmpl/bumped-threads.html",
 		"./tmpl/forum.html",
-		"./tmpl/partial/watch.html",
 		"./tmpl/partial/post.html",
 		"./tmpl/partial/forum-post.html",
+		"./tmpl/partial/thread.html",
 	)}
 	forumsT = forumsTemplate{newTemplate(
 		"./tmpl/base.html",
@@ -176,6 +181,7 @@ func init() {
 		"./tmpl/empty.html",
 		"./tmpl/forums.html",
 		"./tmpl/partial/post.html",
+		"./tmpl/partial/sort.html",
 		"./tmpl/partial/forum-post.html",
 	)}
 }
@@ -253,6 +259,7 @@ func newTemplate(files ...string) *template.Template {
 				"strPtrIsntEmpty":   strPtrIsntEmpty,
 				"dict":              dictify,
 				"intptoint":         intptoint,
+				"archived":          types.Archived,
 			}).ParseFiles(files...),
 	)
 }
@@ -297,6 +304,22 @@ func strPtrIsntEmpty(ptr *string) bool {
 // in addition to exec, you can define other methods as well. clog.Tmpl()
 // automatically logs any errors from templating, if they exist, so make sure
 // to wrap any template executions in this
+
+// i realize it makes sense to just have a generic error template for most cases
+// instead of a special one for each endpoint haha, so that's what the htmxT is
+// gonna be, will clean up other endpoints at some point in time (maybe nvr)
+var htmxT htmxTemplate
+
+func (t *htmxTemplate) error(w io.Writer, message string) {
+	type resp struct {
+		Message string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "error", resp{message}))
+}
+
+type htmxTemplate struct {
+	template *template.Template
+}
 
 var inboxT inboxTemplate
 
@@ -580,11 +603,10 @@ type threadTemplate struct {
 
 type threadresp struct {
 	baseresp
-	Color    *uint32
-	Nick     *string
-	Thread   *types.Thread
-	Archived bool
-	Watched  bool
+	Color   *uint32
+	Nick    *string
+	Thread  *types.Thread
+	Watched bool
 }
 
 var newthreadT newthreadTemplate
@@ -621,6 +643,13 @@ var threadsT threadsTemplate
 
 func (t *threadsTemplate) exec(w io.Writer, threads catalogthreadsresp) {
 	clog.Tmpl(t.template.ExecuteTemplate(w, "base", threads))
+}
+
+func (t *threadTemplate) archive(w io.Writer, ntid string) {
+	type resp struct {
+		NTID string
+	}
+	clog.Tmpl(t.template.ExecuteTemplate(w, "archive-button", resp{ntid}))
 }
 
 func (t *threadTemplate) watch(w io.Writer, tid uint32) {
@@ -663,15 +692,21 @@ type catalogTemplate struct {
 
 type catalogthreadsresp struct {
 	baseresp
-	IsChrono     bool
+	Params       EndpointChronoArchived
 	ChronoCursor *uint32
 	BumpCursor   *time.Time
 	ThreadThumbs []types.Thread
 }
 
+type EndpointChronoArchived struct {
+	Endpoint   string
+	IsChrono   bool
+	IsArchived bool
+}
+
 type forumthreadsresp struct {
 	baseresp
-	IsChrono     bool
+	Params       EndpointChronoArchived
 	ChronoCursor *uint32
 	BumpCursor   *time.Time
 	ThreadThumbs []types.ForumThreadThumb
@@ -805,10 +840,9 @@ func (t *forumTemplate) error(w io.Writer, msg string) {
 
 type forumresp struct {
 	baseresp
-	Thread   *types.Thread
-	Archived bool
-	Watched  bool
-	Ftx      ForumTransmitter
+	Thread  *types.Thread
+	Watched bool
+	Ftx     ForumTransmitter
 }
 
 type ForumTransmitter struct {

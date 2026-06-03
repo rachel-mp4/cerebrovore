@@ -1,21 +1,16 @@
 {{define "content"}}
-  {{if .Thread.Topic}}
-    <h1 class="thread-topic">{{.Thread.Topic}}</h1>
-  {{end}}
-  {{if not (maxBumps .Thread.ReplyCount)}}
-    {{if .Watched}}
-      {{template "unwatch" .Thread}}
-    {{else}}
-      {{template "watch" .Thread}}
-    {{end}}
-  {{end}}
+  {{template "thread-header" .}}
   <div id="eats-ur-brain"{{if .IsMod}} class="mod"{{end}}{{with .Color}} data-color="{{.}}"{{end}}{{with .Nick}} data-nick="{{.}}"{{end}}>
     {{range .Thread.Posts}}
       {{template "post" .}}
     {{end}}
   </div>
-  {{if .Archived}}
-    <div>[reply limit hit; thread archived]</div>
+  {{if archived .Thread}}
+    {{if .Thread.ManuallyArchived}}
+      <div>[thread manually archived]</div>
+    {{else}}
+      <div>[reply limit hit; thread archived]</div>
+    {{end}}
   {{else}}
     {{if .CompiledAssets}}
       <script type="module" src="/{{.CompiledAssets.ChatPath}}"></script>

@@ -18,7 +18,7 @@ type watchMessage struct {
 type watchEvent struct {
 	Topic     *string `json:"topic,omitempty"`
 	TID       uint32  `json:"tid"`
-	PID       uint32  `json:"pid"`
+	PID       *uint32 `json:"pid,omitempty"`
 	BumpLimit *bool   `json:"bumpLimit,omitempty"`
 	New       *bool   `json:"new,omitempty"`
 }
@@ -151,7 +151,7 @@ func (m *Model) NotifyWatchers(forID uint32, pID uint32) {
 		watcherctx.ocmu.RLock()
 		for w := range watcherctx.openConns {
 			select {
-			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, TID: forID, PID: pID, BumpLimit: nil, New: nil}}:
+			case w.ch <- watchMessage{"watcher", watchEvent{Topic: tm.topic, TID: forID, PID: &pID, BumpLimit: nil, New: nil}}:
 			default:
 			}
 		}
@@ -189,7 +189,7 @@ func (m *Model) NotifyBumpLimit(threadID uint32, pID uint32) {
 			watcherctx.ocmu.RLock()
 			for w := range watcherctx.openConns {
 				select {
-				case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, threadID, pID, &bl, nil}}:
+				case w.ch <- watchMessage{"watcher", watchEvent{tm.topic, threadID, &pID, &bl, nil}}:
 				default:
 				}
 			}

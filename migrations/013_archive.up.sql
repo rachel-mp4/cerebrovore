@@ -1,0 +1,1 @@
+ALTER TABLE threads ADD COLUMN manually_archived BOOLEAN NOT NULL DEFAULT FALSE;

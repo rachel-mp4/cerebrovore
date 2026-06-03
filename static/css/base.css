@@ -842,6 +842,8 @@ form .close {
   color: var(--accentl);
   background: var(--gfg);
   background-clip: text;
+  position: relative; /* filter starts a stacking context :c, so needed for the topic to behave nice */
+  z-index: -1;
 }
 
 .up.quote {
@@ -862,4 +864,19 @@ form .close {
 
 .notifications {
   overflow-x: clip
+}
+
+.thread-topic {
+  line-height: 1;
+  background: var(--bg);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  & button {
+    line-height: 1;
+  }
+}
+
+#main-content:has(#brains-ur-eat) .thread-topic {
+  z-index: 1;
 }

@@ -910,7 +910,6 @@ func (h *Handler) getForumThread(c *Client, w http.ResponseWriter, r *http.Reque
 		baseresp: br,
 		Thread:   t,
 		Watched:  watched,
-		Archived: utils.MaxReplies(t.ReplyCount),
 		Ftx:      ftx,
 	}
 	forumT.exec(w, gftr)
@@ -975,7 +974,6 @@ func (h *Handler) getThread(c *Client, w http.ResponseWriter, r *http.Request) {
 		Nick:     pro.DisplayName,
 		Thread:   t,
 		Watched:  watched,
-		Archived: utils.MaxReplies(t.ReplyCount),
 	}
 	threadT.exec(w, gtr)
 }
@@ -1102,9 +1100,15 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
+	archived := r.URL.Query().Get("archived")
+	isArchived := archived != ""
 	tr := catalogthreadsresp{
 		baseresp: base,
-		IsChrono: isChrono,
+		Params: EndpointChronoArchived{
+			Endpoint:   "catalog",
+			IsChrono:   isChrono,
+			IsArchived: isArchived,
+		},
 	}
 	cursor := r.URL.Query().Get("cursor")
 	if isChrono {
@@ -1113,7 +1117,7 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			cc = &id
 		}
-		fts, nc, err := h.db.GetRecentCatalog(cc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
+		fts, nc, err := h.db.GetRecentCatalog(cc, utils.THREADS_PER_CATALOG_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1127,7 +1131,7 @@ func (h *Handler) catalog(c *Client, w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			bc = &t
 		}
-		fts, nc, err := h.db.GetBumpedCatalog(bc, utils.THREADS_PER_CATALOG_PAGE, r.Context())
+		fts, nc, err := h.db.GetBumpedCatalog(bc, utils.THREADS_PER_CATALOG_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1151,9 +1155,15 @@ func (h *Handler) forumthreads(c *Client, w http.ResponseWriter, r *http.Request
 	base.NewThreadForum = true
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
+	archived := r.URL.Query().Get("archived")
+	isArchived := archived != ""
 	tr := forumthreadsresp{
 		baseresp: base,
-		IsChrono: isChrono,
+		Params: EndpointChronoArchived{
+			Endpoint:   "ft",
+			IsChrono:   isChrono,
+			IsArchived: isArchived,
+		},
 	}
 	cursor := r.URL.Query().Get("cursor")
 	if isChrono {
@@ -1162,7 +1172,7 @@ func (h *Handler) forumthreads(c *Client, w http.ResponseWriter, r *http.Request
 		if err == nil {
 			cc = &id
 		}
-		fts, nc, err := h.db.GetRecentDeadThreads(cc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		fts, nc, err := h.db.GetRecentDeadThreads(cc, utils.THREADS_PER_INDEX_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1176,7 +1186,7 @@ func (h *Handler) forumthreads(c *Client, w http.ResponseWriter, r *http.Request
 		if err == nil {
 			bc = &t
 		}
-		fts, nc, err := h.db.GetBumpedDeadThreads(bc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		fts, nc, err := h.db.GetBumpedDeadThreads(bc, utils.THREADS_PER_INDEX_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1202,9 +1212,15 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	chrono := r.URL.Query().Get("chrono")
 	isChrono := chrono != ""
+	archived := r.URL.Query().Get("archived")
+	isArchived := archived != ""
 	tr := catalogthreadsresp{
 		baseresp: base,
-		IsChrono: isChrono,
+		Params: EndpointChronoArchived{
+			Endpoint:   "t",
+			IsChrono:   isChrono,
+			IsArchived: isArchived,
+		},
 	}
 	cursor := r.URL.Query().Get("cursor")
 	if isChrono {
@@ -1213,7 +1229,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			cc = &id
 		}
-		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		fts, nc, err := h.db.GetRecentThreads(cc, utils.THREADS_PER_INDEX_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1227,7 +1243,7 @@ func (h *Handler) threads(c *Client, w http.ResponseWriter, r *http.Request) {
 		if err == nil {
 			bc = &t
 		}
-		fts, nc, err := h.db.GetBumpedThreads(bc, utils.THREADS_PER_INDEX_PAGE, r.Context())
+		fts, nc, err := h.db.GetBumpedThreads(bc, utils.THREADS_PER_INDEX_PAGE, isArchived, r.Context())
 		if err != nil {
 			clog.Warn("%s", err)
 			http.Error(w, "error getting threads", http.StatusInternalServerError)
@@ -1319,4 +1335,52 @@ func (h *Handler) forumPost(c *Client, w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("HX-Trigger-After-Settle", fmt.Sprintf(`{"cbv:htmxForumPost":%d}`, id))
 	forumT.forumpost(w, post)
+}
+
+func (h *Handler) archiveThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized to archive thread", http.StatusUnauthorized)
+		return
+	}
+	ntid := r.PathValue("ntid")
+	id, err := utils.AToID(ntid)
+	if err != nil {
+		htmxT.error(w, "failed to parse id")
+		return
+	}
+	p, err := h.db.EZPost(id, r.Context())
+	if err != nil {
+		htmxT.error(w, "failed to get post")
+		return
+	}
+	if p.ID != p.ThreadID {
+		htmxT.error(w, "given id is not an id of a thread")
+		return
+	}
+	if !c.IsMod && c.Username != p.Username {
+		htmxT.error(w, "cannot archive someone else's thread!")
+		return
+	}
+	err = h.db.ArchiveThread(id, r.Context())
+	if err != nil {
+		clog.Warn("error archive thread: %s", err)
+		htmxT.error(w, "failed to archived thread")
+		return
+	}
+	h.m.ArchiveThread(id)
+	err = h.db.RemoveWatchersFor(id, r.Context())
+	if err != nil {
+		clog.Fail("failed to remove watchers: %s", err)
+	}
+	w.Header().Add("HX-Redirect", fmt.Sprintf("/t/%s", ntid))
+	w.Write(nil)
+}
+
+func (h *Handler) archiveConfirmThread(c *Client, w http.ResponseWriter, r *http.Request) {
+	if c == nil {
+		http.Error(w, "not authorized to archive thread", http.StatusUnauthorized)
+		return
+	}
+	ntid := r.PathValue("ntid")
+	threadT.archive(w, ntid)
 }

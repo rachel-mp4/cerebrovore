@@ -1,8 +1,0 @@
-{{define "unwatch"}}
-  <button class="watch-toggle" hx-swap="outerHTML" hx-post="/u/{{idtoa .ID}}">unwatch</button>
-{{end}}
-
-{{define "watch"}}
-  <button class="watch-toggle" hx-swap="outerHTML" hx-post="/w/{{idtoa .ID}}">watch</button>
-{{end}}
-

@@ -36,26 +36,26 @@ type Storer interface {
 	// GetBumpedCatalog gets the thread info and the OP for the limit most recently
 	// bumped threads before before (if given). If cursor is non-nil, provide it as
 	// the next value of before to get the next limit threads
-	GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+	GetBumpedCatalog(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
 
 	// GetRecentCatalog gets the thread info and the OP for the limit most recently
 	// posted threads before before (if given). If cursor is non-nil, provide it as
 	// the next value of before to get the next limit threads
-	GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
+	GetRecentCatalog(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
 
 	// GetRecentThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently posted limit threads before before (if given).
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
-	GetRecentThreads(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
-	GetRecentDeadThreads(before *uint32, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error)
+	GetRecentThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error)
+	GetRecentDeadThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error)
 
 	// GetBumpedThreads gets the ID, the Topic, the ReplyCount, the OP, and the last 5
 	// non-OP replies for the most recently bumped limit threads before before (if given).
 	// If cursor is non-nil, provide it as the next value of before to get the next limit
 	// threads.
-	GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
-	GetBumpedDeadThreads(before *time.Time, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error)
+	GetBumpedThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error)
+	GetBumpedDeadThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error)
 
 	// GetThread gets all the stored information about a thread, and up to limit replies,
 	// reverse chronologically, posted before before, if provided. if there are more replies
@@ -65,6 +65,8 @@ type Storer interface {
 
 	// DeleteThread sets a thread's deleted column to deleted, to hide it from users
 	DeleteThread(id uint32, ctx context.Context) error
+
+	ArchiveThread(id uint32, ctx context.Context) error
 
 	// watch methods
 

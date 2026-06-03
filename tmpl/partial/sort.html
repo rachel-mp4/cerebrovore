@@ -1,0 +1,27 @@
+{{define "sort"}}
+  {{if and .IsChrono .IsArchived}}
+    <h2>
+      sorted reverse chronologically
+      <a href="/{{.Endpoint}}?archived=yes">(switch to bump order)</a>
+      <a href="/{{.Endpoint}}?chrono=yes">(hide archived threads)</a>
+    </h2>
+  {{else if .IsChrono}}
+    <h2>
+      sorted reverse chronologically
+      <a href="/{{.Endpoint}}">(switch to bump order)</a>
+      <a href="/{{.Endpoint}}?chrono=yes&archived=yes">(show archived threads)</a>
+    </h2>
+  {{else if .IsArchived}}
+    <h2>
+      sorted by bump order
+      <a href="/{{.Endpoint}}?chrono=yes&archived=yes">(switch to reverse chronological)</a>
+      <a href="/{{.Endpoint}}">(hide archived threads)</a>
+    </h2>
+  {{else}}
+    <h2>
+      sorted by bump order
+      <a href="/{{.Endpoint}}?chrono=yes">(switch to reverse chronological)</a>
+      <a href="/{{.Endpoint}}?archived=yes">(show archived threads)</a>
+    </h2>
+  {{end}}
+{{end}}

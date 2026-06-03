@@ -117,6 +117,8 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.HandleFunc("GET /beep", h.AM(h.beep))
 	mux.HandleFunc("GET /t-bumped", h.AM(h.getTBumped))
 	mux.HandleFunc("POST /t", h.AM(h.postThread))
+	mux.HandleFunc("POST /archive/{ntid}", h.AM(h.archiveThread))
+	mux.HandleFunc("POST /archive-confirm/{ntid}", h.AM(h.archiveConfirmThread))
 	mux.HandleFunc("GET /t", h.AM(h.threads))
 	mux.HandleFunc("GET /ft", h.AM(h.forumthreads))
 	mux.HandleFunc("POST /blob", h.AM(rateLimit(blobLimiter, srcKey, h.postBlob)))

@@ -30,6 +30,7 @@ func (s *Store) CreatePost(post *types.Post, ctx context.Context) (int, []Backli
 			END
 		WHERE id = $1
 		AND reply_count < $3
+		AND manually_archived = FALSE
 		RETURNING reply_count
 		`, post.ThreadID, utils.BUMP_LIMIT, utils.REPLY_LIMIT)
 	var rc int

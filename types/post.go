@@ -65,26 +65,28 @@ func blprint(blbl []uint32) string {
 }
 
 type ForumThreadThumb struct {
-	ID         uint32
-	Topic      *string
-	PostedAt   time.Time
-	BumpedAt   time.Time
-	ReplyCount int
-	OP         Post
-	LP         *Post
-	Deleted    bool
+	ID               uint32
+	Topic            *string
+	PostedAt         time.Time
+	BumpedAt         time.Time
+	ReplyCount       int
+	OP               Post
+	LP               *Post
+	Deleted          bool
+	ManuallyArchived bool
 }
 
 type Thread struct {
-	ID         uint32
-	Topic      *string
-	PostedAt   time.Time
-	BumpedAt   time.Time
-	ReplyCount int
-	OP         Post
-	Posts      []Post
-	Deleted    bool
-	Dead       bool
+	ID               uint32
+	Topic            *string
+	PostedAt         time.Time
+	BumpedAt         time.Time
+	ReplyCount       int
+	OP               Post
+	Posts            []Post
+	Deleted          bool
+	Dead             bool
+	ManuallyArchived bool
 }
 
 func (t *Thread) String() string {
@@ -128,4 +130,8 @@ type TextContent struct {
 type ImageContent struct {
 	CID string
 	Alt *string
+}
+
+func Archived(t Thread) bool {
+	return t.ManuallyArchived || utils.MaxReplies(t.ReplyCount)
 }

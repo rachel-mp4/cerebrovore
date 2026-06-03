@@ -3,23 +3,13 @@
   <div>
     <a href="/new">start a new thread</a>
   </div>
-  {{if .IsChrono}}
-    <h2>
-      sorted reverse chronologically
-      <a href="/t">(switch to bump order)</a>
-    </h2>
-  {{else}}
-    <h2>
-      sorted by bump order
-      <a href="/t?chrono=yes">(switch to reverse chronological)</a>
-    </h2>
-  {{end}}
+  {{template "sort" .Params}}
   {{range .ThreadThumbs}}
-    <div class="thread-tail{{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
+    <div class="thread-tail{{if archived .}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
       <div>
         <a href="/t/{{idtoa .ID}}">
           <span class="topic">{{topicOrIdtoa .}}</span>
-          <span>{{if maxReplies .ReplyCount}}[ARCHIVED]{{else}}({{intto36a .ReplyCount}} replies){{end}}</span>
+          <span>{{if archived .}}[ARCHIVED]{{else}}({{intto36a .ReplyCount}} replies){{end}}</span>
         </a>
       </div>
       {{template "post" .OP}}
@@ -31,7 +21,7 @@
       {{end}}
     </div>
   {{end}}
-  {{if .IsChrono}}
+  {{if .Params.IsChrono}}
     {{if .ChronoCursor}}
       <a href="/t?chrono=yes&cursor={{idtoa .ChronoCursor}}">Next page</a>
     {{end}}

@@ -1,14 +1,5 @@
 {{define "content"}}
-  {{if .Thread.Topic}}
-    <h1 class="thread-topic">{{.Thread.Topic}}</h1>
-  {{end}}
-  {{if not (maxBumps .Thread.ReplyCount)}}
-    {{if .Watched}}
-      {{template "unwatch" .Thread}}
-    {{else}}
-      {{template "watch" .Thread}}
-    {{end}}
-  {{end}}
+  {{template "thread-header" .}}
   <a id="the-start" href="#the-end">jump to bottom</a>
   <div id="brains-ur-eat">
     {{range .Thread.Posts}}
@@ -16,8 +7,12 @@
     {{end}}
   </div>
   <a id="the-end" href="#the-start">jump to top</a>
-  {{if .Archived}}
-    <div>[reply limit hit; thread archived]</div>
+  {{if archived .Thread}}
+    {{if .Thread.ManuallyArchived}}
+      <div>[thread manually archived]</div>
+    {{else}}
+      <div>[reply limit hit; thread archived]</div>
+    {{end}}
   {{else}}
     <script src="/js/loadfontsize.js{{.Crack}}"></script>
   {{end}}
@@ -31,7 +26,9 @@
 {{end}}
 
 {{define "right-sidebar"}}
-  {{template "forum-transmitter" .Ftx}}
+  {{if not (archived .Thread)}}
+    {{template "forum-transmitter" .Ftx}}
+  {{end}}
   <div class="sidebar-group">
     <button class="new-posts clickable">there are new posts</button>
   </div>

@@ -61,7 +61,6 @@
 
 .tx:not(.active) .handle {
   color: var(--gfl);
-  position: relative;
   font-size: .75em;
 }
 

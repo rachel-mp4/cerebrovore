@@ -107,7 +107,8 @@ func (s *Store) GetAllThreads(ctx context.Context) ([]types.Thread, error) {
 			id,
 			topic,
 			reply_count,
-			dead
+			dead,
+			manually_archived
 		FROM threads
 		WHERE deleted = FALSE
 		`)
@@ -118,27 +119,26 @@ func (s *Store) GetAllThreads(ctx context.Context) ([]types.Thread, error) {
 	tt := make([]types.Thread, 0)
 	for rows.Next() {
 		var t types.Thread
-		rows.Scan(&t.ID, &t.Topic, &t.ReplyCount, &t.Dead)
+		rows.Scan(&t.ID, &t.Topic, &t.ReplyCount, &t.Dead, &t.ManuallyArchived)
 		tt = append(tt, t)
 	}
 	return tt, nil
 }
 
-func (m *MockStore) GetRecentThreads(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
-	return nil, nil, nil
-
-}
-
-func (m *MockStore) GetRecentDeadThreads(before *uint32, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error) {
+func (m *MockStore) GetRecentThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
 	return nil, nil, nil
 }
 
-func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
+func (m *MockStore) GetRecentDeadThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error) {
+	return nil, nil, nil
+}
+
+func (s *Store) GetRecentThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
 	q := `
 		WITH limited_threads AS (
-			SELECT id, topic, bumped_at, reply_count
+			SELECT id, topic, bumped_at, reply_count, manually_archived
 			FROM threads
-			WHERE deleted = FALSE AND dead = FALSE %s
+			WHERE deleted = FALSE AND dead = FALSE %s %s
 			ORDER BY id DESC
 			LIMIT $1
 		)
@@ -146,6 +146,7 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 			t.id,
 			t.topic,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -182,10 +183,14 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 		ORDER BY t.id DESC, p.id ASC
 	`
 	var rows pgx.Rows
+	astring := "AND manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND id < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND id < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -203,7 +208,7 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 		var body *string
 		var alt *string
 		var cid *string
-		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt, &post.Backlinks)
+		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt, &post.Backlinks)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -240,12 +245,12 @@ func (s *Store) GetRecentThreads(before *uint32, limit int, ctx context.Context)
 	return threads, cursor, nil
 }
 
-func (s *Store) GetRecentDeadThreads(before *uint32, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error) {
+func (s *Store) GetRecentDeadThreads(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *uint32, err error) {
 	q := `
 		WITH limited_threads AS (
-			SELECT id, topic, bumped_at, reply_count
+			SELECT id, topic, bumped_at, reply_count, manually_archived
 			FROM threads
-			WHERE deleted = FALSE AND dead = TRUE %s
+			WHERE deleted = FALSE AND dead = TRUE %s %s
 			ORDER BY id DESC
 			LIMIT $1
 		)
@@ -253,6 +258,7 @@ func (s *Store) GetRecentDeadThreads(before *uint32, limit int, ctx context.Cont
 			t.id,
 			t.topic,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -275,11 +281,15 @@ func (s *Store) GetRecentDeadThreads(before *uint32, limit int, ctx context.Cont
 		) p ON TRUE
 		ORDER BY t.id DESC, p.id ASC
 	`
+	astring := "AND manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND id < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND id < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -293,7 +303,7 @@ func (s *Store) GetRecentDeadThreads(before *uint32, limit int, ctx context.Cont
 	for rows.Next() {
 		thread := types.ForumThreadThumb{}
 		var post types.Post
-		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt)
+		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -327,10 +337,10 @@ func (s *Store) GetRecentDeadThreads(before *uint32, limit int, ctx context.Cont
 	return threads, cursor, nil
 }
 
-func (m *MockStore) GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
+func (m *MockStore) GetBumpedThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
 	return nil, nil, nil
 }
-func (m *MockStore) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error) {
+func (m *MockStore) GetBumpedDeadThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error) {
 	return nil, nil, nil
 }
 
@@ -342,7 +352,7 @@ func (s *Store) GetBumps(ctx context.Context) (threads []types.Thread, err error
 			topic
 		FROM threads
 		WHERE deleted = FALSE
-		AND reply_count + 1 < $1
+		AND reply_count + 1 < $1 AND manually_archived = FALSE
 		ORDER BY bumped_at DESC
 		LIMIT 5
 		`, utils.REPLY_LIMIT)
@@ -369,12 +379,12 @@ func (m *MockStore) GetBumps(ctx context.Context) (threads []types.Thread, err e
 	return nil, nil
 }
 
-func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
+func (s *Store) GetBumpedThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
 	q := `
 		WITH limited_threads AS (
-			SELECT id, topic, bumped_at, reply_count
+			SELECT id, topic, bumped_at, reply_count, manually_archived
 			FROM threads
-			WHERE deleted = FALSE AND dead = FALSE %s
+			WHERE deleted = FALSE AND dead = FALSE %s %s
 			ORDER BY bumped_at DESC
 			LIMIT $1
 		)
@@ -383,6 +393,7 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 			t.topic,
 			t.bumped_at,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -418,11 +429,15 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 		) pr ON pr.to_id = p.id
 		ORDER BY bumped_at DESC, p.id ASC
 	`
+	astring := "AND manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -441,7 +456,7 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 		var body *string
 		var cid *string
 		var alt *string
-		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt, &post.Backlinks)
+		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt, &post.Backlinks)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -481,12 +496,12 @@ func (s *Store) GetBumpedThreads(before *time.Time, limit int, ctx context.Conte
 	return threads, cursor, nil
 }
 
-func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error) {
+func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.ForumThreadThumb, cursor *time.Time, err error) {
 	q := `
 		WITH limited_threads AS (
-			SELECT id, topic, bumped_at, reply_count
+			SELECT id, topic, bumped_at, reply_count, manually_archived
 			FROM threads
-			WHERE deleted = FALSE AND dead = TRUE %s
+			WHERE deleted = FALSE AND dead = TRUE %s %s
 			ORDER BY bumped_at DESC
 			LIMIT $1
 		)
@@ -495,6 +510,7 @@ func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.C
 			t.topic,
 			t.bumped_at,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -517,11 +533,15 @@ func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.C
 		) p ON TRUE
 		ORDER BY bumped_at DESC, p.id ASC
 	`
+	astring := "AND manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -536,7 +556,7 @@ func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.C
 		thread := types.ForumThreadThumb{}
 		var bumpt time.Time
 		var post types.Post
-		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt)
+		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -573,17 +593,18 @@ func (s *Store) GetBumpedDeadThreads(before *time.Time, limit int, ctx context.C
 	return threads, cursor, nil
 }
 
-func (m *MockStore) GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
+func (m *MockStore) GetBumpedCatalog(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
 	return nil, nil, nil
 }
 
-func (s *Store) GetBumpedCatalog(before *time.Time, limit int, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
+func (s *Store) GetBumpedCatalog(before *time.Time, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *time.Time, err error) {
 	q := `
 		SELECT
 			t.id,
 			t.topic,
 			t.bumped_at,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -597,15 +618,19 @@ func (s *Store) GetBumpedCatalog(before *time.Time, limit int, ctx context.Conte
 		LEFT JOIN posts p ON p.id = t.id
 		LEFT JOIN text_posts tp ON tp.post_id = p.id
 		LEFT JOIN image_posts ip ON ip.post_id = p.id
-		WHERE t.deleted = FALSE AND t.dead = false %s
+		WHERE t.deleted = FALSE AND t.dead = false %s %s
 		ORDER BY bumped_at DESC
 		LIMIT $1
 	`
+	astring := "AND t.manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -627,7 +652,7 @@ func (s *Store) GetBumpedCatalog(before *time.Time, limit int, ctx context.Conte
 		var body *string
 		var cid *string
 		var alt *string
-		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt)
+		err = rows.Scan(&thread.ID, &thread.Topic, &bumpt, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -649,16 +674,17 @@ func (s *Store) GetBumpedCatalog(before *time.Time, limit int, ctx context.Conte
 	return threads, cursor, nil
 }
 
-func (m *MockStore) GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
+func (m *MockStore) GetRecentCatalog(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
 	return nil, nil, nil
 }
 
-func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
+func (s *Store) GetRecentCatalog(before *uint32, limit int, archived bool, ctx context.Context) (threads []types.Thread, cursor *uint32, err error) {
 	q := `
 		SELECT
 			t.id,
 			t.topic,
 			t.reply_count,
+			t.manually_archived,
 			p.id,
 			p.nick,
 			p.username,
@@ -672,15 +698,19 @@ func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context)
 		LEFT JOIN posts p ON p.id = t.id
 		LEFT JOIN text_posts tp ON tp.post_id = p.id
 		LEFT JOIN image_posts ip ON ip.post_id = p.id
-		WHERE t.deleted = FALSE AND t.dead = FALSE %s
+		WHERE t.deleted = FALSE AND t.dead = FALSE %s %s
 		ORDER BY t.id DESC
 		LIMIT $1
 	`
+	astring := "AND t.manually_archived = FALSE"
+	if archived {
+		astring = ""
+	}
 	var rows pgx.Rows
 	if before != nil {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2"), limit+1, *before)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "AND bumped_at < $2", astring), limit+1, *before)
 	} else {
-		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, ""), limit+1)
+		rows, err = s.pool.Query(ctx, fmt.Sprintf(q, "", astring), limit+1)
 	}
 	if err != nil {
 		if err == pgx.ErrNoRows {
@@ -701,7 +731,7 @@ func (s *Store) GetRecentCatalog(before *uint32, limit int, ctx context.Context)
 		var body *string
 		var cid *string
 		var alt *string
-		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt)
+		err = rows.Scan(&thread.ID, &thread.Topic, &thread.ReplyCount, &thread.ManuallyArchived, &post.ID, &post.Nick, &post.Username, &post.Anon, &post.Color, &post.PostedAt, &body, &cid, &alt)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -733,8 +763,8 @@ func (m *MockStore) GetDeadThread(id uint32, viewerIsMod bool, viewerUsername st
 
 func (s *Store) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (thread *types.Thread, err error) {
 	thread = &types.Thread{ID: id}
-	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE AND dead=FALSE", id)
-	err = row.Scan(&thread.Topic, &thread.ReplyCount)
+	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count, manually_archived FROM threads WHERE id=$1 AND deleted=FALSE AND dead=FALSE", id)
+	err = row.Scan(&thread.Topic, &thread.ReplyCount, &thread.ManuallyArchived)
 	if err != nil {
 		clog.Warn("db: %s", err)
 		return nil, err
@@ -798,8 +828,8 @@ func (s *Store) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ct
 
 func (s *Store) GetDeadThread(id uint32, viewerIsMod bool, viewerUsername string, ctx context.Context) (thread *types.Thread, err error) {
 	thread = &types.Thread{ID: id, Dead: true}
-	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count FROM threads WHERE id=$1 AND deleted=FALSE AND dead=TRUE", id)
-	err = row.Scan(&thread.Topic, &thread.ReplyCount)
+	row := s.pool.QueryRow(ctx, "SELECT topic, reply_count, manually_archived FROM threads WHERE id=$1 AND deleted=FALSE AND dead=TRUE", id)
+	err = row.Scan(&thread.Topic, &thread.ReplyCount, &thread.ManuallyArchived)
 	if err != nil {
 		clog.Warn("db: %s", err)
 		return nil, err
@@ -988,13 +1018,19 @@ func (m *MockStore) DeleteThread(id uint32, ctx context.Context) error {
 
 func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error) {
 	row := s.pool.QueryRow(ctx, `
-		SELECT reply_count
+		SELECT reply_count, manually_archived
 		FROM threads
 		WHERE id = $1
 		`, id)
 	var rc int
-	err = row.Scan(&rc)
+	var ma bool
+	err = row.Scan(&rc, &ma)
 	if err != nil {
+		return
+	}
+	if ma {
+		bumplimit = true
+		replylimit = true
 		return
 	}
 	bumplimit = utils.MaxBumps(rc)
@@ -1019,4 +1055,13 @@ func (s *Store) ThreadIsDead(id uint32, ctx context.Context) (bool, error) {
 
 func (m *MockStore) ThreadIsDead(id uint32, ctx context.Context) (bool, error) {
 	return false, nil
+}
+
+func (s *Store) ArchiveThread(id uint32, ctx context.Context) error {
+	_, err := s.pool.Exec(ctx, `UPDATE threads SET manually_archived = TRUE WHERE id = $1`, id)
+	return err
+}
+
+func (m *MockStore) ArchiveThread(id uint32, ctx context.Context) error {
+	return nil
 }

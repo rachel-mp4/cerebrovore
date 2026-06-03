@@ -3,17 +3,7 @@
   <div>
     <a href="/new">start a new thread</a>
   </div>
-  {{if .IsChrono}}
-    <h2>
-      sorted reverse chronologically
-      <a href="/catalog">(switch to bump order)</a>
-    </h2>
-  {{else}}
-    <h2>
-      sorted by bump order
-      <a href="/catalog?chrono=yes">(switch to reverse chronological)</a>
-    </h2>
-  {{end}}
+  {{template "sort" .Params}}
   <div class="catalog">
     {{range .ThreadThumbs}}
       <div class="catalog-thumb{{if maxReplies .ReplyCount}} archived{{else if maxBumps .ReplyCount}} bump-limit{{end}}" style="--accent: {{colorToA .OP.Color}}; --accentl: {{colorToA .OP.Color}}80">
@@ -31,7 +21,7 @@
       </div>
     {{end}}
   </div>
-  {{if .IsChrono}}
+  {{if .Params.IsChrono}}
     {{if .ChronoCursor}}
       <a href="/catalog?chrono=yes&cursor={{idtoa .ChronoCursor}}">Next page</a>
     {{end}}

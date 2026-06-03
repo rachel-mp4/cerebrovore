@@ -1,0 +1,35 @@
+{{define "unwatch"}}
+  <button class="watch-toggle clickable" hx-swap="outerHTML" hx-post="/u/{{idtoa .ID}}">unwatch</button>
+{{end}}
+
+{{define "watch"}}
+  <button class="watch-toggle clickable" hx-swap="outerHTML" hx-post="/w/{{idtoa .ID}}">watch</button>
+{{end}}
+
+{{define "archive-button"}}
+  <button class="archive clickable" hx-swap="outerHTML" hx-post="/archive/{{.NTID}}">this is permanent!</button>
+{{end}}
+
+{{define "archive-confirm"}}
+  <button class="archive clickable" hx-swap="outerHTML" hx-post="/archive-confirm/{{idtoa .ID}}">archive</button>
+{{end}}
+
+{{define "thread-header"}}
+  <h1 class="thread-topic">
+    {{if .Thread.Topic}}
+      {{.Thread.Topic}}
+    {{end}}
+    {{if not (archived .Thread)}}
+      {{if not (maxBumps .Thread.ReplyCount)}}
+        {{if .Watched}}
+          {{template "unwatch" .Thread}}
+        {{else}}
+          {{template "watch" .Thread}}
+        {{end}}
+      {{end}}
+      {{if or .IsMod (eq .Username .Thread.OP.Username)}}
+        {{template "archive-confirm" .Thread}}
+      {{end}}
+    {{end}}
+  </h1>
+{{end}}

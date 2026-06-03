@@ -175,6 +175,58 @@ func (m *Model) AddBacklinks(threadID uint32, batch lrcpb.Event_Replybatch) {
 	}
 }
 
+func (m *Model) ArchiveThread(threadID uint32) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return
+	}
+	tm.mu.Lock()
+	tm.full = true
+	tm.bumplimit = true
+	usernames := make([]string, 0, len(tm.watchers))
+	for w := range tm.watchers {
+		usernames = append(usernames, w)
+		delete(tm.watchers, w)
+	}
+	tm.mu.Unlock()
+	go func() {
+		msg := "thread has been manually archived"
+		tm.subsmu.RLock()
+		defer tm.subsmu.RUnlock()
+		for w := range tm.subs {
+			select {
+			case w.ch <- socketMessage{"thread", socketEvent{SystemMessage: &msg, ReplyLimit: &tm.full}}:
+			default:
+			}
+		}
+	}()
+	go func() {
+		bl := true
+		we := watchEvent{tm.topic, threadID, nil, &bl, nil}
+		for _, u := range usernames {
+			m.watchersmu.RLock()
+			watcherctx, ok := m.watchers[u]
+			m.watchersmu.RUnlock()
+			if !ok {
+				continue
+			}
+			watcherctx.ocmu.RLock()
+			for w := range watcherctx.openConns {
+				select {
+				case w.ch <- watchMessage{"watcher", we}:
+				default:
+				}
+			}
+			watcherctx.ocmu.RUnlock()
+			watcherctx.twmu.Lock()
+			delete(watcherctx.threadsWatched, threadID)
+			watcherctx.twmu.Unlock()
+		}
+	}()
+}
+
 func (m *Model) ReplyLimit(threadID uint32) {
 	m.tmapmu.RLock()
 	tm, ok := m.tmap[threadID]
