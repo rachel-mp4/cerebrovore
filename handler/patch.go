@@ -10,6 +10,20 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.6",
+			Timestamp: "2026-06-03",
+			Notes: []types.Note{
+				{
+					Type: "feature",
+					Name: "manually archive your threads, if you wish",
+				},
+				{
+					Type: "upgrade",
+					Name: "sticky topic for threads",
+				},
+			},
+		},
+		{
 			Release:   "β.5.5",
 			Timestamp: "2026-06-02",
 			Notes: []types.Note{
