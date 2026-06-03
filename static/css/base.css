@@ -875,8 +875,15 @@ form .close {
   & button {
     line-height: 1;
   }
+  :hover .archive {
+    display: inline-block;
+  }
 }
 
 #main-content:has(#brains-ur-eat) .thread-topic {
   z-index: 1;
+}
+
+.archive {
+  display:none;
 }
