@@ -8,12 +8,12 @@
     ctx: WSContext;
     defaultnick: string | null;
     defaultcolor: number | null;
+    convertFileToImageItem: (blob: File) => void;
   }
-  let { ctx, defaultnick, defaultcolor }: Props = $props();
+  let { ctx, defaultnick, defaultcolor, convertFileToImageItem }: Props =
+    $props();
   let nick = $state(ctx.nick);
   let anon = $state(ctx.anon);
-  let imageURL: string | undefined = $state();
-  let imageAlt: string = $state("");
   onMount(() => {
     if (window.location.hash === "") {
       document.dispatchEvent(new CustomEvent("lrc:scroll"));
@@ -132,28 +132,6 @@
   };
   var dezzzt = 0;
 
-  const convertFileToImageItem = (blob: File) => {
-    cancelimagepost();
-    const blobUrl = URL.createObjectURL(blob);
-    ctx.initImage(blob, blobUrl);
-    imageURL = blobUrl;
-  };
-  const cancelimagepost = () => {
-    if (imageURL) {
-      URL.revokeObjectURL(imageURL);
-    }
-    ctx.cancelImage();
-    imageAlt = "";
-    imageURL = undefined;
-  };
-  const uploadimage = () => {
-    ctx.pubImage(imageAlt);
-    if (imageURL) {
-      URL.revokeObjectURL(imageURL);
-    }
-    imageAlt = "";
-    imageURL = undefined;
-  };
   let lines = $state(1);
   let inputEl: HTMLTextAreaElement;
   function adjustHeight() {
@@ -171,22 +149,6 @@
     message;
     adjustHeight();
   });
-  const pastifier = (event: ClipboardEvent) => {
-    const items = event.clipboardData?.items;
-    if (items === undefined) {
-      return;
-    }
-    for (const item of items) {
-      if (item.type.startsWith("image/")) {
-        const blob = item.getAsFile();
-        if (blob === null) {
-          return;
-        }
-        event.preventDefault();
-        convertFileToImageItem(blob);
-      }
-    }
-  };
   onMount(() => {
     inputEl.focus();
   });
@@ -225,7 +187,6 @@
       bind:this={inputEl}
       maxlength={65535}
       oninput={adjust}
-      onpaste={pastifier}
       onkeydown={bi}
       placeholder="start typing..."
     ></textarea>
@@ -248,22 +209,4 @@
       />
     {/if}
   </div>
-  {#if imageURL !== undefined}
-    <div>
-      <AutoGrowInput
-        bind:value={imageAlt}
-        placeholder="alt text"
-        size={10}
-        bold={false}
-      />
-      <button onclick={cancelimagepost}> cancel </button>
-      {#if ctx.myMediaUploadState.kind === "ready"}
-        something went wrong if you can see me tbh
-      {:else if ctx.myMediaUploadState.kind === "uploading"}
-        uploading...
-      {:else}
-        <button onclick={uploadimage}> confirm </button>
-      {/if}
-    </div>
-  {/if}
 </div>

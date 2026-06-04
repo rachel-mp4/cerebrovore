@@ -344,7 +344,6 @@ function combine(ppp: nodeline[], diffs: diff.Diff[]): diffline[] {
 
   for (let i = 0; i < ppp.length; i++) {
     const nl = ppp[i]
-    console.log(nl)
     const dl: diffline = { quote: nl.quote, tokens: [] }
 
     for (let j = 0; j < nl.tokens.length; j++) {

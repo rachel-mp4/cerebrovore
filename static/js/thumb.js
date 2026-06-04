@@ -23,5 +23,5 @@ document.addEventListener("click", (e) => {
       })
     }
   }
+  document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"))
 })
-

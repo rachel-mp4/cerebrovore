@@ -11,6 +11,10 @@
   max-width: 100%;
 }
 
+.tx .body:has(.collapse) {
+  white-space: collapse;
+}
+
 .body a {
   font-weight: 600;
 }
@@ -78,6 +82,10 @@
 
 .tx:not(:hover) .clickable {
   display: none;
+}
+
+.tx .body .clickable {
+  display: inline
 }
 
 .clickable {

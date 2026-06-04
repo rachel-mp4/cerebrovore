@@ -92,7 +92,7 @@
 /* diff styles */
 .removed {
   text-decoration: line-through var(--accentl);
-  text-decoration-thickness: 0.4rem;
+  text-decoration-thickness: 0.4em;
 }
 
 .appended {

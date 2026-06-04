@@ -624,7 +624,7 @@ form:has(.form-submit) {
 
 .profile-room .profile {
   position: sticky;
-  top: 0;
+  top: 2rem;
 }
 
 .profile-room .image-wrapper {
@@ -877,6 +877,15 @@ form .close {
   }
   &:hover .archive {
     display: inline-block;
+  }
+}
+
+.loaded .thread-topic {
+  opacity: 0.1;
+  transition: 120s;
+  &:hover {
+    opacity: 1;
+    transition: 0.07s
   }
 }
 

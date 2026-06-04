@@ -15,6 +15,9 @@
       {src}
       {alt}
       title={alt}
+      onload={() => {
+        document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"));
+      }}
     />
   </div>
 {:else}
@@ -24,6 +27,9 @@
       src="{src}&thumb=yes"
       {alt}
       title={alt}
+      onload={() => {
+        document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"));
+      }}
     />
   </div>
 {/if}

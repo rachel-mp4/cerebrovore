@@ -25,6 +25,44 @@
     color ? parseInt(color, 10) : (defaultcolor ?? 4534186),
   );
   ctx.connect(address);
+  let imageURL: string | undefined = $state();
+  const convertFileToImageItem = (blob: File) => {
+    cancelimagepost();
+    const blobUrl = URL.createObjectURL(blob);
+    ctx.initImage(blob, blobUrl);
+    imageURL = blobUrl;
+  };
+  const cancelimagepost = () => {
+    if (imageURL) {
+      URL.revokeObjectURL(imageURL);
+    }
+    ctx.cancelImage();
+    imageURL = undefined;
+  };
+  const uploadimage = (alt: string | undefined) => {
+    ctx.pubImage(alt);
+    if (imageURL) {
+      URL.revokeObjectURL(imageURL);
+    }
+    imageURL = undefined;
+  };
+  const pastifier = (event: ClipboardEvent) => {
+    const items = event.clipboardData?.items;
+    if (items === undefined) {
+      return;
+    }
+    for (const item of items) {
+      if (item.type.startsWith("image/")) {
+        const blob = item.getAsFile();
+        if (blob === null) {
+          return;
+        }
+        event.preventDefault();
+        convertFileToImageItem(blob);
+      }
+    }
+  };
+  document.addEventListener("paste", pastifier);
 </script>
 
 {#if ctx.connected}
@@ -36,7 +74,10 @@
     onmute={ctx.mute}
     onunmute={ctx.unmute}
     {ismoderator}
+    {cancelimagepost}
+    {uploadimage}
+    {ctx}
   />
-  <Transmitter {ctx} {defaultnick} {defaultcolor} />
+  <Transmitter {ctx} {defaultnick} {defaultcolor} {convertFileToImageItem} />
   <Console log={ctx.log} />
 {/if}

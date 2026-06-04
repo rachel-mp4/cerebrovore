@@ -194,7 +194,7 @@ export class WSContext {
   }
 
 
-  pubImage = (alt: string) => {
+  pubImage = (alt: string | undefined) => {
     this.curImageBlobURL = undefined
     switch (this.myMediaState.kind) {
       case "ready":
@@ -678,14 +678,16 @@ const postMessage = (init: lrc.Init, msg: string): number => {
   return id
 }
 
-const postImage = (mediainit: lrc.MediaInit, cid: string, alt: string): number => {
+const postImage = (mediainit: lrc.MediaInit, cid: string, alt: string | undefined): number => {
   const fd = new FormData()
   const id = mediainit.id ?? 0
   fd.append("id", b36encodenumber(id))
   fd.append("color", numToHex(mediainit.color ?? 0))
   fd.append("nick", mediainit.nick ?? "")
   fd.append("cid", cid)
-  fd.append("alt", alt)
+  if (alt !== undefined) {
+    fd.append("alt", alt)
+  }
   if (mediainit.externalID === undefined) {
     fd.append("anon", "yes")
   }
@@ -894,7 +896,7 @@ export const pubImage = (alt: string | undefined, contentAddress: string | undef
     msg: {
       oneofKind: "mediapub",
       mediapub: {
-        alt: alt,
+        ...(alt && { alt: alt }),
         contentAddress: contentAddress,
       }
     }

@@ -4,6 +4,7 @@
   interface Props {
     onBeforeInput?: (event: InputEvent) => void;
     onInput?: (event: Event) => void;
+    submit?: () => void;
     placeholder?: string;
     value?: string;
     size?: number;
@@ -16,6 +17,7 @@
   let {
     onBeforeInput,
     placeholder,
+    submit,
     value = $bindable(""),
     onInput,
     maxlength,
@@ -39,9 +41,9 @@
   onMount(adjustWidth);
   $effect(() => {
     value;
-    setTimeout(() => {
+    requestAnimationFrame(() => {
       adjustWidth();
-    }, 0);
+    });
   });
 </script>
 
@@ -50,8 +52,14 @@
   bind:this={inputEl}
   {maxlength}
   {size}
+  onkeydown={(e) => {
+    if (e.key === "Enter") {
+      submit?.();
+    }
+  }}
   oninput={adjust}
   onbeforeinput={onBeforeInput}
+  style:max-width={"66%"}
   style:font-weight={bold ? "700" : "inherit"}
   style:--accent={color}
   style:color={color ? "var(--accent)" : "var(--fg)"}

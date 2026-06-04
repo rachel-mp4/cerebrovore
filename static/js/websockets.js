@@ -58,4 +58,9 @@ const cbvWSBuffer = {};
   if (wantsNewThreads === null) {
     localStorage.setItem("new-threads", "yes")
   }
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.body.classList.add("loaded")
+    })
+  })
 })()

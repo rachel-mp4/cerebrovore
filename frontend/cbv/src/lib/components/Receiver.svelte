@@ -4,11 +4,13 @@
   import EnbyTransmission from "./EnbyTransmission.svelte";
   import MessageTransmission from "./MessageTransmission.svelte";
   import ImageTransmission from "./ImageTransmission.svelte";
+  import AutoGrowInput from "./AutoGrowInput.svelte";
   import type { Item } from "../types";
   import { newAbsoluteTimestamp, maxItemIdx } from "../utils";
   import { isMessage, isImage, isEnby } from "../types";
   import { numIsDark, numToHex, hexToTransparent } from "../colors";
   import { tick } from "svelte";
+  import type { WSContext } from "../wscontext.svelte";
   interface Props {
     items: Array<Item>;
     mylocalid?: string;
@@ -17,6 +19,9 @@
     onmute?: (id: number) => void;
     onunmute?: (id: number) => void;
     ismoderator: boolean;
+    cancelimagepost: () => void;
+    uploadimage: (alt: string | undefined) => void;
+    ctx: WSContext;
   }
   let {
     items,
@@ -26,6 +31,9 @@
     onmute,
     onunmute,
     ismoderator,
+    cancelimagepost,
+    uploadimage,
+    ctx,
   }: Props = $props();
   let bottomEl: HTMLDivElement;
   let pinnedToBottomone = true;
@@ -75,7 +83,6 @@
   });
 
   let pendingscroll = false;
-  let canceledscroll = false;
   const scrollIfPinned = () => {
     const lines = document
       .getElementById("transmitter-thingy")
@@ -106,18 +113,7 @@
     pendingscroll = true;
     requestAnimationFrame(() => {
       pendingscroll = false;
-      if (canceledscroll) {
-        return;
-      }
       bottomEl.scrollIntoView();
-    });
-  };
-
-  const scrollToMe = (id: string) => {
-    canceledscroll = true;
-    requestAnimationFrame(() => {
-      canceledscroll = false;
-      document.getElementById(id)?.scrollIntoView();
     });
   };
 
@@ -182,9 +178,10 @@
   });
   $effect(() => {
     if (mylocaltext && mylocalid) {
-      scrollToMe(mylocalid);
+      scrollIfPinned();
     }
   });
+  let alt: string = $state("");
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
@@ -267,10 +264,50 @@
           {:else if item.lrcdata.mine && !item.lrcdata.pub}
             <ImageTransmission
               src={mylocalimage ?? ""}
-              alt={undefined}
+              {alt}
               gifoverride={true}
             />
-            <div>THIS IS A PREVIEW THAT ONLY YOU CAN SEE</div>
+            <div class="collapse">
+              <div>(this is a preview that only you can see)</div>
+              <div>
+                <button
+                  class="clickable"
+                  onclick={() => {
+                    cancelimagepost();
+                    alt = "";
+                  }}
+                >
+                  cancel
+                </button>
+                <AutoGrowInput
+                  submit={() => {
+                    if (ctx.myMediaUploadState.kind === "uploaded") {
+                      uploadimage(alt);
+                      alt = "";
+                    }
+                  }}
+                  bind:value={alt}
+                  placeholder="alt text (optional)"
+                  size={10}
+                  bold={false}
+                  fs={"inherit"}
+                />
+                {#if ctx.myMediaUploadState.kind === "ready"}
+                  something went wrong if you can see me tbh
+                {:else if ctx.myMediaUploadState.kind === "uploading"}
+                  uploading...
+                {:else}
+                  <button
+                    onclick={() => {
+                      uploadimage(alt === "" ? undefined : alt);
+                      alt = "";
+                    }}
+                  >
+                    confirm
+                  </button>
+                {/if}
+              </div>
+            </div>
           {:else}
             i don't have image yet
           {/if}
