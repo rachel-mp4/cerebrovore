@@ -29,7 +29,7 @@ func getNotes() []types.Patch {
 				},
 				{
 					Type: "unused",
-					Name: "a weird 3d effect",
+					Name: "a weird 3D effect",
 				},
 			},
 		},
