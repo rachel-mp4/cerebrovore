@@ -10,6 +10,30 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.7",
+			Timestamp: "2026-06-04",
+			Notes: []types.Note{
+				{
+					Type:        "upgrade",
+					Name:        "improve upload image ux",
+					Description: "& they said she'd never get around to it",
+				},
+				{
+					Type: "upgrade",
+					Name: "sticky topic fades over 2 minutes",
+				},
+				{
+					Type:        "upgrade",
+					Name:        "lots of small improvements to autoscroll on hyper-real-time behavior",
+					Description: "this is seriously harder than most of the crap",
+				},
+				{
+					Type: "unused",
+					Name: "a weird 3d effect",
+				},
+			},
+		},
+		{
 			Release:   "β.5.6",
 			Timestamp: "2026-06-03",
 			Notes: []types.Note{
