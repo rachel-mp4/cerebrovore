@@ -141,7 +141,7 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	mux.Handle("GET /js/", h.StripCrack(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /font/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /wav/", Add1YCache(http.FileServer(http.Dir("./static"))))
-	mux.Handle("GET /svg/", http.FileServer(http.Dir("./static")))
+	mux.Handle("GET /svg/", Add1YCache(http.FileServer(http.Dir("./static"))))
 	mux.Handle("GET /assets/", http.FileServer(http.Dir("./frontend/dist")))
 	h.mux = mux
 	h.ca = ca
