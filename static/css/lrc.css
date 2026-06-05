@@ -3,7 +3,7 @@
   flex-shrink: 0;
   background: linear-gradient(var(--bl), var(--bg));
   position: sticky;
-  bottom: 0;
+  bottom: env(safe-area-inset-bottom, 0);
 }
 
 .transmitter .wrapper {

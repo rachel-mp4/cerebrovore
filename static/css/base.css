@@ -627,7 +627,7 @@ form:has(.form-submit) {
 
 .profile-room .profile {
   position: sticky;
-  top: 2rem;
+  top: calc(env(safe-area-inset-top, 0) + 2rem);
 }
 
 .profile-room .image-wrapper {
@@ -873,7 +873,7 @@ form .close {
   line-height: 1;
   background: var(--bg);
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0);
   align-self: flex-start;
   & button {
     line-height: 1;
