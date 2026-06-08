@@ -76,6 +76,7 @@
       return;
     }
     addReply(text);
+    document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"));
     inputEl.focus();
   });
 
