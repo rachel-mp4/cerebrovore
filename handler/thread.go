@@ -235,12 +235,12 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 				clog.Warn("failed to log to file: %s", err)
 			}
 		})
-	}
-	err = genThumbnail(cid)
-	if err != nil {
-		clog.Warn("blob thumbnail: %s", err)
-		http.Error(w, "encountered an error 2", http.StatusInternalServerError)
-		return
+		err = genThumbnail(cid)
+		if err != nil {
+			clog.Warn("blob thumbnail: %s", err)
+			http.Error(w, "encountered an error 2", http.StatusInternalServerError)
+			return
+		}
 	}
 	// i'm not really sure why there's a uuid, but i remember a few months ago
 	// being certain it was necessary. not gonna think too hard about it haha
@@ -275,6 +275,24 @@ func genThumbnail(cid string) error {
 	defer file.Close()
 	img, err := imaging.Decode(file, imaging.AutoOrientation(true))
 	if err != nil {
+		if err.Error() == "webp: invalid format" && strings.HasSuffix(cid, ".webp") {
+			// animated webp are not supported by x/image/webp library, this is
+			// the provided error as of v0.36.0. in this case we just copy it over
+			// this isn't as ideal as gif, but the reasoning here is that we'd have
+			// to decode the image when we want to render it & determine if we provide
+			// a thumbnail or not bc some webp do support thumbnail, & we want rendering
+			// images to be quick. would require extra metadata in database, probably
+			file.Seek(0, 0)
+			f2, err := os.Create(dir + ".png")
+			if err != nil {
+				return err
+			}
+			_, err = io.Copy(f2, file)
+			if err != nil {
+				return err
+			}
+			return nil
+		}
 		return err
 	}
 	thumb := imaging.Fit(img, 192, 192, imaging.NearestNeighbor)
