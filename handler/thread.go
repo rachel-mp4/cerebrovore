@@ -242,14 +242,11 @@ func (h *Handler) postBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	// i'm not really sure why there's a uuid, but i remember a few months ago
-	// being certain it was necessary. not gonna think too hard about it haha
 	type blobresp struct {
-		CID  string `json:"cid"`
-		UUID string `json:"uuid"`
+		CID string `json:"cid"`
 	}
 	w.Header().Add("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(blobresp{cid, r.FormValue("uuid")})
+	err = json.NewEncoder(w).Encode(blobresp{cid})
 	if err != nil {
 		clog.Warn("blob json encode: %s", err)
 	}
