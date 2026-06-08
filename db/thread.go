@@ -938,6 +938,22 @@ func (s *Store) EndWatchContext(username string, ctx context.Context) error {
 	UPDATE watched_threads
 	SET notified = FALSE
 	WHERE username = $1`, username)
+	if err != nil {
+		return err
+	}
+	// the reasoning for this is that i feel like there may be a
+	// race condition involving watching a thread right as it's deleted
+	// or archived, and this seems like a good time when nothing is
+	// happening to figure out the truth of the matter. (watch context
+	// is the only place where we care about keeping the number of threads
+	// a user watches to a minimum)
+	_, err = s.pool.Exec(ctx, `
+		DELETE FROM watched_threads wt
+		USING threads t
+		WHERE t.id = wt.thread_id
+		AND wt.username = $1
+		AND (t.deleted = TRUE OR t.manually_archived = TRUE OR t.reply_count > $2)
+		`, username, utils.BUMP_LIMIT)
 	return err
 }
 
@@ -950,8 +966,8 @@ func (m *MockStore) WatchThread(username string, id uint32, ctx context.Context)
 }
 
 func (s *Store) WatchThread(username string, id uint32, ctx context.Context) (changed bool, err error) {
-	bl, _, err := s.ThreadStatus(id, ctx)
-	if err != nil || bl {
+	bl, ma, deleted, err := s.ThreadStatus(id, ctx)
+	if err != nil || bl || ma || deleted {
 		return
 	}
 	tag, err := s.pool.Exec(ctx, `
@@ -965,10 +981,6 @@ func (s *Store) WatchThread(username string, id uint32, ctx context.Context) (ch
 }
 
 func (s *Store) UnwatchThread(username string, id uint32, ctx context.Context) (changed bool, err error) {
-	bl, _, err := s.ThreadStatus(id, ctx)
-	if err != nil || bl {
-		return
-	}
 	tag, err := s.pool.Exec(ctx, `
 		DELETE FROM watched_threads WHERE username = $1 AND thread_id = $2
 		`, username, id)
@@ -1016,15 +1028,15 @@ func (m *MockStore) DeleteThread(id uint32, ctx context.Context) error {
 	return nil
 }
 
-func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error) {
+func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, deleted bool, err error) {
 	row := s.pool.QueryRow(ctx, `
-		SELECT reply_count, manually_archived
+		SELECT reply_count, manually_archived, deleted
 		FROM threads
 		WHERE id = $1
 		`, id)
 	var rc int
 	var ma bool
-	err = row.Scan(&rc, &ma)
+	err = row.Scan(&rc, &ma, &deleted)
 	if err != nil {
 		return
 	}
@@ -1038,7 +1050,7 @@ func (s *Store) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, re
 	return
 }
 
-func (m *MockStore) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error) {
+func (m *MockStore) ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, deleted bool, err error) {
 	return
 }
 

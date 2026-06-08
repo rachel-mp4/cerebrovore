@@ -91,7 +91,7 @@ type Storer interface {
 	RemoveWatchersFor(id uint32, ctx context.Context) error
 
 	// ThreadStatus returns if a thread is at bump limit, or reply limit
-	ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, err error)
+	ThreadStatus(id uint32, ctx context.Context) (bumplimit bool, replylimit bool, deleted bool, err error)
 	ThreadIsDead(id uint32, ctx context.Context) (bool, error)
 
 	// post methods
