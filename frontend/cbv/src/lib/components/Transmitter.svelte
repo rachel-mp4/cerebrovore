@@ -76,6 +76,7 @@
       return;
     }
     addReply(text);
+    document.dispatchEvent(new CustomEvent("lrc:scrollIfAttached"));
     inputEl.focus();
   });
 
@@ -105,19 +106,29 @@
   const bi = (event: KeyboardEvent) => {
     if (event.key === "Enter") {
       if (event.shiftKey) {
+        event.stopPropagation();
         return;
       }
       event.preventDefault();
       const sent = ctx.insertLineBreak();
       switch (sent) {
+        case 0: {
+          // we don't stopPropagation here because we want to then
+          // try and handle the event by uploading an image that is
+          // ready to upload
+          return;
+        }
+
         case 1: {
           // normal case
+          event.stopPropagation();
           message = "";
           sentmessage = "";
           return;
         }
         case 2: {
           // pubbedWithoutRecieving case
+          event.stopPropagation();
           inputEl.classList.add("dzzzt");
           dezzzt += 1;
           setTimeout(() => {

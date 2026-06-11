@@ -18,21 +18,29 @@ import { getFocusPingVolume, getPingVolume, getVolume, onVolumeChange, onVolumeF
 // complexity here a ton and track every message i send & recieve individually, which sucks, so this hopefully should
 // be a middleground that's only moderate complexity but which handles 99.99% of legitimate cases
 type lrcState = ready | sent | received | pubbedWithoutReceiving
-type mediaUploadState = ready | uploading | uploaded
+type mediaUploadState = ready | uploading | uploaded | failed
 
 type ready = {
   kind: "ready"
 }
+
 const ready: ready = {
   kind: "ready"
 }
+
 type uploading = {
   kind: "uploading"
   nonce: string
 }
+
 type uploaded = {
   kind: "uploaded"
   cid: string
+}
+
+type failed = {
+  kind: "failed"
+  reason: string
 }
 
 type sent = {
@@ -205,7 +213,8 @@ export class WSContext {
       case "sent": {
         switch (this.myMediaUploadState.kind) {
           case "ready":
-          case "uploading": {
+          case "uploading":
+          case "failed": {
             pubImage(alt, undefined, this)
             break
           }
@@ -224,7 +233,8 @@ export class WSContext {
       case "recieved": {
         switch (this.myMediaUploadState.kind) {
           case "ready":
-          case "uploading": {
+          case "uploading":
+          case "failed": {
             pubImage(alt, undefined, this)
             break
           }
@@ -274,7 +284,6 @@ export class WSContext {
       const uuid = crypto.randomUUID()
       const formData = new FormData()
       formData.append("file", blob)
-      formData.append("uuid", uuid)
       this.myMediaUploadState = {
         kind: "uploading",
         nonce: uuid
@@ -285,7 +294,7 @@ export class WSContext {
       }).then((response) => {
         if (response.ok) {
           response.json().then((data) => {
-            if (this.myMediaUploadState.kind === "uploading" && this.myMediaUploadState.nonce === data.uuid) {
+            if (this.myMediaUploadState.kind === "uploading" && this.myMediaUploadState.nonce === uuid) {
               this.myMediaUploadState = {
                 kind: "uploaded",
                 cid: data.cid
@@ -295,9 +304,16 @@ export class WSContext {
             }
           })
         } else {
-          throw new Error(`HTTP ${response.status}`)
+          if (this.myMediaUploadState.kind === "uploading" && this.myMediaUploadState.nonce === uuid) {
+            response.text().then((text) => {
+              this.myMediaUploadState = {
+                kind: "failed",
+                reason: text,
+              }
+            })
+          }
         }
-      }).catch((err) => { console.log(err) })
+      })
     }
   }
 

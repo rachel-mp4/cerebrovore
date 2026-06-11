@@ -151,3 +151,11 @@
   top:0;
   z-index: -1
 }
+
+.active .quote {
+  background: var(--gbg);
+  /* already is not ideal that i need a z-index, but even less ideal
+     now that i need to cancel it when active to get the background to
+     be the desired color */
+  z-index: 0;
+}

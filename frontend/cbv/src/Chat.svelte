@@ -63,6 +63,17 @@
     }
   };
   document.addEventListener("paste", pastifier);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      if (
+        ctx.myMediaState.kind === "recieved" &&
+        ctx.myMediaUploadState.kind === "uploaded"
+      ) {
+        ctx.pubImage(alt !== "" ? alt : undefined);
+      }
+    }
+  });
+  let alt: string = $state("");
 </script>
 
 {#if ctx.connected}
@@ -77,6 +88,7 @@
     {cancelimagepost}
     {uploadimage}
     {ctx}
+    bind:alt
   />
   <Transmitter {ctx} {defaultnick} {defaultcolor} {convertFileToImageItem} />
   <Console log={ctx.log} />

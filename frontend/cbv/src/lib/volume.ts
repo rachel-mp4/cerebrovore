@@ -67,9 +67,9 @@ export function onVolumeWormWatchChange(handler: (e: any) => void) {
 }
 
 export function getWormWatchVolume(): number {
-  const stored = localStorage.getItem("volumewormwatcher")
+  const stored = localStorage.getItem("volumewormwatch")
   if (stored === null) {
-    localStorage.setItem("volumewormwatcher", String(1))
+    localStorage.setItem("volumewormwatch", String(1))
     return 1
   }
   const volume = Number(stored)

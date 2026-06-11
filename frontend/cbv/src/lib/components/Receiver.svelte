@@ -22,6 +22,7 @@
     cancelimagepost: () => void;
     uploadimage: (alt: string | undefined) => void;
     ctx: WSContext;
+    alt: string;
   }
   let {
     items,
@@ -34,6 +35,7 @@
     cancelimagepost,
     uploadimage,
     ctx,
+    alt = $bindable(),
   }: Props = $props();
   let bottomEl: HTMLDivElement;
   let pinnedToBottomone = true;
@@ -181,7 +183,6 @@
       scrollIfPinned();
     }
   });
-  let alt: string = $state("");
 </script>
 
 {#each items as item (`${item.id}-${item.type}`)}
@@ -296,6 +297,8 @@
                   something went wrong if you can see me tbh
                 {:else if ctx.myMediaUploadState.kind === "uploading"}
                   uploading...
+                {:else if ctx.myMediaUploadState.kind === "failed"}
+                  failed: {ctx.myMediaUploadState.reason}
                 {:else}
                   <button
                     onclick={() => {

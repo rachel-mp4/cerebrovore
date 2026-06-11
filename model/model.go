@@ -372,7 +372,13 @@ func WithWormwatch(id uint32) Option {
 // they go offline, activity in that thread would become relevant again
 func WithCleanupFunction(cleanup func(string, context.Context) error) Option {
 	return func(options *options) error {
-		options.cleanup = cleanup
+		options.cleanup = func(s string, ctx context.Context) error {
+			err := cleanup(s, ctx)
+			if err != nil {
+				clog.Warn("cleanup error: %s / %s", s, err.Error())
+			}
+			return err
+		}
 		return nil
 	}
 }

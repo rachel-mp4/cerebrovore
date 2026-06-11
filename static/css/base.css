@@ -842,8 +842,7 @@ form .close {
 }
 
 .quote {
-  color: var(--accentl);
-  background: var(--gfg);
+  color: color-mix(in oklab, var(--accent), var(--fg));
   background-clip: text;
   position: relative; /* filter starts a stacking context :c, so needed for the topic to behave nice */
   z-index: -1;
