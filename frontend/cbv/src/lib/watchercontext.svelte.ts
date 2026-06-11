@@ -71,7 +71,7 @@ export class WatcherContext {
     })
 
     const handleWatcherEvent = (twe: any) => {
-      const npid = b36encodenumber(twe.pid)
+      const npid = b36encodenumber(twe.pid ?? twe.tid) //twe.tid is always defined, but pid is not always defined
       const ntid = b36encodenumber(twe.tid)
       // don't show that there's a reply if we're currently looking at this thread!
       if (document.getElementById(ntid)) {
