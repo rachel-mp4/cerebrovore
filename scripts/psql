@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+# source lib for load_env
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HERE/lib.sh"
+
+cd "$(cd "$HERE/.." && pwd)"
+load_env
+
+docker exec -it cerebrovore-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"

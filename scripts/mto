@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# migrate the db TO a specific version
+# warn before rolling backwards
+
+# ./scripts/mto 12 -> goto 12 (warns if it rolls back from a higher version)
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HERE/lib.sh"
+
+do_mto() {
+    local target="${1:-}"
+    if [[ -z "$target" ]]; then
+        log_fail "usage: mto <version>"
+    fi
+    if ! [[ "$target" =~ ^[0-9]+$ ]]; then
+        log_fail "version must be a number // '$target'"
+    fi
+    require_migrate
+
+    local DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+
+    # warn if this moves us backwards
+    local current=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" version 2>&1) || true
+    if [[ "$current" =~ ^[0-9]+$ ]] && (( target < current )); then
+        log_frfr
+        log_warn "this rolls the database DOWN from $current to $target"
+        input_yn "are you sure?" || { log_info "aborting"; return 0; }
+    fi
+
+    log_step "migrating to version $target"
+    "$MIGRATE_BIN" -path migrations/ -database "$DB_URL" goto "$target"
+    log_ok "now at version $target"
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+    load_env
+    source "$HERE/ensure-db"; do_ensure_db
+    do_mto "$@"
+fi
