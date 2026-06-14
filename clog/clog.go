@@ -81,40 +81,84 @@ func Close() {
 	}
 }
 
-func writeLog(level string, msg string) {
+func writeLog(level string, fmsg string) {
 	logMu.Lock()
 	defer logMu.Unlock()
-	if Dev && logFile != nil {
-		ts := time.Now().Format(time.RFC3339) // insane, whatever
-		fmt.Fprintf(logFile, "%s [%s] %s\n", ts, level, msg)
-	} else if !Dev {
+	if Dev {
+		switch level {
+		case okay:
+			okayP(fmsg)
+		case warn:
+			warnP(fmsg)
+		case fail:
+			failP(fmsg)
+		case info:
+			infoP(fmsg)
+		case tmpl:
+			tmplP(fmsg)
+		case loge:
+			logeP(fmsg)
+		case dbug:
+			dbugP(fmsg)
+		}
+		if logFile != nil {
+			ts := time.Now().Format(time.RFC3339) // insane, whatever
+			fmt.Fprintf(logFile, "%s [%s] %s\n", ts, level, fmsg)
+		}
+	} else {
 		ts := time.Now().Format(time.RFC3339)
-		fmt.Printf("%s [%s] %s\n", ts, level, msg)
+		fmt.Printf("%s [%s] %s\n", ts, level, fmsg)
 	}
+}
+
+const (
+	okay = "OKAY"
+	warn = "WARN"
+	fail = "FAIL"
+	info = "INFO"
+	tmpl = "TMPL"
+	loge = "LOGE"
+	dbug = "DBUG"
+)
+
+func okayP(formatted string) {
+	fmt.Printf("%s[%s+%s%s] %s%s\n", g, bd, rt, g, formatted, rt)
 }
 
 func Okay(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Printf("%s[%s+%s%s] %s%s\n", g, bd, rt, g, formatted, rt)
-	writeLog("OKAY", formatted)
+	writeLog(okay, formatted)
+}
+
+func warnP(formatted string) {
+	fmt.Printf("%s[%s*%s%s] %s%s\n", y, bd, rt, y, formatted, rt)
 }
 
 func Warn(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Printf("%s[%s*%s%s] %s%s\n", y, bd, rt, y, formatted, rt)
-	writeLog("WARN", formatted)
+	writeLog(warn, formatted)
+}
+
+func failP(formatted string) {
+	fmt.Printf("%s[%s!%s%s] %s%s\n", r, bd, rt, r, formatted, rt)
 }
 
 func Fail(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Printf("%s[%s!%s%s] %s%s\n", r, bd, rt, r, formatted, rt)
-	writeLog("FAIL", formatted)
+	writeLog(fail, formatted)
+}
+
+func infoP(fmsg string) {
+	fmt.Printf("[~] %s\n", fmsg)
 }
 
 func Info(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Printf("[~] %s\n", formatted)
-	writeLog("INFO", formatted)
+	writeLog(info, formatted)
+}
+
+func tmplP(fmsg string) {
+	fmt.Printf("[T] %s\n", fmsg)
 }
 
 func Tmpl(err error) {
@@ -122,8 +166,11 @@ func Tmpl(err error) {
 		return
 	}
 	formatted := fmt.Sprintf("tmpl error: %s", err.Error())
-	fmt.Printf("[T] %s\n", formatted)
-	writeLog("TMPL", formatted)
+	writeLog(tmpl, formatted)
+}
+
+func logeP(fmsg string) {
+	fmt.Printf("[E] %s\n", fmsg)
 }
 
 func LogE(err error, in string) {
@@ -131,17 +178,19 @@ func LogE(err error, in string) {
 		return
 	}
 	formatted := fmt.Sprintf("error in %s: %s", in, err.Error())
-	fmt.Printf("[E] %s\n", formatted)
-	writeLog("LOGE", formatted)
+	writeLog(loge, formatted)
 }
 
-// use this for meta messages, just for you!
+func dbugP(fmsg string) {
+	fmt.Printf("%s[&] %s%s\n", dm, fmsg, rt)
+}
+
 func Dbug(msg string, args ...any) {
 	if !Dev {
 		return
 	}
 	formatted := fmt.Sprintf(msg, args...)
-	fmt.Printf("%s[&] %s%s\n", dm, formatted, rt)
+	writeLog(dbug, formatted)
 }
 
 func InputYN(prompt string) bool {
