@@ -22,13 +22,8 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS="$ROOT/scripts"
 
-# crumb scripts
+# library
 source "$SCRIPTS/lib.sh"
-source "$SCRIPTS/setup"
-source "$SCRIPTS/ensure-db"
-source "$SCRIPTS/reset-db"
-source "$SCRIPTS/mup"
-source "$SCRIPTS/dev"
 
 # flags
 VERBOSE=false
@@ -100,30 +95,21 @@ pick_script() {
     read -r choice
 
     case "$choice" in
-        1) template_standard; return ;;
-        2) template_nomigrate; return ;;
-        3) picked=ensure-db ;;
-        4) picked=mup ;;
-        5) picked=mto ;;
-        6) picked=psql ;;
-        7) picked=backup ;;
-        8) picked=reset-db ;;
-        9) picked=setup ;;
-        10) picked=dev ;;
-        11) picked=prod ;;
-        q) picked=exit ;;
-        Q) picked=exit ;;
+        1) template_standard ;;
+        2) template_nomigrate ;;
+        3|4|5|7|8|10) load_env ;;&
+        3|4|5|10) do_ensure_db ;;&
+        4) do_mup ;;
+        5) printf "   version: "; read -r version; do_mto "$version" ;;
+        6) "$SCRIPTS/psql" ;;
+        7) do_backup ;;
+        8) do_reset_db ;;
+        9) do_setup ;;
+        10) do_dev ;;
+        11) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
+        q|Q) return ;;
         *) log_fail "invalid choice" ;;
     esac
-
-    if [[ "$picked" == "exit" ]]; then
-        exit 0
-    fi
-
-    printf "   args (optional): "
-    read -r extra
-    log_info "running ./scripts/$picked $extra"
-    "$SCRIPTS/$picked" $extra
 }
 
 banner dev

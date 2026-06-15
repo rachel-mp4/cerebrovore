@@ -3,8 +3,7 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
-
-cd "$(cd "$HERE/.." && pwd)"
+cd "$HERE/.."
 load_env
 
 docker exec -it cerebrovore-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"
