@@ -498,6 +498,7 @@ do_setup() {
             3)
                 log_info "come back when you have it installed!"
                 exit 0
+                ;;
             *)
                 log_fail "invalid choice, run ./d again"
                 ;;
