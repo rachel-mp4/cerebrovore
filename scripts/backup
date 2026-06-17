@@ -5,4 +5,24 @@ source "$HERE/lib.sh"
 ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
 load_env
 
-do_backup
+BACKUP_PRODUCTION=false
+
+for arg in "$@"; do
+  case "$arg" in
+    -p|--prod) BACKUP_PRODUCTION=true ;;
+    -h|--help)
+      echo "usage: $0 [-p|--prod] [-h|--help]"
+      echo ""
+      echo " (no arg)   save backup to ./backups"
+      echo " -p/--prod  save backup to /opt/cerebrovore/backups"
+      echo " -h/--help  this text"
+      echo ""
+      exit 0 ;;
+  esac
+done
+
+if [[ "$BACKUP_PRODUCTION" == "true" ]]; then
+  BACKUP_DIR="/opt/cerebrovore/backups" do_backup
+else
+  do_backup
+fi

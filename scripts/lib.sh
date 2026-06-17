@@ -95,6 +95,7 @@ require_migrate() {
 
 # pg_dump database to ./backups (or $BACKUP_DIR)
 # set SKIP_BACKUP=1 to tolerate failure (e.g. first deploy, nothing to dump yet)
+# assumes you have postgres credentials sourced
 do_backup() {
     log_step "database backup"
     local BACKUP_DIR="${BACKUP_DIR:-backups}"
@@ -148,11 +149,18 @@ do_dev() {
 
     # dev: vite w/ hmr
     log_step "starting vite with HMR"
+    # i feel like we shouldn't see vite output even in verbose 
+    # because it's too aggressive but i'm not positive, 
+    # that's why this is commented out.
     # stdin from /dev/null so vite doesn't fight the restart loop for the terminal
     if [[ "$VERBOSE" == true ]]; then
-        (cd "$FRONTEND" && npx vite dev) </dev/null &
+        # logLevel error because i'm bad at coding and there are lots of warnings
+        # should learn about how to write npm scripts, because i think it's better
+        # to do npm run dev vs npx vite dev, in case npm build system ever is more
+        # than just running vite, but right now 6.17.2026 it should be identical
+        (cd "$FRONTEND" && npx vite dev --logLevel error --clearScreen false) </dev/null &
     else
-        (cd "$FRONTEND" && npx vite dev) </dev/null &>/dev/null &
+        (cd "$FRONTEND" && npm run dev) </dev/null &>/dev/null &
     fi
     PIDS+=($!)
     log_info "vite dev pid: $!"
@@ -166,7 +174,7 @@ do_dev() {
     fi
     log_ok "go $(go version | awk '{print $3}')"
 
-    local GO_FLAGS="-db -midp -dev"
+    local GO_FLAGS="$@"
 
     GO_PID=""
     GO_IN=""
@@ -372,116 +380,116 @@ do_setup() {
         log_warn ".env is identical to .env.example (default secrets)"
     fi
 
-    if [[ "$NEEDS_SETUP" == true ]]; then
-        log_info "let's set up .env"
-        echo ""
+    if [[ "$NEEDS_SETUP" == false ]]; then
+        log_ok ".env exists and is configured"
+        return 0
+    fi
 
-        # these just need to be random strings
-        # cerebrovore doesn't actually care if its default
-        # .. but *I* do
-        printf "${W}[${P}${BD}?${RT}${W}]${RT} secrets (SESSION_KEY, LRCD_SECRET, POSTGRES_PASSWORD)\n"
-        printf "   ${G}(G)${RT}enerate random / ${R}(M)${RT}anual entry: "
-        read -r SECRET_MODE
+    log_info "let's set up .env"
+    echo ""
 
-        # generate url safe passwords (standard hex is fine)
-        case "$SECRET_MODE" in
-            [gG])
-                SESSION_KEY=$(openssl rand -hex 32)
-                LRCD_SECRET=$(openssl rand -hex 32)
-                POSTGRES_PASSWORD=$(openssl rand -hex 32)
-                log_ok "generated random secrets"
-                ;;
-            [mM])
-                printf "   SESSION_KEY: " && read -r SESSION_KEY
-                printf "   LRCD_SECRET: " && read -r LRCD_SECRET
-                printf "   POSTGRES_PASSWORD: " && read -r POSTGRES_PASSWORD
-                if [[ "$POSTGRES_PASSWORD" =~ [^a-zA-Z0-9_.-] ]]; then
-                    log_warn "password contains URL-unsafe characters (/, +, @, etc.)"
-                    log_fail "use only alphanumeric, dash, dot, underscore"
-                fi
-                log_ok "manual secrets set"
-                ;;
-            *)
-                log_fail "invalid choice, run ./d again"
-                ;;
-        esac
+    # these just need to be random strings
+    # cerebrovore doesn't actually care if its default
+    # .. but *I* do
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} secrets (SESSION_KEY, LRCD_SECRET, POSTGRES_PASSWORD)\n"
+    printf "   ${G}(G)${RT}enerate random / ${R}(M)${RT}anual entry: "
+    read -r SECRET_MODE
 
-        echo ""
-        log_info "this is completely optional in dev to be clear"
-        printf "${W}[${P}${BD}?${RT}${W}]${RT} YOUTUBE_API_KEY (ww / yt metadata grabbing)\n"
-        printf "   ${G}(M)${RT}anual entry / ${R}(S)${RT}kip: "
-        read -r YT_MODE
+    # generate url safe passwords (standard hex is fine)
+    case "$SECRET_MODE" in
+        [gG])
+            SESSION_KEY=$(openssl rand -hex 32)
+            LRCD_SECRET=$(openssl rand -hex 32)
+            POSTGRES_PASSWORD=$(openssl rand -hex 32)
+            log_ok "generated random secrets"
+            ;;
+        [mM])
+            printf "   SESSION_KEY: " && read -r SESSION_KEY
+            printf "   LRCD_SECRET: " && read -r LRCD_SECRET
+            printf "   POSTGRES_PASSWORD: " && read -r POSTGRES_PASSWORD
+            if [[ "$POSTGRES_PASSWORD" =~ [^a-zA-Z0-9_.-] ]]; then
+                log_warn "password contains URL-unsafe characters (/, +, @, etc.)"
+                log_fail "use only alphanumeric, dash, dot, underscore"
+            fi
+            log_ok "manual secrets set"
+            ;;
+        *)
+            log_fail "invalid choice, run ./d again"
+            ;;
+    esac
 
-        case "$YT_MODE" in
-            [mM])
-                printf "   YOUTUBE_API_KEY: " && read -r YOUTUBE_API_KEY
-                log_ok "youtube api key set"
-                ;;
-            [sS]|"")
-                YOUTUBE_API_KEY="NONE"
-                log_ok "youtube api key skipped (set to NONE)"
-                ;;
-            *)
-                log_fail "invalid choice, run ./d again"
-                ;;
-        esac
+    echo ""
+    log_info "this is completely optional in dev to be clear"
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} YOUTUBE_API_KEY (ww / yt metadata grabbing)\n"
+    printf "   ${G}(M)${RT}anual entry / ${R}(S)${RT}kip: "
+    read -r YT_MODE
 
-        # admin username
-        echo ""
-        printf "${W}[${P}${BD}?${RT}${W}]${RT} ADMIN_USERNAME (enter for 'admin'): "
-        read -r ADMIN_USERNAME
-        ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
-        log_ok "admin username: $ADMIN_USERNAME"
+    case "$YT_MODE" in
+        [mM])
+            printf "   YOUTUBE_API_KEY: " && read -r YOUTUBE_API_KEY
+            log_ok "youtube api key set"
+            ;;
+        [sS]|"")
+            YOUTUBE_API_KEY="NONE"
+            log_ok "youtube api key skipped (set to NONE)"
+            ;;
+        *)
+            log_fail "invalid choice, run ./d again"
+            ;;
+    esac
 
-        # migrate tooling (golang-migrate), stored as MIGRATE_BIN in .env
-        # no need for global PATH stuff
-        echo ""
-        printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
-        printf "   ${G}(1)${RT} use system install (already on PATH)\n"
-        printf "   ${G}(2)${RT} install via go  (recommended)\n"
-        printf "   ${G}(3)${RT} download + compile into ./bin  ${DM}(heavy, largely pointless; 2 already fetches & builds)${RT}\n"
-        printf "   choose [1/2/3]: "
-        read -r MIGRATE_MODE
+    # admin username
+    echo ""
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} ADMIN_USERNAME (enter for 'admin'): "
+    read -r ADMIN_USERNAME
+    ADMIN_USERNAME="${ADMIN_USERNAME:-admin}"
+    log_ok "admin username: $ADMIN_USERNAME"
 
-        case "$MIGRATE_MODE" in
-            1)
-                MIGRATE_BIN="migrate"
-                if command -v migrate &>/dev/null; then
-                    log_ok "using system migrate ($(command -v migrate))"
-                else
-                    log_warn "migrate not on PATH - install golang-migrate or re-run setup"
-                fi
-                ;;
-            2)
-                command -v go &>/dev/null || log_fail "go not found, can't go-install migrate"
-                log_info "installing migrate via go (may take a little while)..."
-                go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-                MIGRATE_BIN="$(go env GOPATH)/bin/migrate"
-                [[ -x "$MIGRATE_BIN" ]] && log_ok "installed: $MIGRATE_BIN" \
-                    || log_fail "go install finished but $MIGRATE_BIN missing, check go env GOPATH"
-                ;;
-            3)
-                log_warn "may take a while, proceeding"
-                command -v go  &>/dev/null || log_fail "go not found, can't compile migrate"
-                command -v git &>/dev/null || log_fail "git not found, can't clone migrate"
-                log_info "cloning + building golang-migrate into ./bin ..."
-                mkdir -p bin
-                DEST="$(pwd)/bin/migrate"
-                TMP=$(mktemp -d)
-                git clone --depth 1 https://github.com/golang-migrate/migrate "$TMP"
-                (cd "$TMP" && go build -tags 'postgres' -o "$DEST" ./cmd/migrate)
-                rm -rf "$TMP"
-                MIGRATE_BIN="bin/migrate"
-                [[ -x "$MIGRATE_BIN" ]] && log_ok "built: ./bin/migrate" \
-                    || log_fail "build failed, ./bin/migrate not found"
-                ;;
-            *)
-                log_fail "invalid choice, run ./d again"
-                ;;
-        esac
+    # discord link
+    echo ""
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} DISCORD_LINK (optional): "
+    read -r DISCORD_LINK
+    log_ok "discord link: $DISCORD_LINK"
 
-        # write .env
-        cat > .env <<EOF
+    # report delimiter
+    echo ""
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} REPORT_DELIMITER (maybe pick a weird unicode character that users probably won't use): "
+    read -r REPORT_DELIMITER
+    log_ok "report delimiter: $REPORT_DELIMITER"
+
+    # migrate tooling (golang-migrate), stored as MIGRATE_BIN in .env
+    # no need for global PATH stuff
+    echo ""
+    printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
+    printf "   ${G}(1)${RT} use system install (if already in PATH)\n"
+    printf "   ${G}(2)${RT} install via go  (recommended)\n"
+    printf "   choose [1/2]: "
+    read -r MIGRATE_MODE
+
+    case "$MIGRATE_MODE" in
+        1)
+            MIGRATE_BIN="migrate"
+            if command -v migrate &>/dev/null; then
+                log_ok "using system migrate ($(command -v migrate))"
+            else
+                log_fail "migrate not in PATH - manually install golang-migrate or re-run setup"
+            fi
+            ;;
+        2)
+            command -v go &>/dev/null || log_fail "go not found, can't go-install migrate"
+            log_info "installing migrate via go (may take a little while)..."
+            go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+            MIGRATE_BIN="$(go env GOPATH)/bin/migrate"
+            [[ -x "$MIGRATE_BIN" ]] && log_ok "installed: $MIGRATE_BIN" \
+                || log_fail "go install finished but $MIGRATE_BIN missing, check go env GOPATH"
+            ;;
+        *)
+            log_fail "invalid choice, run ./d again"
+            ;;
+    esac
+
+    # write .env
+    cat > .env <<EOF
 SESSION_KEY=${SESSION_KEY}
 LRCD_SECRET=${LRCD_SECRET}
 POSTGRES_USER=cbv
@@ -490,34 +498,35 @@ POSTGRES_DB=cbvdb
 POSTGRES_PORT=9001
 YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
 ADMIN_USERNAME=${ADMIN_USERNAME}
+DISCORD_LINK=${DISCORD_LINK}
+REPORT_DELIMITER=${REPORT_DELIMITER}
 MIGRATE_BIN=${MIGRATE_BIN}
 EOF
-        echo ""
-        log_ok ".env written"
+    echo ""
+    log_ok ".env written"
 
-        echo ""
-        log_info "generated .env:"
-        echo "   SESSION_KEY=${DM}${R}${SESSION_KEY}${RT}"
-        echo "   LRCD_SECRET=${DM}${R}${LRCD_SECRET}${RT}"
-        echo "   POSTGRES_USER=${DM}${R}cbv${RT}"
-        echo "   POSTGRES_PASSWORD=${DM}${R}${POSTGRES_PASSWORD}${RT}"
-        echo "   POSTGRES_DB=${DM}${R}cbvdb${RT}"
-        echo "   POSTGRES_PORT=${DM}${R}9001${RT}"
-        echo "   YOUTUBE_API_KEY=${DM}${R}${YOUTUBE_API_KEY}${RT}"
-        echo "   ADMIN_USERNAME=${DM}${R}${ADMIN_USERNAME}${RT}"
-        echo "   MIGRATE_BIN=${DM}${R}${MIGRATE_BIN}${RT}"
-        echo ""
+    echo ""
+    log_info "generated .env:"
+    echo "   SESSION_KEY=${DM}${R}${SESSION_KEY}${RT}"
+    echo "   LRCD_SECRET=${DM}${R}${LRCD_SECRET}${RT}"
+    echo "   POSTGRES_USER=${DM}${R}cbv${RT}"
+    echo "   POSTGRES_PASSWORD=${DM}${R}${POSTGRES_PASSWORD}${RT}"
+    echo "   POSTGRES_DB=${DM}${R}cbvdb${RT}"
+    echo "   POSTGRES_PORT=${DM}${R}9001${RT}"
+    echo "   YOUTUBE_API_KEY=${DM}${R}${YOUTUBE_API_KEY}${RT}"
+    echo "   ADMIN_USERNAME=${DM}${R}${ADMIN_USERNAME}${RT}"
+    echo "   DISCORD_LINK=${DM}${R}${DISCORD_LINK}${RT}"
+    echo "   REPORT_DELIMITER=${DM}${R}${REPORT_DELIMITER}${RT}"
+    echo "   MIGRATE_BIN=${DM}${R}${MIGRATE_BIN}${RT}"
+    echo ""
 
-        log_info "${R}${BD}MAKE SURE TO SET UP ADMIN ACCOUNT IN THE WEBAPP${RT}"
-        log_info "${R}${BD}SIGN UP WITH THIS ACCOUNT NAME:${G} ${ADMIN_USERNAME}${RT}"
-        if ! input_yn "Will you make the admin account please"; then
-            log_warn "I'M NOT GONNA SELL YOU THESE BASS STRINGS"
-            log_warn "I, I- I'M /NEVER/ GONNA SELL YOU THESE BASS STRINGS"
-            log_warn "b-BUSTER!"
-        else
-            log_info "thank you"
-        fi
+    log_info "${R}${BD}MAKE SURE TO SET UP ADMIN ACCOUNT IN THE WEBAPP${RT}"
+    log_info "${R}${BD}SIGN UP WITH THIS ACCOUNT NAME:${G} ${ADMIN_USERNAME}${RT}"
+    if ! input_yn "Will you make the admin account please"; then
+        log_warn "I'M NOT GONNA SELL YOU THESE BASS STRINGS"
+        log_warn "I, I- I'M /NEVER/ GONNA SELL YOU THESE BASS STRINGS"
+        log_warn "b-BUSTER!"
     else
-        log_ok ".env exists and is configured"
+        log_info "thank you"
     fi
 }

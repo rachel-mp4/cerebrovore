@@ -10,9 +10,8 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
-source "$HERE/setup"
-source "$HERE/backup"
 
+# if you change this, it's hardcoded in ./scripts/backup & ./d -i
 INSTALL_DIR="/opt/cerebrovore"
 
 # flags
@@ -43,8 +42,42 @@ ROOT="$(cd "$HERE/.." && pwd)"
 cd "$ROOT"
 log_info "project root: $ROOT"
 
-# make sure a repo .env exists (gets copied to /opt on first deploy)
-do_setup
+# set up install dir
+mkdir -p "$INSTALL_DIR"
+log_step "deploying to $INSTALL_DIR"
+
+# make sure .env exists in install dir
+if [[ ! -f "$INSTALL_DIR/.env" ]]; then
+    # setup here and copy install dir
+    if [[ ! -f ".env" ]]; then
+        log_warn "no .env in $INSTALL_DIR or this repo; walking you through .env construction & will copy it over"
+        log_info "walking you through .env construction & copying it over"
+        do_setup
+        cp .env "$INSTALL_DIR/.env"
+    else
+        log_warn "no .env in $INSTALL_DIR, but it's present in this repo"
+        log_info "copying from repo, you should review it"
+        cat .env
+        if input_yn "looks good?"; then
+            log_ok "copying"
+            cp .env "$INSTALL_DIR/.env"
+        else
+            log_fail "fix it!"
+        fi
+    fi
+else
+    if [[ ! -f ".env" ]]; then
+        log_info "no .env in this repo, but it's present in $INSTALL_DIR, so i'm going to copy it back to this repo for convenience purposes"
+        cp "$INSTALL_DIR/.env" .env
+    else
+        log_info "both this repo and $INSTALL_DIR have an .env, checking that they match"
+        if cmp -s .env "$INSTALL_DIR/.env"; then
+            log_info "they match, redeploying"
+        else
+            log_fail "your .env does not match $INSTALL_DIR/.env!"
+        fi
+    fi
+fi
 
 # frontend (production build)
 log_step "checking node"
@@ -63,7 +96,7 @@ else
 fi
 
 log_step "building frontend (production)"
-quiet bash -c "cd '$FRONTEND' && npx vite build"
+quiet bash -c "cd '$FRONTEND' && npm run build"
 log_ok "frontend built"
 
 # go
@@ -108,16 +141,6 @@ log_step "building go binary"
 quiet go build -o cerebrovore ./cmd/main.go
 log_ok "binary built"
 
-# stop service if running
-log_step "deploying to $INSTALL_DIR"
-if systemctl is-active cerebrovore &>/dev/null; then
-    log_info "stopping cerebrovore service"
-    systemctl stop cerebrovore
-    log_ok "service stopped"
-fi
-
-# set up install dir
-mkdir -p "$INSTALL_DIR"
 
 # wipe old build artifacts (skip uploads, .env, .fileStore, etc)
 rm -f "$INSTALL_DIR/cerebrovore"
@@ -135,16 +158,6 @@ cp -r static "$INSTALL_DIR/"
 cp -r tmpl "$INSTALL_DIR/"
 cp -r migrations "$INSTALL_DIR/"
 cp docker-compose.yml "$INSTALL_DIR/"
-
-# make sure .env exists in install dir
-if [[ ! -f "$INSTALL_DIR/.env" ]]; then
-    log_warn "no .env in $INSTALL_DIR"
-    log_info "copying from repo, you should review it"
-    cp .env "$INSTALL_DIR/.env"
-fi
-
-# make sure uploads dir exists
-mkdir -p "$INSTALL_DIR/uploads"
 
 # set ownership
 chown -R "$SVC_USER":"$SVC_USER" "$INSTALL_DIR"
@@ -189,6 +202,12 @@ else
     log_fail "migration failed: $MIGRATE_OUTPUT"
 fi
 
+if systemctl is-active cerebrovore &>/dev/null; then
+    log_step "stopping cerebrovore service"
+    systemctl stop cerebrovore
+    log_ok "service stopped"
+fi
+
 # systemd service
 log_step "systemd service"
 cat > /etc/systemd/system/cerebrovore.service <<EOF
@@ -204,6 +223,7 @@ WorkingDirectory=${INSTALL_DIR}
 ExecStart=${INSTALL_DIR}/cerebrovore -cold -db -port 9000
 Restart=on-failure
 RestartSec=5
+TimeoutStopSec=20
 
 [Install]
 WantedBy=multi-user.target
