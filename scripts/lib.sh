@@ -457,36 +457,52 @@ do_setup() {
     read -r REPORT_DELIMITER
     log_ok "report delimiter: $REPORT_DELIMITER"
 
-    # migrate tooling (golang-migrate), stored as MIGRATE_BIN in .env
-    # no need for global PATH stuff
-    echo ""
-    printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
-    printf "   ${G}(1)${RT} use system install (if already in PATH)\n"
-    printf "   ${G}(2)${RT} install via go  (recommended)\n"
-    printf "   choose [1/2]: "
-    read -r MIGRATE_MODE
+    if command -v migrate &>/dev/null; then
+        log_ok "using system migrate ($(command -v migrate))"
+        MIGRATE_BIN="migrate"
+    else
+        # migrate tooling (golang-migrate), stored as MIGRATE_BIN in .env
+        # no need for global PATH stuff
+        echo ""
+        printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
+        printf "   ${G}(1)${RT} install via go install ${B}(recommended)\n"
+        printf "   ${G}(2)${RT} download from github + compile via go build into ./bin  ${DM}(1 fewer place to delete stuff from when you're done with this project)${RT}\n"
+        printf "   ${G}(3)${RT} manual install to path \n"
+        printf "   choose [1/2/3]: "
+        read -r MIGRATE_MODE
 
-    case "$MIGRATE_MODE" in
-        1)
-            MIGRATE_BIN="migrate"
-            if command -v migrate &>/dev/null; then
-                log_ok "using system migrate ($(command -v migrate))"
-            else
-                log_fail "migrate not in PATH - manually install golang-migrate or re-run setup"
-            fi
-            ;;
-        2)
-            command -v go &>/dev/null || log_fail "go not found, can't go-install migrate"
-            log_info "installing migrate via go (may take a little while)..."
-            go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
-            MIGRATE_BIN="$(go env GOPATH)/bin/migrate"
-            [[ -x "$MIGRATE_BIN" ]] && log_ok "installed: $MIGRATE_BIN" \
-                || log_fail "go install finished but $MIGRATE_BIN missing, check go env GOPATH"
-            ;;
-        *)
-            log_fail "invalid choice, run ./d again"
-            ;;
-    esac
+        case "$MIGRATE_MODE" in
+            1)
+                command -v go &>/dev/null || log_fail "go not found, can't go-install migrate"
+                log_info "installing migrate via go (may take a little while)..."
+                go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.19.1
+                MIGRATE_BIN="$(go env GOPATH)/bin/migrate"
+                [[ -x "$MIGRATE_BIN" ]] && log_ok "installed: $MIGRATE_BIN" \
+                    || log_fail "go install finished but $MIGRATE_BIN missing, check go env GOPATH"
+                ;;
+            2)
+                log_warn "may take a while, proceeding"
+                command -v go  &>/dev/null || log_fail "go not found, can't compile migrate"
+                command -v git &>/dev/null || log_fail "git not found, can't clone migrate"
+                log_info "cloning + building golang-migrate into ./bin ..."
+                mkdir -p bin
+                DEST="$(pwd)/bin/migrate"
+                TMP=$(mktemp -d)
+                git clone --depth 1 https://github.com/golang-migrate/migrate "$TMP"
+                (cd "$TMP" && git checkout v4.19.1 && go build -tags 'postgres' -o "$DEST" ./cmd/migrate)
+                rm -rf "$TMP"
+                MIGRATE_BIN="bin/migrate"
+                [[ -x "$MIGRATE_BIN" ]] && log_ok "built: ./bin/migrate" \
+                    || log_fail "build failed, ./bin/migrate not found"
+                ;;
+            3)
+                log_info "come back when you have it installed!"
+                exit 0
+            *)
+                log_fail "invalid choice, run ./d again"
+                ;;
+        esac
+    fi
 
     # write .env
     cat > .env <<EOF
