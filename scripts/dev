@@ -7,6 +7,8 @@ source "$HERE/lib.sh"
 # press R to restart the backend, Ctrl-C to quit
 # expects $ROOT to point at the repo root
 do_dev() {
+  ensure_db
+
   # frontend
   log_step "checking node"
 
@@ -147,8 +149,6 @@ do_dev() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
   ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
   load_env
-
-  source "$HERE/ensure-db"; do_ensure_db
 
   do_dev "$@"
 fi

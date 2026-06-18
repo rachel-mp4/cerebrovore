@@ -92,3 +92,38 @@ require_migrate() {
     fi
     log_fail "golang-migrate not found (MIGRATE_BIN='$MIGRATE_BIN'). run ./scripts/setup or set MIGRATE_BIN in .env"
 }
+
+# make sure docker is up and pg accepts conn. 
+# expects POSTGRES_* already in env (load_env)
+ensure_db() {
+    [[ -n "${_DB_OK:-}" ]] && return
+    # docker (postgres)
+    log_step "checking docker"
+
+    if ! command -v docker &>/dev/null; then
+        log_fail "docker not found, install docker and try again"
+    fi
+
+    if ! docker info &>/dev/null; then
+        log_fail "docker daemon isn't running, start docker desktop (or dockerd) and try again"
+    fi
+
+    log_ok "docker available"
+
+    log_step "starting postgres"
+    quiet docker compose up -d --wait db
+
+    # changelog: added bug
+    log_info "waiting for postgres to accept connections..."
+    for i in $(seq 1 15); do
+        if docker compose exec -T db pg_isready -U "$POSTGRES_USER" &>/dev/null; then
+        break
+        fi
+        sleep 1
+    done
+    if ! docker compose exec -T db pg_isready -U "$POSTGRES_USER" &>/dev/null; then
+        log_fail "postgres didn't become ready in 15s, check docker logs"
+    fi
+    log_ok "postgres is ready"
+    _DB_OK=1
+}

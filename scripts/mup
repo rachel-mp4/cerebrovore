@@ -5,6 +5,8 @@ source "$HERE/lib.sh"
 
 # migrate up, apply pending migrations to the local db
 do_mup() {
+  ensure_db
+
   log_step "database migrations"
 
   require_migrate
@@ -34,8 +36,6 @@ do_mup() {
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
   ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
   load_env
-
-  source "$HERE/ensure-db"; do_ensure_db
 
   do_mup
 fi

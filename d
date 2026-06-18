@@ -10,7 +10,6 @@
 # to accomplish this same task by hand, run the following scripts (./scripts)
 #
 # setup
-# ensure-db
 # mup
 # dev
 #
@@ -25,7 +24,6 @@ SCRIPTS="$ROOT/scripts"
 # library
 source "$SCRIPTS/backup"
 source "$SCRIPTS/dev"
-source "$SCRIPTS/ensure-db"
 source "$SCRIPTS/lib.sh"
 source "$SCRIPTS/mto"
 source "$SCRIPTS/mup"
@@ -65,7 +63,6 @@ template_standard() {
     do_setup
     load_env
     [[ "$RESETDB" == true ]] && do_reset_db
-    do_ensure_db
     do_mup
     do_dev "-db -dev$IDENTITY_FLAG"
 }
@@ -75,7 +72,6 @@ template_nomigrate() {
     do_setup
     load_env
     [[ "$RESETDB" == true ]] && do_reset_db
-    do_ensure_db
     do_dev "-db -dev$IDENTITY_FLAG"
 }
 
@@ -86,18 +82,17 @@ pick_script() {
     echo "   ${Y}(1)${RT}  standard     full dev (setup, db, migrate, run)"
     echo "   ${Y}(2)${RT}  no-migrate   full dev but skips migrations"
     echo "  ${B}${BD}db${RT}"
-    echo "   ${B}(3)${RT}  ensure-db    start postgres"
-    echo "   ${B}(4)${RT}  mup          migrate up"
-    echo "   ${B}(5)${RT}  mto          migrate to a version"
-    echo "   ${B}(6)${RT}  psql         psql shell"
-    echo "   ${B}(7)${RT}  backup       dump the db"
-    echo "   ${B}(8)${RT}  backup prod  dump the production db"
-    echo "   ${B}(9)${RT}  reset-db     nuke the db"
+    echo "   ${B}(3)${RT}  mup          migrate up"
+    echo "   ${B}(4)${RT}  mto          migrate to a version"
+    echo "   ${B}(5)${RT}  psql         psql shell"
+    echo "   ${B}(6)${RT}  backup       dump the db"
+    echo "   ${B}(7)${RT}  backup prod  dump the production db"
+    echo "   ${B}(8)${RT}  reset-db     nuke the db"
     echo "  ${G}${BD}dev${RT}"
-    echo "   ${G}(10)${RT} setup        generate .env"
-    echo "   ${G}(11)${RT} dev          run vite + go"
+    echo "   ${G}(9)${RT}  setup        generate .env"
+    echo "   ${G}(10)${RT} dev          run vite + go"
     echo "  ${P}${BD}prod${RT}"
-    echo "   ${P}(12)${RT} prod         deploy to the server"
+    echo "   ${P}(11)${RT} prod         deploy to the server"
     echo "  ${R}${BD}meta${RT}"
     echo "   ${R}(Q)${RT}  quit         SO LONG"
 
@@ -107,17 +102,16 @@ pick_script() {
     case "$choice" in
         1) template_standard ;;
         2) template_nomigrate ;;
-        3|4|5|7|8|9|11) load_env ;;&
-        3|4|5|11) do_ensure_db ;;&
-        4) do_mup ;;
-        5) printf "   version: "; read -r version; do_mto "$version" ;;
-        6) "$SCRIPTS/psql" ;;
-        7) do_backup ;;
-        8) BACKUP_DIR="/opt/cerebrovore/backups" do_backup ;;
-        9) do_reset_db ;;
-        10) do_setup ;;
-        11) printf "   flags: "; read -r flags; do_dev "$flags" ;;
-        12) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
+        3|4|6|7|8|10) load_env ;;&
+        3) do_mup ;;
+        4) printf "   version: "; read -r version; do_mto "$version" ;;
+        5) "$SCRIPTS/psql" ;;
+        6) do_backup ;;
+        7) BACKUP_DIR="/opt/cerebrovore/backups" do_backup ;;
+        8) do_reset_db ;;
+        9) do_setup ;;
+        10) printf "   flags: "; read -r flags; do_dev "$flags" ;;
+        11) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
         q|Q) return ;;
         *) log_fail "invalid choice" ;;
     esac
