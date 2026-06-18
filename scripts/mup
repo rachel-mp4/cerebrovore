@@ -35,7 +35,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
   ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
   load_env
 
-  do_ensure_db
+  source "$HERE/ensure-db"; do_ensure_db
 
   do_mup
 fi
