@@ -21,7 +21,7 @@ bash)
 
 ### scripts
 for more info about the included scripts, see
-[https://github.com/rachel-mp4/cerebrovore/tree/script-split/scripts#readme](https://github.com/rachel-mp4/cerebrovore/tree/script-split/scripts#readme)
+[https://github.com/rachel-mp4/cerebrovore/tree/main/scripts#readme](https://github.com/rachel-mp4/cerebrovore/tree/main/scripts#readme)
 
 ## manual setup (deprecated)
 
