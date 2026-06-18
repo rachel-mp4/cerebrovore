@@ -23,7 +23,14 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 SCRIPTS="$ROOT/scripts"
 
 # library
+source "$SCRIPTS/backup"
+source "$SCRIPTS/dev"
+source "$SCRIPTS/ensure-db"
 source "$SCRIPTS/lib.sh"
+source "$SCRIPTS/mto"
+source "$SCRIPTS/mup"
+source "$SCRIPTS/reset-db"
+source "$SCRIPTS/setup"
 
 # flags
 VERBOSE=false

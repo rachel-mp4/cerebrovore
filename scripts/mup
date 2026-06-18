@@ -2,9 +2,40 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
-ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
-load_env
 
-do_ensure_db
+# migrate up, apply pending migrations to the local db
+do_mup() {
+  log_step "database migrations"
 
-do_mup
+  require_migrate
+
+  local DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+
+  # check current state before touching anything
+  local MIGRATE_VERSION=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" version 2>&1) || true
+
+  if echo "$MIGRATE_VERSION" | grep -q "dirty"; then
+    log_frfr
+    log_fail "database is in dirty migration state, resolve manually with migrate -path migrations/ -database \"\$DB_URL\" force <version>"
+  fi
+
+  # run pending migrations (migrate exits non-zero on 'no change')
+  local MIGRATE_OUTPUT
+  if MIGRATE_OUTPUT=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" up 2>&1); then
+    log_ok "migrations applied"
+  elif echo "$MIGRATE_OUTPUT" | grep -q "no change"; then
+    log_ok "migrations up to date"
+  else
+    log_fail "migration failed: $MIGRATE_OUTPUT"
+  fi
+}
+
+# only run following code if run as standalone script; not when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
+  ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+  load_env
+
+  do_ensure_db
+
+  do_mup
+fi

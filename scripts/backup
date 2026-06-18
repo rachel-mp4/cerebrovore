@@ -2,27 +2,58 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
-ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
-load_env
 
-BACKUP_PRODUCTION=false
+# pg_dump database to ./backups (or $BACKUP_DIR)
+# set SKIP_BACKUP=1 to tolerate failure (e.g. first deploy, nothing to dump yet)
+# assumes you have postgres credentials sourced
+do_backup() {
+  log_step "database backup"
+  local BACKUP_DIR="${BACKUP_DIR:-backups}"
+  mkdir -p "$BACKUP_DIR"
+  local STAMP=$(date +%Y%m%d-%H%M%S)
+  local BACKUP_FILE="$BACKUP_DIR/${POSTGRES_DB}-${STAMP}.sql"
 
-for arg in "$@"; do
-  case "$arg" in
-    -p|--prod) BACKUP_PRODUCTION=true ;;
-    -h|--help)
-      echo "usage: $0 [-p|--prod] [-h|--help]"
-      echo ""
-      echo " (no arg)   save backup to ./backups"
-      echo " -p/--prod  save backup to /opt/cerebrovore/backups"
-      echo " -h/--help  this text"
-      echo ""
-      exit 0 ;;
-  esac
-done
+  # don't swallow stderr, so a failed dump tells you why
+  if PGPASSWORD="$POSTGRES_PASSWORD" pg_dump -h 127.0.0.1 -p "$POSTGRES_PORT" -U "$POSTGRES_USER" "$POSTGRES_DB" > "$BACKUP_FILE"; then
+    log_ok "backup: $BACKUP_FILE"
+  else
+    if [[ "${SKIP_BACKUP:-}" == 1 ]]; then
+      log_warn "backup failed"
+      if input_yn "SKIP_BACKUP=1 (is this your first deploy?) continue?"; then
+        log_ok "backup skipped"
+      else
+        log_fail "aborting"
+      fi
+    else
+      log_fail "aborting before migrations. if this is the first deploy, re-run with SKIP_BACKUP=1"
+    fi
+  fi
+}
 
-if [[ "$BACKUP_PRODUCTION" == "true" ]]; then
-  BACKUP_DIR="/opt/cerebrovore/backups" do_backup
-else
-  do_backup
+# only run following code if run as standalone script; not when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
+  ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+  load_env
+
+  BACKUP_PRODUCTION=false
+
+  for arg in "$@"; do
+    case "$arg" in
+      -p|--prod) BACKUP_PRODUCTION=true ;;
+      -h|--help)
+        echo "usage: $0 [-p|--prod] [-h|--help]"
+        echo ""
+        echo " (no arg)   save backup to ./backups"
+        echo " -p/--prod  save backup to /opt/cerebrovore/backups"
+        echo " -h/--help  this text"
+        echo ""
+        exit 0 ;;
+    esac
+  done
+
+  if [[ "$BACKUP_PRODUCTION" == "true" ]]; then
+    BACKUP_DIR="/opt/cerebrovore/backups" do_backup
+  else
+    do_backup
+  fi
 fi
