@@ -11,9 +11,9 @@
 3. hopefully everything works! if not, let us know!
 
 ### windows
-1. install git, it should come with git bash, which you should use as your
-   terminal emulator (or you can pick your favorite terminal emulator that runs
-bash) 
+1. install [git](https://git-scm.com/install/windows). it should come with git
+   bash, which you should use as your terminal emulator (or you can pick your
+favorite terminal emulator that runs bash; we just need bash to run `d`) 
 2. in git bash: `./d`
 2. follow the instructions
 3. maybe everything works! if not, please let us know, not testing on windows
