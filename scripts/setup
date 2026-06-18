@@ -102,7 +102,7 @@ do_setup() {
     # no need for global PATH stuff
     echo ""
     printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
-    printf "   ${G}(1)${RT} install via go install ${B}(recommended)\n"
+    printf "   ${G}(1)${RT} install via go install ${B}(recommended)${RT}\n"
     printf "   ${G}(2)${RT} download from github + compile via go build into ./bin  ${DM}(1 fewer place to delete stuff from when you're done with this project)${RT}\n"
     printf "   ${G}(3)${RT} manual install to PATH \n"
     printf "   ${G}(4)${RT} manual entry of binary location \n"

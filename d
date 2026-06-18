@@ -4,7 +4,6 @@
 #   ./d -v         verbose, show docker/npm/vite output
 #   ./d -reset-db  nuke and recreate the local database
 #   ./d -i         pick a crumb script to run (interactive)
-#   ./d -no-migrate same as no-arg but skips migrations (e.g. just poking templates)
 #
 # orchestration script, each can be run individually
 # to accomplish this same task by hand, run the following scripts (./scripts)
@@ -19,6 +18,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
+cd $ROOT
 SCRIPTS="$ROOT/scripts"
 
 # library
@@ -35,14 +35,12 @@ VERBOSE=false
 IDENTITY_FLAG=" -midp"
 RESETDB=false
 INTERACTIVE=false
-NOMIGRATE=false
 for arg in "$@"; do
     case "$arg" in
         -v)          VERBOSE=true ;;
         -s)          IDENTITY_FLAG="" ;;
         -reset-db)   RESETDB=true ;;
         -i)          INTERACTIVE=true ;;
-        -no-migrate) NOMIGRATE=true ;;
         -h|--help)
             echo "usage: $0 [-v] [-s] [-reset-db] [-i] [-no-migrate] [-h|--help]"
             echo ""
@@ -51,7 +49,6 @@ for arg in "$@"; do
             echo " -s           use an external identity service provider listening on :9009"
             echo " -reset-db    nuke and recreate the local database"
             echo " -i           pick a crumb script to run (interactive)"
-            echo " -no-migrate  dev mode but skip the migrate step"
             echo " -h/--help    this text"
             echo ""
             exit 0 ;;
@@ -67,32 +64,23 @@ template_standard() {
     do_dev "-db -dev$IDENTITY_FLAG"
 }
 
-# same thing, minus migrations (for when you just wanna poke around)
-template_nomigrate() {
-    do_setup
-    load_env
-    [[ "$RESETDB" == true ]] && do_reset_db
-    do_dev "-db -dev$IDENTITY_FLAG"
-}
-
 # -i menu: pick a template or crumb script to run
 pick_script() {
     log_step "pick something to run"
     echo "  ${Y}${BD}run${RT}"
     echo "   ${Y}(1)${RT}  standard     full dev (setup, db, migrate, run)"
-    echo "   ${Y}(2)${RT}  no-migrate   full dev but skips migrations"
     echo "  ${B}${BD}db${RT}"
-    echo "   ${B}(3)${RT}  mup          migrate up"
-    echo "   ${B}(4)${RT}  mto          migrate to a version"
-    echo "   ${B}(5)${RT}  psql         psql shell"
-    echo "   ${B}(6)${RT}  backup       dump the db"
-    echo "   ${B}(7)${RT}  backup prod  dump the production db"
-    echo "   ${B}(8)${RT}  reset-db     nuke the db"
+    echo "   ${B}(2)${RT}  mup          migrate up"
+    echo "   ${B}(3)${RT}  mto          migrate to a version"
+    echo "   ${B}(4)${RT}  psql         psql shell"
+    echo "   ${B}(5)${RT}  backup       dump the db"
+    echo "   ${B}(6)${RT}  backup prod  dump the production db"
+    echo "   ${B}(7)${RT}  reset-db     nuke the db"
     echo "  ${G}${BD}dev${RT}"
-    echo "   ${G}(9)${RT}  setup        generate .env"
-    echo "   ${G}(10)${RT} dev          run vite + go"
+    echo "   ${G}(8)${RT}  setup        generate .env"
+    echo "   ${G}(9)${RT}  dev          run vite + go"
     echo "  ${P}${BD}prod${RT}"
-    echo "   ${P}(11)${RT} prod         deploy to the server"
+    echo "   ${P}(10)${RT} prod         deploy to the server"
     echo "  ${R}${BD}meta${RT}"
     echo "   ${R}(Q)${RT}  quit         SO LONG"
 
@@ -101,17 +89,16 @@ pick_script() {
 
     case "$choice" in
         1) template_standard ;;
-        2) template_nomigrate ;;
-        3|4|6|7|8|10) load_env ;;&
-        3) do_mup ;;
-        4) printf "   version: "; read -r version; do_mto "$version" ;;
-        5) "$SCRIPTS/psql" ;;
-        6) do_backup ;;
-        7) BACKUP_DIR="/opt/cerebrovore/backups" do_backup ;;
-        8) do_reset_db ;;
-        9) do_setup ;;
-        10) printf "   flags: "; read -r flags; do_dev "$flags" ;;
-        11) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
+        2|3|5|6|7|9) load_env ;;&
+        2) do_mup ;;
+        3) printf "   version: "; read -r version; do_mto "$version" ;;
+        4) "$SCRIPTS/psql" ;;
+        5) do_backup ;;
+        6) BACKUP_DIR="/opt/cerebrovore/backups" do_backup ;;
+        7) do_reset_db ;;
+        8) do_setup ;;
+        9) printf "   flags: "; read -r flags; do_dev "$flags" ;;
+        10) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
         q|Q) return ;;
         *) log_fail "invalid choice" ;;
     esac
@@ -126,12 +113,6 @@ if [[ "$INTERACTIVE" == true ]]; then
 fi
 
 log_info "mode: dev"
-cd "$ROOT"
 log_info "project root: $ROOT"
 
-# run one of the two templates
-if [[ "$NOMIGRATE" == true ]]; then
-    template_nomigrate
-else
-    template_standard
-fi
+template_standard

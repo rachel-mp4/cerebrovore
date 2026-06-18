@@ -21,14 +21,24 @@ do_mup() {
     log_fail "database is in dirty migration state, resolve manually with migrate -path migrations/ -database \"\$DB_URL\" force <version>"
   fi
 
-  # run pending migrations (migrate exits non-zero on 'no change')
-  local MIGRATE_OUTPUT
-  if MIGRATE_OUTPUT=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" up 2>&1); then
-    log_ok "migrations applied"
-  elif echo "$MIGRATE_OUTPUT" | grep -q "no change"; then
+  local TARGET_VERSION=$(ls migrations | sort -r | head -c 3)
+  # leading zero means bash interprets as octal
+  if (( 10#$TARGET_VERSION == 10#$MIGRATE_VERSION )); then
     log_ok "migrations up to date"
-  else
-    log_fail "migration failed: $MIGRATE_OUTPUT"
+    return 0
+  fi
+
+  if input_yn "Your database is version $MIGRATE_VERSION, but you can migrate to version $TARGET_VERSION.
+    Would you like to migrate up ${B}(recommended)${RT}"; then
+    # run pending migrations (migrate exits non-zero on 'no change')
+    local MIGRATE_OUTPUT
+    if MIGRATE_OUTPUT=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" up 2>&1); then
+      log_ok "migrations applied"
+    elif echo "$MIGRATE_OUTPUT" | grep -q "no change"; then
+      log_ok "migrations up to date"
+    else
+      log_fail "migration failed: $MIGRATE_OUTPUT"
+    fi
   fi
 }
 
