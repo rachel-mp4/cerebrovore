@@ -3,12 +3,25 @@
  ⠣⠤ ⠣⠭ ⠏  ⠣⠭ ⠧⠜ ⠏  ⠣⠜ ⠱⠃ ⠣⠜ ⠏  ⠣⠭
 ```
 
-auto setup
-1. `./d`
-2. follow the instructions
-3. hopefully everything works! if not, let me know!
+## auto setup
 
-manual setup
+### mac/linux
+1. run `./d`
+2. follow the instructions
+3. hopefully everything works! if not, let us know!
+
+### windows
+1. install git, it should come with git bash, which you should use as your
+   terminal emulator (or you can pick your favorite terminal emulator that runs
+bash) 
+2. in git bash: `./d`
+2. follow the instructions
+3. maybe everything works! if not, please let us know, not testing on windows
+   rn, but we want it to work!!
+
+## manual setup (deprecated)
+
+### required steps
 1. install go
 2. install npm
 3. install docker (required for database, which is currently required since
@@ -19,20 +32,17 @@ manual setup
 6. `docker compose up -d`
 7. `./scripts/mup`
 8. `cd frontend/cbv`
-9. `npm install`
+9. `npm install
 
-hopefully it's not too confusing...
+and then you pick one of two paths to run the code:
 
-manual dev build
+### manual dev-style (w/ HMR) build
 1. `cd frontend/cbv`
 2. `npm run dev`
 3. open another terminal
-4. `go run ./cmd -db -midp`
+4. `go run ./cmd -db -midp -dev`
 
-at some point or maybe never i'll make it so you can run a lousy version
-without db for dev purposes to make it easier if you just wanna do frontend
-
-manual prod build
+### manual prod-style (w/o HMR) build
 1. `cd frontend/cbv`
 2. `npm run build`
 3. `cd -`
@@ -46,11 +56,7 @@ a file (`-midp`), or an external service that we communicate with through http
 api (`-sidp {port}`) (not included in this repo, it's private). cerebrovore
 sends the credentials to that service and it responds accordingly
 
-### KNOWN BUGS AND BAD BEHAVIOR THATS ANNOYING 
-when you click on a thumbnail, swapping it out for the full-size image, it's
-bad need to store the size (aspect ratio dimensions size), broadcast over lrc
-etc...
-
+## KNOWN BUGS AND BAD BEHAVIOR THATS ANNOYING 
 mock db is completely useless, need to upgrade it to an in memory db at least
 lol
 
@@ -67,16 +73,12 @@ i believe the bug in wormwatch where a video appears to be unavailable is a
 result of adblockers in firefox. refreshing the page a few times seems to fix
 it, but this is of course not ideal
 
-### TODO
+## TODO
 - like wormwatch entries
 - #hug thru parser, and hug button thru not parser
-- report
-- 1 click delete for moderators
-- left sidebar left side count posts in thread etc (maybe create ls equiv)
-- render usernames for non-anonymous posts
+- probably blocking usernames is needed at some point
 
-
-### code style guide
+## code style guide (or perhaps a style dictionary)
 
 i'm a bit crazy idk it's probs typical in go, a lot of abbreviations. here are
 some common variable names:
@@ -99,7 +101,7 @@ end of a function to say it accepts a pointer, in another place i use it to
 mean we panic if it fails. f at the end of a function means we force (ignore
 error)
 
-### environment variables
+## environment variables
 - `SESSION_KEY` is for encrypting the cookie store
 - `LRCD_SECRET` is for generating nonces on lrcd inits for several purposes,
 but mostly to ensure that you don't try and post someone else's message
@@ -115,3 +117,5 @@ associated with your site
 - `REPORT_DELIMITER` is a delimiter used to add the current in-progress status
 of reported messages to report reasons, it's just nice to not expose to users
 so they don't try and file misleading reports
+- `MIGRATE_BIN` is not used by the application, but it is used by our scripts
+to migrate
