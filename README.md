@@ -19,6 +19,10 @@ bash)
 3. maybe everything works! if not, please let us know, not testing on windows
    rn, but we want it to work!!
 
+### scripts
+for more info about the included scripts, see
+[https://github.com/rachel-mp4/cerebrovore/tree/script-split/scripts#readme](https://github.com/rachel-mp4/cerebrovore/tree/script-split/scripts#readme)
+
 ## manual setup (deprecated)
 
 ### required steps
@@ -47,6 +51,9 @@ and then you pick one of two paths to run the code:
 2. `npm run build`
 3. `cd -`
 4. `go run ./cmd -cold -db -midp`
+
+for more info about the frontend, see
+[https://github.com/rachel-mp4/cerebrovore/tree/main/frontend/cbv#readme](https://github.com/rachel-mp4/cerebrovore/tree/main/frontend/cbv#readme)
 
 the flags are explained a bit if you run `go run ./cmd -h`
 
