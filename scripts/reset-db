@@ -2,7 +2,25 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
-ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
-load_env
 
-do_reset_db
+# nuke the local database volume and its data
+# THIS ONE MEANS "BUSINESS"
+do_reset_db() {
+  log_frfr
+  log_warn "this will DESTROY the local database and all its data"
+  if input_yn "are you SURE you want to reset the database?"; then
+    log_step "resetting database"
+    quiet docker compose down -v
+    log_ok "database volume destroyed"
+  else
+    log_info "skipping database reset"
+  fi
+}
+
+# only run following code if run as standalone script; not when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
+  ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+  load_env
+
+  do_reset_db
+fi

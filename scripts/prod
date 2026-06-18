@@ -10,6 +10,8 @@
 set -euo pipefail
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$HERE/lib.sh"
+source "$HERE/setup"
+source "$HERE/backup"
 
 # if you change this, it's hardcoded in ./scripts/backup & ./d -i
 INSTALL_DIR="/opt/cerebrovore"

@@ -12,11 +12,6 @@ this is similar to just running the `d` script without any arguments, however
 it does not have sensible defaults for cerebrovore's flags, and any flags you
 pass to it get `dev` get forwarded to cerebrovore
 
-## ensure-db
-
-this ensures that you have docker installed and postgres running in an image,
-it shouldn't be necessary to call directly in most instances
-
 ## mto
 
 this migrates the database to a specific migration number (migrations are in
