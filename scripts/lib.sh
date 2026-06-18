@@ -456,19 +456,17 @@ do_setup() {
     printf "${W}[${P}${BD}?${RT}${W}]${RT} REPORT_DELIMITER (maybe pick a weird unicode character that users probably won't use): "
     read -r REPORT_DELIMITER
     log_ok "report delimiter: $REPORT_DELIMITER"
-
-    if command -v migrate &>/dev/null; then
-        log_ok "using system migrate ($(command -v migrate))"
-        MIGRATE_BIN="migrate"
-    else
+    
+    manual_select_migrate() {
         # migrate tooling (golang-migrate), stored as MIGRATE_BIN in .env
         # no need for global PATH stuff
         echo ""
         printf "${W}[${P}${BD}?${RT}${W}]${RT} golang-migrate (db migration tool)\n"
         printf "   ${G}(1)${RT} install via go install ${B}(recommended)\n"
         printf "   ${G}(2)${RT} download from github + compile via go build into ./bin  ${DM}(1 fewer place to delete stuff from when you're done with this project)${RT}\n"
-        printf "   ${G}(3)${RT} manual install to path \n"
-        printf "   choose [1/2/3]: "
+        printf "   ${G}(3)${RT} manual install to PATH \n"
+        printf "   ${G}(4)${RT} manual entry of binary location \n"
+        printf "   choose [1/2/3/4]: "
         read -r MIGRATE_MODE
 
         case "$MIGRATE_MODE" in
@@ -499,10 +497,24 @@ do_setup() {
                 log_info "come back when you have it installed!"
                 exit 0
                 ;;
+            4)
+                echo "   MIGRATE_BIN=" 
+                read -r MIGRATE_BIN
+                ;;
             *)
                 log_fail "invalid choice, run ./d again"
                 ;;
         esac
+    }
+
+    if command -v migrate &>/dev/null; then
+        if input_yn "you have migrate ($(command -v migrate)) in your PATH, is it ok to use?"; then
+            MIGRATE_BIN="migrate"
+        else
+            manual_select_migrate
+        fi
+    else
+        manual_select_migrate
     fi
 
     # write .env
