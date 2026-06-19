@@ -26,6 +26,7 @@ func main() {
 	dontmock := flag.Bool("db", false, "doesn't mock the database")
 	midp := flag.Bool("midp", false, "uses an in memory id provider instead of service id provider")
 	dev := flag.Bool("dev", false, "run in dev mode (file logging, debug output)")
+	first := flag.Bool("first", false, "first time running on this db")
 	flag.Parse()
 
 	clog.Dev = *dev
@@ -34,6 +35,9 @@ func main() {
 	}
 	defer clog.Close()
 
+	if *first {
+		clog.Info("i see this is your first time\n    good luck!")
+	}
 	clog.Info("*eats ur brain*")
 
 	err := godotenv.Load(".env")
@@ -96,13 +100,8 @@ func main() {
 	// all threads. in truth this should be get all threads that haven't
 	// hit post limit, but the post limit does not yet exist
 	threads, err := store.GetAllThreads(context.Background())
-	first := false
 	if err != nil {
-		if !clog.InputYN("is this your first time running on this database?") {
-			panic(err)
-		}
-		clog.Okay("good luck!")
-		first = true
+		panic(err)
 	}
 	clog.Info("clearing old selfbans")
 	nrows, err := store.ClearOldSelfBans(context.Background())
@@ -115,15 +114,10 @@ func main() {
 	// couples all the threads, but it seems cool + you have to make
 	// dumb decisions to learn
 	mid, err := store.GetMaxPostId(context.Background())
-	if first {
-		err = nil
-		mid = 0
-	}
-	if err != nil {
-		if !clog.InputYN("is this your first time running on this database?") {
-			panic(err)
-		}
-		clog.Okay("good luck!")
+	if err != nil && !*first {
+		clog.Fail("failed to get max post id. is this your first time on this db? if so, rerun with -first flag")
+		clog.Dbug("if you're running cerebrovore with `./d`, you will need to ctrl-c to exit and run `./d -first`")
+		panic(err)
 	}
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idp, reqcode)

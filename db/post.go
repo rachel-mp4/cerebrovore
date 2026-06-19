@@ -200,7 +200,7 @@ func (s *Store) GetMaxPostId(ctx context.Context) (uint32, error) {
 	var id uint32
 	err := row.Scan(&id)
 	if err != nil {
-		clog.Warn("db: %s", err)
+		clog.Warn("db: GetMaxPostId: %s", err)
 		return 0, err
 	}
 	return id, nil

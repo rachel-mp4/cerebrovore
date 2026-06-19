@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HERE/lib.sh"
+
+# migrate up, apply pending migrations to the local db
+do_mup() {
+  ensure_db
+
+  log_step "database migrations"
+
+  require_migrate
+
+  local DB_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@localhost:${POSTGRES_PORT}/${POSTGRES_DB}?sslmode=disable"
+
+  # check current state before touching anything
+  local MIGRATE_VERSION=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" version 2>&1) || true
+
+  if echo "$MIGRATE_VERSION" | grep -q "dirty"; then
+    log_frfr
+    log_fail "database is in dirty migration state, resolve manually with migrate -path migrations/ -database \"\$DB_URL\" force <version>"
+  elif [[ "$MIGRATE_VERSION" == "error: no migration" ]]; then
+    # a database that hasn't been migrated at all should return error: no migration
+    MIGRATE_VERSION="0"
+  fi
+
+  local TARGET_VERSION=$(ls migrations | sort -r | head -c 3)
+  # leading zero means bash interprets as octal
+  if (( 10#$TARGET_VERSION == 10#$MIGRATE_VERSION )); then
+    log_ok "migrations up to date"
+    return 0
+  fi
+
+  if input_yn "Your database is version $MIGRATE_VERSION, but you can migrate to version $TARGET_VERSION.
+    Would you like to migrate up ${B}(recommended)${RT}"; then
+    # run pending migrations (migrate exits non-zero on 'no change')
+    local MIGRATE_OUTPUT
+    if MIGRATE_OUTPUT=$("$MIGRATE_BIN" -path migrations/ -database "$DB_URL" up 2>&1); then
+      log_ok "migrations applied"
+    elif echo "$MIGRATE_OUTPUT" | grep -q "no change"; then
+      log_ok "migrations up to date"
+    else
+      log_fail "migration failed: $MIGRATE_OUTPUT"
+    fi
+  fi
+}
+
+# only run following code if run as standalone script; not when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
+  ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+  load_env
+
+  do_mup
+fi
