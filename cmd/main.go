@@ -106,7 +106,7 @@ func main() {
 	}
 	clog.Info("clearing old selfbans")
 	nrows, err := store.ClearOldSelfBans(context.Background())
-	if err != nil {
+	if err != nil && !first {
 		panic(err)
 	}
 	clog.Info("cleared %d selfbans", nrows)
@@ -120,10 +120,7 @@ func main() {
 		mid = 0
 	}
 	if err != nil {
-		if !clog.InputYN("is this your first time running on this database?") {
-			panic(err)
-		}
-		clog.Okay("good luck!")
+		panic(err)
 	}
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idp, reqcode)
