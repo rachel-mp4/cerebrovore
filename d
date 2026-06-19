@@ -33,14 +33,16 @@ source "$SCRIPTS/setup"
 # flags
 VERBOSE=false
 IDENTITY_FLAG=" -midp"
+FIRST_TIME_FLAG=""
 RESETDB=false
 INTERACTIVE=false
 for arg in "$@"; do
     case "$arg" in
-        -v)          VERBOSE=true ;;
-        -s)          IDENTITY_FLAG="" ;;
-        -reset-db)   RESETDB=true ;;
-        -i)          INTERACTIVE=true ;;
+        -v)         VERBOSE=true ;;
+        -s)         IDENTITY_FLAG="" ;;
+        -first)     FIRST_TIME_FLAG=" -first" ;;
+        -reset-db)  RESETDB=true; FIRST_TIME_FLAG=" -first" ;;
+        -i)         INTERACTIVE=true ;;
         -h|--help)
             echo "usage: $0 [-v] [-s] [-reset-db] [-i] [-no-migrate] [-h|--help]"
             echo ""
@@ -61,7 +63,7 @@ template_standard() {
     load_env
     [[ "$RESETDB" == true ]] && do_reset_db
     do_mup
-    do_dev "-db -dev$IDENTITY_FLAG"
+    do_dev "-db -dev$IDENTITY_FLAG$FIRST_TIME_FLAG"
 }
 
 # -i menu: pick a template or crumb script to run
@@ -76,11 +78,12 @@ pick_script() {
     echo "   ${B}(5)${RT}  backup       dump the db"
     echo "   ${B}(6)${RT}  backup prod  dump the production db"
     echo "   ${B}(7)${RT}  reset-db     nuke the db"
+    echo "   ${B}(8)${RT}  load backup  loads a backup"
     echo "  ${G}${BD}dev${RT}"
-    echo "   ${G}(8)${RT}  setup        generate .env"
-    echo "   ${G}(9)${RT}  dev          run vite + go"
+    echo "   ${G}(9)${RT}  setup        generate .env"
+    echo "   ${G}(10)${RT} dev          run vite + go"
     echo "  ${P}${BD}prod${RT}"
-    echo "   ${P}(10)${RT} prod         deploy to the server"
+    echo "   ${P}(11)${RT} prod         deploy to the server"
     echo "  ${R}${BD}meta${RT}"
     echo "   ${R}(Q)${RT}  quit         SO LONG"
 
@@ -89,16 +92,17 @@ pick_script() {
 
     case "$choice" in
         1) template_standard ;;
-        2|3|5|6|7|9) load_env ;;&
+        2|3|5|6|7|10) load_env ;;&
         2) do_mup ;;
         3) printf "   version: "; read -r version; do_mto "$version" ;;
         4) "$SCRIPTS/psql" ;;
         5) do_backup ;;
         6) BACKUP_DIR="/opt/cerebrovore/backups" do_backup ;;
         7) do_reset_db ;;
-        8) do_setup ;;
-        9) printf "   flags: "; read -r flags; do_dev "$flags" ;;
-        10) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
+        8) printf "   path or flags: "; read -r args; "$SCRIPTS/load" "$args" ;;
+        9) do_setup ;;
+        10) printf "   flags: "; read -r flags; do_dev "$flags" ;;
+        11) printf "   args: "; read -r args; "$SCRIPTS/prod" "$args" ;;
         q|Q) return ;;
         *) log_fail "invalid choice" ;;
     esac

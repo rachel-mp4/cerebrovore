@@ -6,18 +6,19 @@
 ## auto setup
 
 ### mac/linux
-1. run `./d`
+1. run `./d -first`
+    1. the `-first` flag should only be necessary until you have created your
+       first thread! it just skips a few warnings that we don't care about when
+    we're starting the server.
 2. follow the instructions
 3. hopefully everything works! if not, let us know!
 
 ### windows
-1. install [git](https://git-scm.com/install/windows). it should come with git
-   bash, which you should use as your terminal emulator (or you can pick your
-favorite terminal emulator that runs bash; we just need bash to run `d`) 
-2. in git bash: `./d`
-2. follow the instructions
-3. maybe everything works! if not, please let us know, not testing on windows
-   rn, but we want it to work!!
+windows is going to be a bit tougher. probably this should be doable in WSL if
+you clone this repository with autocrlf false, and then follow the mac/linux
+instructions. get in contact with the devs if you need help, we're happy to
+show you the ropes, and it would be nice to formalize the dev environment for
+windows, too
 
 ### scripts
 for more info about the included scripts, see

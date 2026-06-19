@@ -19,6 +19,9 @@ do_mup() {
   if echo "$MIGRATE_VERSION" | grep -q "dirty"; then
     log_frfr
     log_fail "database is in dirty migration state, resolve manually with migrate -path migrations/ -database \"\$DB_URL\" force <version>"
+  elif [[ "$MIGRATE_VERSION" == "error: no migration" ]]; then
+    # a database that hasn't been migrated at all should return error: no migration
+    MIGRATE_VERSION="0"
   fi
 
   local TARGET_VERSION=$(ls migrations | sort -r | head -c 3)

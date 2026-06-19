@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$HERE/lib.sh"
+
+# pg_dump database to ./backups (or $BACKUP_DIR)
+# set SKIP_BACKUP=1 to tolerate failure (e.g. first deploy, nothing to dump yet)
+# assumes you have postgres credentials sourced
+do_load() {
+  ensure_db
+
+  log_step "sanity checks"
+  if input_yn "is this a clean install of postgres (you just ran reset-db?)"; then
+    log_ok "good"
+  else
+    log_fail "run reset-db"
+  fi
+  if input_yn "we are about to load this file: $1, is that correct?"; then
+    log_ok "good"
+  else
+    log_fail "see you next time!"
+  fi
+
+  log_step "loading backup"
+
+  docker exec -i cerebrovore-db-1 psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" < $1
+
+  log_ok "backup loaded!"
+}
+
+# only run following code if run as standalone script; not when sourced
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then 
+  if [[ ! -v 1 || $1 == "" || $1 == "-h" || $1 == "--help" ]]; then
+    echo "${DM}usage:${RT} $0 ${BD}/path/to/your/backup${RT}"
+    echo "    ${DM}or${RT} $0 ${BD}-r|--recent [-p|--prod]${RT}" 
+    echo "    ${DM}to load the most recent backup from this repo, or /opt/cerebrovore/backups if --prod is set${RT}" 
+    exit 0
+  fi
+  if [[ $1 == "-r" || $1 == "--recent" ]]; then
+    if [[ -v 2 && ($2 == "-p" || $2 == "--prod") ]]; then
+      BACKUP_PATH="/opt/cerebrovore/backups/$(ls /opt/cerebrovore/backups | sort -r | head -n 1)"
+    else
+      ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+      BACKUP_PATH="$ROOT/backups/$(ls backups | sort -r | head -n 1)"
+    fi
+  elif [[ -e "$1" ]]; then
+    BACKUP_PATH="$(realpath $1)"
+  else
+    log_fail "file does not exist"
+  fi
+  ROOT="$(cd "$HERE/.." && pwd)"; cd "$ROOT"
+  load_env
+
+  do_load $BACKUP_PATH
+fi

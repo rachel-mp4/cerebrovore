@@ -191,14 +191,3 @@ func Dbug(msg string, args ...any) {
 	formatted := fmt.Sprintf(msg, args...)
 	writeLog(dbug, formatted)
 }
-
-func InputYN(prompt string) bool {
-	fmt.Printf("%s[%s%s?%s%s]%s %s %sY%s/%sN%s: ", w, p, bd, rt, w, rt, prompt, r, w, g, rt)
-	var answer string
-	_, err := fmt.Scanln(&answer)
-	if err != nil {
-		LogE(err, "inputYN")
-		return false
-	}
-	return strings.EqualFold(answer, "y")
-}
