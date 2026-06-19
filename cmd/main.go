@@ -107,7 +107,11 @@ func main() {
 	clog.Info("clearing old selfbans")
 	nrows, err := store.ClearOldSelfBans(context.Background())
 	if err != nil && !first {
-		panic(err)
+		if !clog.InputYN("is this your first time running on this database?") {
+			panic(err)
+		}
+		clog.Okay("good luck!")
+		first = true
 	}
 	clog.Info("cleared %d selfbans", nrows)
 	// we also need the max id in order to allocate post ids properly
@@ -115,12 +119,13 @@ func main() {
 	// couples all the threads, but it seems cool + you have to make
 	// dumb decisions to learn
 	mid, err := store.GetMaxPostId(context.Background())
-	if first {
-		err = nil
+	if err != nil && !first {
+		if !clog.InputYN("is this your first time running on this database?") {
+			panic(err)
+		}
+		clog.Okay("good luck!")
+		first = true
 		mid = 0
-	}
-	if err != nil {
-		panic(err)
 	}
 	m := model.NewModel(threads, mid)
 	h := handler.NewHandler(ca, m, store, idp, reqcode)
