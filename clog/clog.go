@@ -1,7 +1,6 @@
 package clog
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"log"
@@ -195,8 +194,11 @@ func Dbug(msg string, args ...any) {
 
 func InputYN(prompt string) bool {
 	fmt.Printf("%s[%s%s?%s%s]%s %s %sY%s/%sN%s: ", w, p, bd, rt, w, rt, prompt, r, w, g, rt)
-	reader := bufio.NewReader(os.Stdin)
-	answer, _ := reader.ReadString('\n')
-	answer = strings.TrimSpace(answer)
+	var answer string
+	_, err := fmt.Scanln(&answer)
+	if err != nil {
+		LogE(err, "inputYN")
+		return false
+	}
 	return strings.EqualFold(answer, "y")
 }
