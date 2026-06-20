@@ -40,6 +40,9 @@ if [[ "$EUID" -ne 0 ]]; then
     log_fail "deploy requires sudo: sudo ./scripts/prod"
 fi
 
+# actually just fix the invoking user, cheap
+export HOME=$(getent passwd "${SUDO_USER:-$USER}" | cut -d: -f6)
+
 ROOT="$(cd "$HERE/.." && pwd)"
 cd "$ROOT"
 log_info "project root: $ROOT"
