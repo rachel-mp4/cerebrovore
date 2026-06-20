@@ -24,6 +24,9 @@
     nick ?? defaultnick ?? "wanderer",
     color ? parseInt(color, 10) : (defaultcolor ?? 4534186),
   );
+  if (ctx.cinematicMode) {
+    document.getElementById("eats-ur-brain")?.classList.add("cinema");
+  }
   ctx.connect(address);
   let imageURL: string | undefined = $state();
   const convertFileToImageItem = (blob: File) => {
@@ -91,5 +94,7 @@
     bind:alt
   />
   <Transmitter {ctx} {defaultnick} {defaultcolor} {convertFileToImageItem} />
-  <Console log={ctx.log} />
+  {#if !ctx.cinematicMode}
+    <Console log={ctx.log} />
+  {/if}
 {/if}

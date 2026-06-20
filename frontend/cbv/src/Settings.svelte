@@ -11,8 +11,8 @@
   let noWormWatch = $state(nww !== "");
   const dp = localStorage.getItem("displayPing");
   let displayPing = $state(dp !== null);
-  const llrc = localStorage.getItem("logEvents");
-  let logLRC = $state(llrc !== null);
+  const llrc = localStorage.getItem("cinemaMode");
+  let cinemaMode = $state(llrc !== null);
   // effect is ok for this because we use checkbox, however prefer onchange
   // for the range because we don't want to commit all the intermediate to
   // localStorage
@@ -30,10 +30,10 @@
     }
   });
   $effect(() => {
-    if (logLRC) {
-      localStorage.setItem("logEvents", "yes");
+    if (cinemaMode) {
+      localStorage.setItem("cinemaMode", "yes");
     } else {
-      localStorage.removeItem("logEvents");
+      localStorage.removeItem("cinemaMode");
     }
   });
   const fsminval = localStorage.getItem("fs-min");
@@ -141,8 +141,8 @@
   >display your ping while in thread if you're interested or maybe for debugging
   (requires refresh)</label
 >
-<input type="checkbox" bind:checked={logLRC} id="log-lrc" />
-<label for="log-lrc"> log all outgoing lrc events </label>
+<input type="checkbox" bind:checked={cinemaMode} id="cinema-mode" />
+<label for="cinema-mode"> cinematic mode </label>
 <input type="checkbox" bind:checked={noWormWatch} id="no-worm-watch" />
 <label for="no-worm-watch">disable worm watch</label>
 <h2>debug</h2>

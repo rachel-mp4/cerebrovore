@@ -248,6 +248,7 @@
 <div id="worm-watch"></div>
 
 <div
+  id="worm-watch-resize"
   role="separator"
   aria-orientation="vertical"
   class="{pointerstarty !== undefined ? 'currently-resizing' : ''} {player &&

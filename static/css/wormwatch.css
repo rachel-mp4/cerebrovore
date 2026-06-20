@@ -35,3 +35,11 @@
 .autoplay-disabled::after {
   content:"autoplay disabled, click to unmute. i recommend firefox with autoplay enabled"
 }
+
+:has(#eats-ur-brain.cinema) #worm-watch {
+  z-index: 999;
+}
+
+:has(#eats-ur-brain.cinema) #worm-watch-resize {
+  z-index: 9999 !important;
+}

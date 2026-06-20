@@ -75,7 +75,7 @@ export class WSContext {
   rttpingstart: number | undefined
   pinginterval: number | undefined
   shouldCalcPing: boolean
-  shouldLogEvents: boolean
+  cinematicMode: boolean
 
   nick: string = "wanderer"
   anon: boolean = false
@@ -120,7 +120,7 @@ export class WSContext {
     })
     this.anon = localStorage.getItem("anon") !== null
     this.shouldCalcPing = localStorage.getItem("displayPing") !== null
-    this.shouldLogEvents = localStorage.getItem("logEvents") !== null
+    this.cinematicMode = localStorage.getItem("cinemaMode") !== null
     const log = new Array<cbv.LogItem>(200)
     for (let i = 0; i < 200; i++) {
       log[i] = { type: "init", id: 0, binary: "", time: 0, key: Math.random(), ignore: true }
@@ -159,11 +159,8 @@ export class WSContext {
           }
         }
       }
-      if (this.shouldLogEvents) console.log("starttransmit evt ", evt)
       const byteArray = lrc.Event.toBinary(evt)
-      if (this.shouldLogEvents) console.log("starttransmit byteArray ", byteArray)
       this.ws?.send(byteArray)
-      if (this.shouldLogEvents) console.log("starttransmit")
       this.lrceventqueue = []
     }
   }
@@ -892,11 +889,8 @@ export const initMessage = (ctx: WSContext): lrc.Init => {
       init: init
     }
   }
-  if (ctx.shouldLogEvents) console.log("initMessage evt ", evt)
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("initMessage byteArray ", byteArray)
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("initMessage")
   return init
 }
 
@@ -911,11 +905,8 @@ export const initImage = (ctx: WSContext) => {
       }
     }
   }
-  if (ctx.shouldLogEvents) console.log("initImage evt ", evt)
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("initImage byteArray ", byteArray)
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("initImage")
 }
 
 export const pubImage = (alt: string | undefined, contentAddress: string | undefined, ctx: WSContext) => {
@@ -928,11 +919,8 @@ export const pubImage = (alt: string | undefined, contentAddress: string | undef
       }
     }
   }
-  if (ctx.shouldLogEvents) console.log("pubImage evt ", evt)
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("pubImage byteArray ", byteArray)
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("pubImage")
 }
 
 export const insertMessage = (idx: number, s: string, ctx: WSContext) => {
@@ -953,11 +941,8 @@ export const insertMessage = (idx: number, s: string, ctx: WSContext) => {
           }
         }
       }
-      if (ctx.shouldLogEvents) console.log("insertMessage evt ", evt)
       const byteArray = lrc.Event.toBinary(evt)
-      if (ctx.shouldLogEvents) console.log("insertMessage byteArray ", byteArray)
       ctx.ws?.send(byteArray)
-      if (ctx.shouldLogEvents) console.log("insertMessage")
       return
     }
 
@@ -971,9 +956,7 @@ export const insertMessage = (idx: number, s: string, ctx: WSContext) => {
           }
         }
       }
-      if (ctx.shouldLogEvents) console.log("insertMessage edit ", edit)
       ctx.lrceventqueue.push(edit)
-      if (ctx.shouldLogEvents) console.log("insertMessage add to queue")
       return
     }
   }
@@ -987,11 +970,8 @@ export const pubMessage = (ctx: WSContext) => {
       }
     }
   }
-  if (ctx.shouldLogEvents) console.log("pubMessage evt ", evt)
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("pubMessage byteArray ", byteArray)
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("pubMessage")
 }
 
 export const deleteMessage = (idx: number, idx2: number, ctx: WSContext) => {
@@ -1012,11 +992,8 @@ export const deleteMessage = (idx: number, idx2: number, ctx: WSContext) => {
           }
         }
       }
-      if (ctx.shouldLogEvents) console.log("deleteMessage evt ", evt)
       const byteArray = lrc.Event.toBinary(evt)
-      if (ctx.shouldLogEvents) console.log("deleteMessage byteArray ", byteArray)
       ctx.ws?.send(byteArray)
-      if (ctx.shouldLogEvents) console.log("deleteMessage")
       return
     }
 
@@ -1030,9 +1007,7 @@ export const deleteMessage = (idx: number, idx2: number, ctx: WSContext) => {
           }
         }
       }
-      if (ctx.shouldLogEvents) console.log("deleteMessage edit ", edit)
       ctx.lrceventqueue.push(edit)
-      if (ctx.shouldLogEvents) console.log("deleteMessage add to queue")
       return
     }
   }
@@ -1048,9 +1023,7 @@ export const muteMessage = (id: number, ctx: WSContext) => {
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("try mute Message")
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("mute Message")
 }
 
 export const unmuteMessage = (id: number, ctx: WSContext) => {
@@ -1063,9 +1036,7 @@ export const unmuteMessage = (id: number, ctx: WSContext) => {
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("try unmute Message")
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("unmute Message")
 }
 
 export const getTopic = (ctx: WSContext) => {
@@ -1078,9 +1049,7 @@ export const getTopic = (ctx: WSContext) => {
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("try get topic")
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("get topic")
 }
 
 export const setNick = (nick: string, ctx: WSContext) => {
@@ -1094,9 +1063,7 @@ export const setNick = (nick: string, ctx: WSContext) => {
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("try set nick")
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("set nick")
 }
 
 export const setColor = (color: number, ctx: WSContext) => {
@@ -1110,9 +1077,7 @@ export const setColor = (color: number, ctx: WSContext) => {
     }
   }
   const byteArray = lrc.Event.toBinary(evt)
-  if (ctx.shouldLogEvents) console.log("try set color")
   ctx.ws?.send(byteArray)
-  if (ctx.shouldLogEvents) console.log("set color")
 }
 
 export const pingServer = (ctx: WSContext) => {
