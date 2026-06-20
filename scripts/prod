@@ -222,6 +222,7 @@ Requires=docker.service
 Type=simple
 User=${SVC_USER}
 WorkingDirectory=${INSTALL_DIR}
+Environment="GIT_COMMIT_SHORT=$(echo "$LOCAL" | head -c 7)"}
 ExecStart=${INSTALL_DIR}/cerebrovore -cold -db -port 9000
 Restart=on-failure
 RestartSec=5

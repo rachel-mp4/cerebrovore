@@ -160,9 +160,14 @@ func NewHandler(ca *CompiledAssets, m *model.Model, db db.Storer, idp id.Provide
 	h.reqcode = reqcode
 	out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
 	if err != nil {
-		panic(err)
+		if os.Getenv("GIT_COMMIT_SHORT") != "" {
+			h.commit = os.Getenv("GIT_COMMIT_SHORT")
+		} else {
+			panic(err)
+		}
+	} else {
+		h.commit = strings.TrimSpace(string(out))
 	}
-	h.commit = strings.TrimSpace(string(out))
 	h.admin = os.Getenv("ADMIN_USERNAME")
 	h.moderators, err = h.db.GetModerators(context.Background())
 	if err != nil {
