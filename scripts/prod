@@ -114,9 +114,9 @@ log_ok "go $(go version | awk '{print $3}')"
 # deploy, build binary + systemd
 # check git status
 log_step "checking git"
-git fetch --quiet origin
-LOCAL=$(git rev-parse HEAD)
-REMOTE=$(git rev-parse origin/main)
+sudo -u "${SUDO_USER:-$USER}" git fetch --quiet origin
+LOCAL=$(sudo -u "${SUDO_USER:-$USER}" git rev-parse HEAD)
+REMOTE=$(sudo -u "${SUDO_USER:-$USER}" git rev-parse origin/main)
 if [[ "$LOCAL" != "$REMOTE" ]]; then
     log_warn "local is behind origin/main"
     if input_yn "abort and update first?"; then
