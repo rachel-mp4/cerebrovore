@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -821,6 +822,10 @@ func (s *Store) GetThread(id uint32, viewerIsMod bool, viewerUsername string, ct
 		p.ViewerIsYou = viewerUsername == p.Username
 		p.LinkToModerate = viewerIsMod
 		thread.Posts = append(thread.Posts, p)
+	}
+	if len(thread.Posts) == 0 {
+		clog.Fail("thread not deleted with no posts? tid_10=%d", id)
+		return nil, errors.New("all posts in thread deleted but thread not deleted?")
 	}
 	thread.OP = thread.Posts[0]
 	return thread, nil

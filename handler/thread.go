@@ -174,6 +174,7 @@ func (h *Handler) getBlob(c *Client, w http.ResponseWriter, r *http.Request) {
 	file, err := os.Open(dir)
 	if err != nil {
 		http.Error(w, "not found", http.StatusNotFound)
+		clog.Info("file not found: dir %s err %s", dir, err)
 		return
 	}
 	defer file.Close()
