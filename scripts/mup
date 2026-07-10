@@ -31,6 +31,10 @@ do_mup() {
     return 0
   fi
 
+  if (( 10#$TARGET_VERSION < 10#$MIGRATE_VERSION )); then
+    log_fail "Your database is on version $MIGRATE_VERSION, but the max migration I can find is $TARGET_VERSION. Did you delete or stash your migrations without migrating down?"
+  fi
+
   if input_yn "Your database is version $MIGRATE_VERSION, but you can migrate to version $TARGET_VERSION.
     Would you like to migrate up ${B}(recommended)${RT}"; then
     # run pending migrations (migrate exits non-zero on 'no change')
