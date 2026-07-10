@@ -23,13 +23,13 @@
   let volume: number = getVolume();
   let wwvolume: number = getWormWatchVolume();
   let showVolumeSettings = $state(false);
-  let ui = $state(navigator.userActivation.hasBeenActive);
-  if (!ui) {
-    // @ts-expect-error this works in firefox
-    if (navigator.getAutoplayPolicy("mediaelement") === "allowed") {
-      ui = true;
-    }
-  }
+  // a whole lotta junk, but this getAutoPlayPolicy is just for firefox, so the idea is that for everyone
+  // we always set user interacted (ui) to true, but in firefox if they have permissive autoplay policy,
+  // then it's as if they have already interacted and we can just play the video with audio ezpz
+  let ui = $state(
+    navigator.userActivation.hasBeenActive ||
+      (navigator as any).getAutoplayPolicy?.("mediaelement") === "allowed",
+  );
 
   onMount(() => {
     const startHandler = () => {
