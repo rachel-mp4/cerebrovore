@@ -61,7 +61,7 @@ func ParseBodyForPlays(s string) (res []*PlayInput, unpause bool) {
 				continue
 			}
 			switch playurl.Host {
-			case "youtube.com", "www.youtube.com", "m.youtube.com":
+			case "youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com":
 				id := playurl.Query().Get("v")
 				pi, err := getDurationForYoutubeId(id)
 				if err != nil {
@@ -677,6 +677,7 @@ func validURL(s string) (*url.URL, error) {
 	}
 	q := u.Query()
 	q.Del("si")
+	q.Del("is")
 	u.RawQuery = q.Encode()
 	return u, nil
 }
@@ -693,7 +694,8 @@ func clean(rr []rune) string {
 				continue
 			}
 			if idx+4 < len(rr) {
-				if rr[idx+1] == 's' && rr[idx+2] == 'i' && rr[idx+3] == '=' {
+				// strip "si", "is" frags from links. i think they are only used for spotify, youtube... share graph tracking data
+				if ((rr[idx+1] == 's' && rr[idx+2] == 'i') || (rr[idx+1] == 'i' && rr[idx+2] == 's')) && rr[idx+3] == '=' {
 					strip = true
 					continue
 				}
