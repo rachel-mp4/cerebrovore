@@ -676,6 +676,7 @@ func validURL(s string) (*url.URL, error) {
 		return nil, errors.New("url doesn't end with valid tld")
 	}
 	q := u.Query()
+	// you have to change this in 2 places! this here removes the query param from the href in the link html. electrolytes
 	q.Del("si")
 	q.Del("is")
 	u.RawQuery = q.Encode()
@@ -695,6 +696,7 @@ func clean(rr []rune) string {
 			}
 			if idx+4 < len(rr) {
 				// strip "si", "is" frags from links. i think they are only used for spotify, youtube... share graph tracking data
+				// you have to change this in 2 places! this here removes the query param from the textnode inside the link. electrolytes
 				if ((rr[idx+1] == 's' && rr[idx+2] == 'i') || (rr[idx+1] == 'i' && rr[idx+2] == 's')) && rr[idx+3] == '=' {
 					strip = true
 					continue
