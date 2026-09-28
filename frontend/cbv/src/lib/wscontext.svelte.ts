@@ -342,12 +342,93 @@ export class WSContext {
     this.curMsg = deleteFromAStringBetweenIdxs(this.curMsg, idx, idx2)
   }
 
+  setItem = (item: lrc.Item) => {
+    if (this.existingindices.get(item.id)) {
+      if (item.init !== undefined) {
+        this.items = this.items.map((i: cbv.Item) => {
+          return i.id === item.id && isMessage(i)
+            ? {
+              ...i, username: item.init?.externalID, type: "message", lrcdata: {
+                mine: i.lrcdata.mine,
+                muted: false,
+                init: {
+                  color: item.init?.color,
+                  nick: item.init?.nick,
+                  handle: item.init?.externalID,
+                  nonce: item.init?.nonce
+                },
+                body: item.body ?? ""
+              }
+            } : i
+        })
+      } else if (item.mediainit !== undefined) {
+        this.items = this.items.map((i: cbv.Item) => {
+          return i.id === item.id && isMedia(i)
+            ? {
+              ...i, username: item.init?.externalID, type: "image", lrcdata: {
+                mine: i.lrcdata.mine,
+                muted: false,
+                init: {
+                  color: item.mediainit?.color,
+                  nick: item.mediainit?.nick,
+                  handle: item.mediainit?.externalID,
+                  nonce: item.mediainit?.nonce
+                },
+              }
+            } : i
+        })
+      } else {
+        console.error("recieved an lrc.Item from get response that has no init!", item)
+      }
+    } else {
+      if (item.init !== undefined) {
+        this.pushItem({
+          type: "message",
+          id: item.init.id!,
+          username: item.init.externalID,
+          lrcdata: {
+            mine: item.init.echoed ?? false,
+            muted: false,
+            init: {
+              color: item.init.color,
+              nick: item.init.nick,
+              handle: item.init.externalID,
+              nonce: item.init.nonce,
+            },
+            body: item.body ?? "",
+          },
+          replies: [],
+        })
+      } else if (item.mediainit !== undefined) {
+        this.pushItem({
+          type: "image",
+          id: item.mediainit.id!,
+          username: item.mediainit.externalID,
+          lrcdata: {
+            mine: item.mediainit.echoed ?? false,
+            muted: false,
+            init: {
+              color: item.mediainit.color,
+              nick: item.mediainit.nick,
+              handle: item.mediainit.externalID,
+              nonce: item.mediainit.nonce,
+            },
+          },
+          replies: [],
+        })
+      } else {
+        console.error("recieved an lrc.Item from get response that has no init!", item)
+      }
+    }
+  }
+
   mute = (id: number) => {
     muteMessage(id, this)
   }
 
   unmute = (id: number) => {
     unmuteMessage(id, this)
+    getItem(id, this)
   }
 
   setNick = (nick: string) => {
@@ -608,15 +689,15 @@ export class WSContext {
     }
   }
 
-  insertMessage = (id: number, idx: number, s: string) => {
+  insertMessage = (id: number, idx: number, s: string): boolean => {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
         return item.id === id && isMessage(item) && !item.ignore
           ? { ...item, type: "message", lrcdata: { ...item.lrcdata, body: insertSIntoAStringAtIdx(s, item.lrcdata.body, idx) } }
           : item
       })
+      return true
     } else {
-
       this.pushItem({
         type: "message",
         id: id,
@@ -628,18 +709,20 @@ export class WSContext {
         },
         replies: []
       })
+      console.log("late insert, returning false")
+      return false
     }
   }
 
-  deleteMessage = (id: number, idx1: number, idx2: number) => {
+  deleteMessage = (id: number, idx1: number, idx2: number): boolean => {
     if (this.existingindices.get(id)) {
       this.items = this.items.map((item: cbv.Item) => {
         return item.id === id && isMessage(item) && !item.ignore
           ? { ...item, type: "message", lrcdata: { ...item.lrcdata, body: deleteFromAStringBetweenIdxs(item.lrcdata.body, idx1, idx2) } }
           : item
       })
+      return true
     } else {
-
       this.pushItem({
         type: "message",
         id: id,
@@ -651,6 +734,7 @@ export class WSContext {
         },
         replies: []
       })
+      return false
     }
   }
 
@@ -1052,6 +1136,21 @@ export const getTopic = (ctx: WSContext) => {
   ctx.ws?.send(byteArray)
 }
 
+export const getItem = (id: number, ctx: WSContext) => {
+  const evt: lrc.Event = {
+    msg: {
+      oneofKind: "get",
+      get: {
+        item: {
+          id: id,
+        }
+      }
+    }
+  }
+  const byteArray = lrc.Event.toBinary(evt)
+  ctx.ws?.send(byteArray)
+}
+
 export const setNick = (nick: string, ctx: WSContext) => {
   ctx.nick = nick
   const evt: lrc.Event = {
@@ -1172,7 +1271,11 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       const id = event.msg.insert.id ?? 0
       if (id === 0) return 0
       ctx.pushToLog(id, byteArray, "insert")
-      doinsert(id, event.msg.insert, ctx)
+      const needsnointroduction = doinsert(id, event.msg.insert, ctx)
+      if (!needsnointroduction) {
+        console.log("getting item insert")
+        getItem(id, ctx)
+      }
       return 1
     }
 
@@ -1180,7 +1283,11 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       const id = event.msg.delete.id ?? 0
       if (id === 0) return 0
       ctx.pushToLog(event.msg.delete.id ?? 0, byteArray, "delete")
-      dodelete(id, event.msg.delete, ctx)
+      const needsnointroduction = dodelete(id, event.msg.delete, ctx)
+      if (!needsnointroduction) {
+        console.log("getting item delete")
+        getItem(id, ctx)
+      }
       return 1
     }
 
@@ -1200,11 +1307,15 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
     }
 
     case "get": {
+      console.log(event)
       if (event.msg.get.connected !== undefined) {
         ctx.setConncount(event.msg.get.connected)
       }
       if (event.msg.get.topic !== undefined) {
         ctx.setTopic(event.msg.get.topic)
+      }
+      if (event.msg.get.item !== undefined) {
+        ctx.setItem(event.msg.get.item)
       }
       return 0
     }
@@ -1224,11 +1335,19 @@ function parseEvent(binary: MessageEvent<any>, ctx: WSContext): number {
       event.msg.editbatch.edits.forEach((edit: lrc.Edit) => {
         switch (edit.edit.oneofKind) {
           case "insert": {
-            doinsert(id, edit.edit.insert, ctx)
+            const needsnointroduction = doinsert(id, edit.edit.insert, ctx)
+            if (!needsnointroduction) {
+              console.log("getting item insert editbatch")
+              getItem(id, ctx)
+            }
             return
           }
           case "delete": {
-            dodelete(id, edit.edit.delete, ctx)
+            const needsnointroduction = dodelete(id, edit.edit.delete, ctx)
+            if (!needsnointroduction) {
+              console.log("getting item delete editbatch")
+              getItem(id, ctx)
+            }
             return
           }
         }
@@ -1311,15 +1430,18 @@ function doattachreply(attach: lrc.AttachReply, ctx: WSContext) {
   })
 }
 
-function doinsert(id: number, insert: lrc.Insert, ctx: WSContext) {
+function doinsert(id: number, insert: lrc.Insert, ctx: WSContext): boolean {
   const idx = insert.utf16Index
   const s = insert.body
-  ctx.insertMessage(id, idx, s)
+  const needsnointroduction = ctx.insertMessage(id, idx, s)
+  console.log(needsnointroduction)
+  return needsnointroduction
 }
 
 function dodelete(id: number, del: lrc.Delete, ctx: WSContext) {
   const idx = del.utf16Start
   const idx2 = del.utf16End
-  ctx.deleteMessage(id, idx, idx2)
+  const needsnointroduction = ctx.deleteMessage(id, idx, idx2)
+  return needsnointroduction
 }
 

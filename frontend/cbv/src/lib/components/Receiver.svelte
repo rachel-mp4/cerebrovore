@@ -55,7 +55,7 @@
     }
   };
 
-  document.addEventListener("lrc:append", async () => {
+  const reflow = async () => {
     await tick();
     const el = document.getElementById("eats-ur-brain");
     if (el === null) {
@@ -82,7 +82,9 @@
         child = prevchild;
       }
     }
-  });
+  };
+
+  document.addEventListener("lrc:append", reflow);
 
   let pendingscroll = false;
   const scrollIfPinned = () => {
@@ -223,6 +225,7 @@
               onclick={() => {
                 item.lrcdata.muted = true;
                 onmute?.(item.id);
+                reflow();
               }}>{" mute"}</button
             >
             {#if ismoderator}
@@ -326,16 +329,19 @@
       {/if}
     </div>
   {:else}
-    muted
-    <button
-      class="unmute"
-      onclick={() => {
-        item.lrcdata.muted = false;
-        onunmute?.(item.id);
-      }}
-    >
-      unmute
-    </button>
+    <div class="tx">
+      muted
+      <button
+        class="unmute"
+        onclick={() => {
+          item.lrcdata.muted = false;
+          onunmute?.(item.id);
+          reflow();
+        }}
+      >
+        unmute
+      </button>
+    </div>
   {/if}
 {/each}
 <div bind:this={bottomEl} style="height:1px"></div>

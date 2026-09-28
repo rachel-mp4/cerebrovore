@@ -8,8 +8,8 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
-	github.com/rachel-mp4/lrcd v0.2.15
-	github.com/rachel-mp4/lrcproto v1.3.1
+	github.com/rachel-mp4/lrcd v0.2.17
+	github.com/rachel-mp4/lrcproto v1.4.0
 	golang.org/x/crypto v0.48.0
 	golang.org/x/image v0.36.0
 	golang.org/x/term v0.41.0
