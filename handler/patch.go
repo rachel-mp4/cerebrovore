@@ -10,6 +10,38 @@ import (
 func getNotes() []types.Patch {
 	return []types.Patch{
 		{
+			Release:   "β.5.9",
+			Timestamp: "2026-10-26",
+			Notes: []types.Note{
+				{
+					Type:        "feature",
+					Name:        "#seek command",
+					Description: "change position in wormwatch with seek. ex: #seek +5m (seeks 5 minutes in the future) ex: #seek <1:11 (seeks left 1 minute and 11 seconds) ex: #seek 1:23:45 (sets the timestamp to 1 hour, 23 minute, 45 second)",
+				},
+				{
+					Type:        "feature",
+					Name:        "#noseek command",
+					Description: "vote to disable seeking for everyone besides whoever queued the video",
+				},
+				{
+					Type:        "feature",
+					Name:        "#yesseek command",
+					Description: "vote to enable seeking for everyone (seek itself does not require a vote)",
+				},
+			},
+		},
+		{
+			Release:   "β.5.8",
+			Timestamp: "2026-late-summer",
+			Notes: []types.Note{
+				{
+					Type:        "upgrade",
+					Name:        "get in progress message",
+					Description: "loading a thread while people are typing allows you to get their in progress messages",
+				},
+			},
+		},
+		{
 			Release:   "β.5.7",
 			Timestamp: "2026-06-04",
 			Notes: []types.Note{

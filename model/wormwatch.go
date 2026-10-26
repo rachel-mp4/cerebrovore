@@ -261,8 +261,9 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 }
 
 func (tm *threadModel) handleQueue() {
-	<-tm.wormwatchdata.ctx.Done()
-	switch context.Cause(tm.wormwatchdata.ctx) {
+	ctx := tm.wormwatchdata.ctx
+	<-ctx.Done()
+	switch context.Cause(ctx) {
 	case context.DeadlineExceeded:
 		tm.nextVideo()
 	case skipped:
