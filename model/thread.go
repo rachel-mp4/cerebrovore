@@ -106,6 +106,7 @@ func newThreadModel(id uint32, topic *string) *threadModel {
 		wormwatchdata: &wormwatchdata{
 			index:    0,
 			watchers: make(map[string]int),
+			voteseek: make(map[string]bool),
 		},
 	}
 }

@@ -19,6 +19,8 @@ type wormwatchdata struct {
 	ctx      context.Context
 	cancel   context.CancelCauseFunc
 	queue    []*wormwatchqueueentry
+	noseek   bool
+	voteseek map[string]bool
 	watchers map[string]int // keys are usernames
 }
 
@@ -50,6 +52,154 @@ const (
 	TypePause = "pause"
 )
 
+func (m *Model) NoSeek(threadID uint32, username string) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return
+	}
+	if tm.dead {
+		return
+	}
+	wwd := tm.wormwatchdata
+	tm.wormwatchersmu.Lock()
+	defer tm.wormwatchersmu.Unlock()
+	if wwd.noseek {
+		delete(wwd.voteseek, username)
+		return
+	}
+	wwd.voteseek[username] = true
+	nvotes := len(wwd.voteseek)
+	nwatchers := len(wwd.watchers)
+	if float64(nvotes) >= math.Log2(float64(nwatchers)) {
+		wwd.noseek = true
+		wwd.voteseek = make(map[string]bool)
+	}
+}
+
+func (m *Model) YesSeek(threadID uint32, username string) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return
+	}
+	if tm.dead {
+		return
+	}
+	wwd := tm.wormwatchdata
+	tm.wormwatchersmu.Lock()
+	defer tm.wormwatchersmu.Unlock()
+	if !wwd.noseek {
+		delete(wwd.voteseek, username)
+		return
+	}
+	wwd.voteseek[username] = true
+	nvotes := len(wwd.voteseek)
+	nwatchers := len(wwd.watchers)
+	if float64(nvotes) >= math.Log2(float64(nwatchers)) {
+		wwd.noseek = false
+		wwd.voteseek = make(map[string]bool)
+	}
+}
+
+// basically the idea with seeking is that it's time sensitive, so it doesn't
+// require voting, instead to help spam the thread can either enter a noseek
+// mode where only the queuer is able to seek. determining whether thread should
+// be yesseek or noseek is what requires a vote. if you input a seek command
+// but you didn't queue the current video and the thread is in noseek mode, we
+// add you as a yesseek vote, and if that takes the thread into yesseek mode, your
+// vote goes through
+func (m *Model) Seek(threadID uint32, username string, to time.Duration, rel bool) {
+	m.tmapmu.RLock()
+	tm, ok := m.tmap[threadID]
+	m.tmapmu.RUnlock()
+	if !ok {
+		return
+	}
+	if tm.dead {
+		return
+	}
+	wwd := tm.wormwatchdata
+	tm.wormwatchersmu.Lock()
+	if wwd.index >= len(wwd.queue) {
+		tm.wormwatchersmu.Unlock()
+		return
+	}
+	playing := wwd.queue[wwd.index]
+	if playing == nil {
+		tm.wormwatchersmu.Unlock()
+		return
+	}
+	if wwd.noseek && playing.username != username {
+		wwd.voteseek[username] = true
+		nvotes := len(wwd.voteseek)
+		nwatchers := len(wwd.watchers)
+		if float64(nvotes) >= math.Log2(float64(nwatchers)) {
+			wwd.noseek = false
+			wwd.voteseek = make(map[string]bool)
+		} else {
+			tm.wormwatchersmu.Unlock()
+			return
+		}
+	}
+	// 4 cases: paused,  seek out of bounds: manually invoke nv (comment@blinko blitzer)
+	//          playing, seek out of bounds: skip
+	//          paused,  seek in bounds: set paused at to new time
+	//          playing, seek in bounds: send typeStart event with new time
+	ntr := to + time.Since(*wwd.start)
+	seekoutofbounds := (!rel && to > (playing.Data.Duration+bufferDuration)) ||
+		(rel && wwd.pausedAt != nil && (to+*wwd.pausedAt) > (playing.Data.Duration+bufferDuration)) ||
+		(rel && wwd.pausedAt == nil && ntr > (playing.Data.Duration+bufferDuration))
+	if seekoutofbounds {
+		if wwd.pausedAt == nil {
+			wwd.cancel(skipped)
+		} else {
+			tm.nv()
+			return
+		}
+	} else {
+		if wwd.pausedAt != nil {
+			if !rel {
+				wwd.pausedAt = &to
+			} else {
+				ntr = to + *wwd.pausedAt
+				wwd.pausedAt = &ntr
+			}
+		} else {
+			wwd.cancel(sought)
+			if rel {
+				to = ntr
+			}
+			tstart := time.Now().Add(-1 * to)
+			otheroption := time.Now().Add(bufferDuration)
+			if tstart.After(otheroption) {
+				tstart = otheroption
+			}
+			tstartms := tstart.UnixMilli()
+
+			for w := range tm.wormwatchers {
+				select {
+				case w.ch <- wormwatchMessage{"wormwatch", wormwatchEvent{Type: TypeStart, Index: &wwd.index, Timestamp: &tstartms}}:
+				default:
+				}
+			}
+			idx := wwd.index
+			ctx, cancel := context.WithCancelCause(context.Background())
+			time.AfterFunc(wwd.queue[idx].Data.Duration-to, func() {
+				cancel(context.DeadlineExceeded)
+			})
+			wwd.ctx = ctx
+			wwd.cancel = cancel
+			wwd.start = &tstart
+			go tm.handleQueue()
+		}
+	}
+	tm.wormwatchersmu.Unlock()
+
+}
+
 func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) {
 	if len(pis) == 0 {
 		return
@@ -66,6 +216,7 @@ func (m *Model) Queue(threadID uint32, username string, pis []*utils.PlayInput) 
 	wwd := tm.wormwatchdata
 	// not totally ideal to allocate and copy all this while i hold lock,
 	// however otherwise there's a race condition on two queue inserts at once
+	// since i label entries with their indices
 	tm.wormwatchersmu.Lock()
 	clen := len(wwd.queue)
 	entries := make([]*wormwatchqueueentry, 0, len(pis))
@@ -118,7 +269,7 @@ func (tm *threadModel) handleQueue() {
 		tm.nextVideo()
 	case paused:
 		tm.pauseVideo()
-	case deleted:
+	case sought, deleted:
 		return
 	}
 }
@@ -244,6 +395,13 @@ func (m *Model) Skip(threadID uint32, username string) {
 	entry := wwd.queue[wwd.index]
 	if entry.username == username {
 		// i can always skip my own wormwatch entry
+
+		// blinko blitzer
+		// when the video is paused, there is no routine handling the queue,
+		// so we can't cancel it (in fact cancel should be a no-op or something)
+		// recall we have a kinda dumb recursive go routine structure here as
+		// the video is playing, but it seemed not necessary to have someone waiting
+		// while the video was paused since pauses can theoretically last forever
 		if wwd.pausedAt == nil {
 			wwd.cancel(skipped)
 		} else {
@@ -315,7 +473,6 @@ func (tm *threadModel) unpauseHOLDINGLOCK() {
 	index := wwd.index
 	tstart := time.Now().Add(-1 * *wwd.pausedAt)
 	tstartms := tstart.UnixMilli()
-	wwd.start = &tstart
 
 	for w := range tm.wormwatchers {
 		select {

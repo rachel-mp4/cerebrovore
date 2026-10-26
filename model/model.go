@@ -463,6 +463,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				count := wwd.watchers[username] - 1
 				if count <= 0 {
 					delete(wwd.watchers, username)
+					delete(wwd.voteseek, username)
 					// should recheck skip / pause condition here if i want to be really cool
 					// but that's a pain since locks
 				} else {

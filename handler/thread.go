@@ -745,6 +745,9 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 	type commands struct {
 		play        bool
 		skip        bool
+		seek        bool
+		yesseek     bool
+		noseek      bool
 		pause       bool
 		unpause     bool
 		molt        bool
@@ -765,6 +768,8 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			cmd.desh = true
 		case utils.MOLT_ID:
 			cmd.molt = true
+		case utils.SEEK_ID:
+			cmd.seek = true
 		}
 	}
 	for _, ex := range st.Extras {
@@ -775,6 +780,10 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 			cmd.debrainworm = true
 		case utils.DESHELL_EX:
 			cmd.deshell = true
+		case utils.YESSEEK_EX:
+			cmd.yesseek = true
+		case utils.NOSEEK_EX:
+			cmd.noseek = true
 		}
 	}
 	if cmd.play {
@@ -784,6 +793,27 @@ func (h *Handler) postPostPostFunFunc(c *Client, post *types.Post, replyCount in
 		}
 		if unpause {
 			h.m.Unpause(post.ThreadID, c.Username)
+		}
+	}
+	if cmd.yesseek {
+		h.m.YesSeek(post.ThreadID, c.Username)
+	}
+	if cmd.noseek {
+		h.m.NoSeek(post.ThreadID, c.Username)
+	}
+	if cmd.seek {
+		to, rel, ok := utils.ParseBodyForSeek(post.TextContent.Body)
+		if ok {
+			if cmd.play {
+				// the idea here is that youtube player gets a bit confused if we
+				// want it to play. there is also some nasty race that idk how to
+				// fix, or observe really.
+				time.AfterFunc(time.Second, func() {
+					h.m.Seek(post.ThreadID, c.Username, to, rel)
+				})
+			} else {
+				h.m.Seek(post.ThreadID, c.Username, to, rel)
+			}
 		}
 	}
 	if cmd.skip {

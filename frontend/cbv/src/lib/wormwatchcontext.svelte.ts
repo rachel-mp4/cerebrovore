@@ -20,7 +20,7 @@ export class WormWatchContext extends EventTarget {
   constructor() {
     super()
     const handleWormwatchEvent = (wwe: any) => {
-      console.log(wwe)
+      console.log("wormwatchevent:", wwe)
       switch (wwe.type) {
         case "timeS": {
           this.offset = wwe.timestamp - Date.now()

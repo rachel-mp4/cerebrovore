@@ -27,10 +27,15 @@ func PercentRemaining(replyCount *int) string {
 	return fmt.Sprintf("%f%%", rem)
 }
 
+// EVERY 6 base36 digit word is smaller than uint32max
+// EVERY 7 base36 digit word with first letter > 1 is bigger than uint32max
 var (
 	PLAY_ID        = AToIDp("play")
 	SKIP_ID        = AToIDp("skip")
 	PAUSE_ID       = AToIDp("pause")
+	SEEK_ID        = AToIDp("seek")
+	NOSEEK_EX      = AToExp("noseek")
+	YESSEEK_EX     = AToExp("yesseek")
 	UNPAUSE_EX     = AToExp("unpause")
 	DEBRAINWORM_EX = AToExp("debrainworm")
 	DESH_ID        = AToIDp("desh")

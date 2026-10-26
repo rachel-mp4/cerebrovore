@@ -7,6 +7,7 @@ const ErrThreadDead = ModelError("requested thread is dead, so this feature is n
 const ErrThreadFull = ModelError("requested thread has hit the bump limit")
 const ErrServerDNE = ModelError("requested thread's server does not exist")
 const skipped = ModelError("wormwatch entry skipped")
+const sought = ModelError("wormwatch entry sought")
 const paused = ModelError("wormwatch entry paused")
 const deleted = ModelError("thread was deleted")
 

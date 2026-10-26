@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"fmt"
 	"strings"
 	"time"
 )
@@ -35,4 +36,25 @@ func FTime(t time.Time) string {
 
 func ParseTime(s string) (time.Time, error) {
 	return time.Parse(time.RFC3339, s)
+}
+
+func NiceParseDuration(s string) (d time.Duration, err error) {
+	d, err = time.ParseDuration(s)
+	if err == nil {
+		return
+	}
+	var h, m, sec int
+	_, err = fmt.Sscanf(s, "%d:%d:%d", &h, &m, &sec)
+	if err != nil {
+		h = 0
+		_, err = fmt.Sscanf(s, "%d:%d", &m, &sec)
+		if err != nil {
+			m = 0
+			_, err = fmt.Sscanf(s, "%d", &sec)
+			if err != nil {
+				return
+			}
+		}
+	}
+	return (time.Duration(h) * time.Hour) + (time.Duration(m) * time.Minute) + (time.Duration(sec) * time.Second), nil
 }

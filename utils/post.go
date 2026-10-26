@@ -40,6 +40,37 @@ type PlayInput struct {
 	Height   *int          `json:"height,omitempty"`
 }
 
+func ParseBodyForSeek(s string) (to time.Duration, rel bool, ok bool) {
+	scanner := bufio.NewScanner(strings.NewReader(s))
+	for scanner.Scan() {
+		l := scanner.Text()
+		literal, found := strings.CutPrefix(l, "#seek ")
+		flip := false
+		if found {
+			switch literal[0] {
+			case '+', '>':
+				rel = true
+				literal = literal[1:]
+			case '-', '<':
+				rel = true
+				literal = literal[1:]
+				flip = true
+			}
+			var err error
+			to, err = NiceParseDuration(literal)
+			if err != nil {
+				continue
+			}
+			if flip {
+				to = -1 * to
+			}
+			ok = true
+			return
+		}
+	}
+	return
+}
+
 // ParseBodyForPlays finds each instance of #play {play_url} and then
 // according to the play_url, makes appropriate api calls to produce
 // a slice of PlayInput that we can inform the client of. i think this

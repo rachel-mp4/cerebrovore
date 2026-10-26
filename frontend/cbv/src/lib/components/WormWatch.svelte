@@ -224,6 +224,7 @@
           player?.off(listener);
         }
       });
+      player?.seekTo(st / -1000, true);
       player?.playVideo();
     } else {
       setTimeout(() => {
