@@ -27,6 +27,9 @@ type Model struct {
 
 	id  uint32
 	pid uint32 // "prestige" id // lol what drugs was i onnnnnn
+
+	conns  int
+	connmu sync.Mutex
 }
 
 // NewModel creates and initializes a new Model, returning it
@@ -38,6 +41,7 @@ func NewModel(threads []types.Thread, maxid uint32) *Model {
 		m.recreateThread(thread)
 	}
 	go cleaner(m)
+	go logger(m)
 	return m
 }
 
@@ -323,6 +327,23 @@ func cleaner(m *Model) {
 	}
 }
 
+func logger(m *Model) {
+	ticker := time.NewTicker(2 * time.Second)
+	lastval := -1
+	for {
+		<-ticker.C
+		m.connmu.Lock()
+		if lastval != m.conns {
+			clog.Info("conn poll: was %d, now %d", lastval, m.conns)
+			lastval = m.conns
+		} else {
+			clog.Info("conn poll: still %d", lastval)
+		}
+		m.connmu.Unlock()
+
+	}
+}
+
 type Option = func(options *options) error
 
 type options = struct {
@@ -404,7 +425,9 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 		client := &clientConn{}
 		client.conn = conn
 		client.ch = make(chan any, 10)
-		client.ctx, client.cancel = context.WithCancel(context.Background())
+		client.ctx, client.cfunc = context.WithCancel(context.Background())
+		client.theymu = &m.connmu
+		client.count = &m.conns
 		var tm *threadModel
 		var ok bool
 
@@ -419,6 +442,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				tm.subsmu.Lock()
 				tm.subs[client] = true
 				tm.users[username] += 1
+				clog.Info("%s connected to #%s, their %d-th connection. %d connections in total", username, utils.IDToA(tm.id), tm.users[username], len(tm.subs))
 				tm.subsmu.Unlock()
 			}()
 			defer func() {
@@ -426,8 +450,10 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				delete(tm.subs, client)
 				if tm.users[username] <= 1 {
 					delete(tm.users, username)
+					clog.Info("%s's last connection disconnected from #%s. %d connections in total", username, utils.IDToA(tm.id), len(tm.subs))
 				} else {
 					tm.users[username] -= 1
+					clog.Info("%s disconnected from #%s, they have %d more connections. %d connections to the thread in total", username, utils.IDToA(tm.id), tm.users[username], len(tm.subs))
 				}
 				tm.subsmu.Unlock()
 			}()
@@ -478,6 +504,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				uwctx, ok := m.watchers[username]
 				if ok {
 					uwctx.ocmu.Lock()
+					clog.Info("new watcher (%s) for existing watchctx (%d total watchctx)", username, len(m.watchers))
 					// use value of openConns to say if i want new thread notifications
 					uwctx.openConns[client] = myoptions.newthreads
 					uwctx.ocmu.Unlock()
@@ -489,6 +516,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 					m.watchers[username] = uwctx
 					uwctx.cleanupmu.Unlock()
 				} else {
+					clog.Info("new watcher (%s) for new watchctx (%d total watchctx)", username, len(m.watchers))
 					uwctx = &userWatcherCtx{
 						threadsWatched: make(map[uint32]bool),
 						openConns:      make(map[*clientConn]bool, 1),
@@ -541,6 +569,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 			defer func() {
 				m.watchersmu.RLock()
 				uwctx := m.watchers[username]
+				clog.Info("watcher (%s) disconnect from watchctx", username)
 				m.watchersmu.RUnlock()
 				uwctx.ocmu.Lock()
 				delete(uwctx.openConns, client)
@@ -575,6 +604,7 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 
 						if len(uwctx.openConns) == 0 {
 							delete(m.watchers, username)
+							clog.Info("%s's watchctx empty, cleaning up. %d watchctx remain open", username, len(m.watchers))
 						}
 						for tid := range uwctx.threadsWatched {
 							m.tmapmu.RLock()
@@ -592,6 +622,9 @@ func (m *Model) GetWebSockets(username string, opts ...Option) (http.HandlerFunc
 				}
 			}()
 		}
+		m.connmu.Lock()
+		m.conns += 1
+		m.connmu.Unlock()
 		go client.readloop()
 		client.watch()
 	}, nil

@@ -30,7 +30,11 @@ type clientConn struct {
 	conn   *websocket.Conn
 	ch     chan any
 	ctx    context.Context
-	cancel context.CancelFunc
+	cfunc  context.CancelFunc
+	memu   sync.Mutex
+	done   bool
+	theymu *sync.Mutex
+	count  *int
 }
 
 // userWatcherCtx represents all of a user's currently open connections
@@ -258,4 +262,16 @@ func (w *clientConn) readloop() {
 			return
 		}
 	}
+}
+
+func (w *clientConn) cancel() {
+	w.memu.Lock()
+	if !w.done {
+		w.done = true
+		w.theymu.Lock()
+		*w.count = *w.count - 1
+		w.theymu.Unlock()
+	}
+	w.memu.Unlock()
+	w.cfunc()
 }

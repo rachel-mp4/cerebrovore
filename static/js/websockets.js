@@ -1,5 +1,6 @@
 const cbvWSBuffer = {};
-(() => {
+let cbvWSBackoff = 500;
+const cbvWSConnect = () => {
   const wantsNewThreads = localStorage.getItem("new-threads")
   const baseurl = window.location.hostname
   const port = window.location.port
@@ -51,9 +52,12 @@ const cbvWSBuffer = {};
   }
   ws.onerror = (e) => {
     console.log("wserror,", e)
+    ws.close()
   }
   ws.onclose = (e) => {
     console.log("wsclose,", e)
+    cbvWSBackoff *= 2
+    setTimeout(cbvWSConnect, cbvWSBackoff)
   }
   if (wantsNewThreads === null) {
     localStorage.setItem("new-threads", "yes")
@@ -63,4 +67,5 @@ const cbvWSBuffer = {};
       document.body.classList.add("loaded")
     })
   })
-})()
+}
+cbvWSConnect()
