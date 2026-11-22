@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/rachel-mp4/cerebrovore/clog"
 )
 
 type watchMessage struct {
@@ -233,15 +234,18 @@ func (w *clientConn) watch() {
 	for {
 		select {
 		case <-w.ctx.Done():
+			clog.Info("exiting clientConn.watch: ctx done")
 			return
 		case <-ticker.C:
 			err := w.conn.WriteControl(websocket.PingMessage, nil, time.Now().Add(5*time.Second))
 			if err != nil {
+				clog.Info("exiting clientConn.watch: write ping control error %s", err.Error())
 				return
 			}
 		case we := <-w.ch:
 			err := w.conn.WriteJSON(we)
 			if err != nil {
+				clog.Info("exiting clientConn.watch: write watchevent json error %s", err.Error())
 				return
 			}
 		}
@@ -258,8 +262,14 @@ func (w *clientConn) readloop() {
 		return nil
 	})
 	for {
-		if _, _, err := w.conn.ReadMessage(); err != nil {
-			return
+		select {
+		case <-w.ctx.Done():
+			clog.Info("exiting clientConn.readloop: ctx done")
+		default:
+			if _, _, err := w.conn.ReadMessage(); err != nil {
+				clog.Info("exiting clientConn.readloop: read error %s", err.Error())
+				return
+			}
 		}
 	}
 }

@@ -336,8 +336,6 @@ func logger(m *Model) {
 		if lastval != m.conns {
 			clog.Info("conn poll: was %d, now %d", lastval, m.conns)
 			lastval = m.conns
-		} else {
-			clog.Info("conn poll: still %d", lastval)
 		}
 		m.connmu.Unlock()
 
